@@ -702,6 +702,22 @@ test('mobile visual representatives: 360, 390 keyboard, 430, landscape, and 200%
     if (mode === 'keyboard') {
       await page.getByRole('button', { name: 'Math keyboard' }).click();
       await expect(page.locator('.ML__keyboard')).toBeVisible();
+      const secondField = page.locator('math-field').nth(1);
+      await secondField.focus();
+      await expect.poll(async () => page.evaluate(() => {
+        const field = document.querySelectorAll('math-field')[1]?.getBoundingClientRect();
+        const actions = document.querySelector('.actions')?.getBoundingClientRect();
+        return field && actions ? field.bottom <= actions.top - 15 : false;
+      })).toBe(true);
+      const secondFieldMetrics = await page.evaluate(() => {
+        const field = document.querySelectorAll('math-field')[1]?.getBoundingClientRect();
+        const actions = document.querySelector('.actions')?.getBoundingClientRect();
+        return {
+          fieldBottom: field?.bottom ?? Number.POSITIVE_INFINITY,
+          actionsTop: actions?.top ?? Number.NEGATIVE_INFINITY,
+        };
+      });
+      expect(secondFieldMetrics.fieldBottom).toBeLessThanOrEqual(secondFieldMetrics.actionsTop - 15);
     }
     if (mode === 'zoom') {
       await page.evaluate(() => { document.documentElement.style.zoom = '2'; });
