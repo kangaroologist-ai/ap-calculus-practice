@@ -1,0 +1,36 @@
+{
+  "name": "ap-derivative-practice",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "test": "vitest run",
+    "test:progress": "vitest run tests/progress.test.ts tests/transfer.test.ts",
+    "test:math": "tsx scripts/math-corpus.ts && .venv/bin/python scripts/check_math.py",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "@cortex-js/compute-engine": "0.130.0",
+    "decimal.js": "10.6.0",
+    "fflate": "0.8.3",
+    "idb": "8.0.3",
+    "jsqr": "1.4.0",
+    "mathlive": "0.110.0",
+    "qrcode": "1.5.4",
+    "ts-fsrs": "5.4.2"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "@types/node": "26.6.1",
+    "@types/qrcode": "1.5.6",
+    "prettier": "3.9.8",
+    "tsx": "4.23.13",
+    "typescript": "7.0.2",
+    "vite": "8.3.0",
+    "vitest": "5.0.1",
+    "wrangler": "4.135.0"
+  }
+}
