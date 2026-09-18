@@ -124,8 +124,10 @@ describe('serialized local persistence and backup replacement', () => {
     const progress = freshProgress(config, NOW);
     progress.sequence = 7;
     progress.recentQuestionSignatures = ['q-a', 'q-b'];
-    const result = await storage.replaceState(snapshot(progress), 'full-id');
-    expect(result.progress).toEqual(progress);
+    const portable = snapshot(progress);
+    const result = await storage.replaceState(portable, 'full-id');
+    const { exportedAt, ...expected } = portable;
+    expect(result.progress).toEqual(expected);
     expect(result).not.toHaveProperty('exportedAt');
     expect(result.lastImportedId).toBe('full-id');
   });

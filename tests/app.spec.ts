@@ -1,3 +1,4 @@
+import { makePortableProgress } from '../src/transfer';
 import { test as base, expect, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -232,7 +233,7 @@ test.describe('Derivative Studio browser flows', () => {
     const exportCode = page.locator('#export-code');
     await expect(exportCode).toBeVisible();
     const code = await exportCode.inputValue();
-    expect(code).toMatch(/^DSP1\.[a-f0-9]{8}\.[A-Za-z0-9_-]+$/);
+    expect(code).toMatch(/^DSP2\.[a-f0-9]{8}\.[A-Za-z0-9_-]+$/);
     await screenshot(page, 'constant-04-export');
     await scrollDialogToBottom(page);
     await screenshot(page, 'constant-04-export-bottom');
@@ -431,9 +432,9 @@ test('cross-context transfer preserves FSRS fields and imports a generated QR im
     // review with the larger text code.
     await source.getByRole('button', { name: 'Move progress' }).click();
     await source.getByRole('button', { name: 'Export progress' }).click();
-    await expect(source.locator('#qr-label')).toHaveText('QR 1 of 1');
+    await expect(source.locator('#qr-label')).toHaveText('Scan to move your progress');
     const qrCode = await source.locator('#export-code').inputValue();
-    expect(qrCode).toMatch(/^DSP1\.[a-f0-9]{8}\.[A-Za-z0-9_-]+$/);
+    expect(qrCode).toMatch(/^DSP2\.[a-f0-9]{8}\.[A-Za-z0-9_-]+$/);
     const qrDataUrl = await source.locator('#qr').evaluate((canvas) => (canvas as HTMLCanvasElement).toDataURL('image/png'));
     const qrBuffer = Buffer.from(qrDataUrl.split(',')[1], 'base64');
     await source.locator('#close-modal').click();
@@ -587,7 +588,7 @@ test('Level 2 remediation round trip preserves FSRS and due across contexts', as
     await desktop.getByRole('button', { name: 'Move progress' }).click();
     await desktop.getByRole('button', { name: 'Export progress' }).click();
     const mobileImportCode = await desktop.locator('#export-code').inputValue();
-    expect(mobileImportCode).toMatch(/^DSP1\.[a-f0-9]{8}\.[A-Za-z0-9_-]+$/);
+    expect(mobileImportCode).toMatch(/^DSP2\.[a-f0-9]{8}\.[A-Za-z0-9_-]+$/);
     await screenshot(desktop, 'level2-flow-desktop-relearning-export');
     await desktop.locator('#close-modal').click();
 
@@ -606,7 +607,9 @@ test('Level 2 remediation round trip preserves FSRS and due across contexts', as
     await expect.poll(async () => (await readStoredProgress(mobile)).sequence).toBe(relearning.sequence);
     await expect(mobile.getByRole('button', { name: /Start practicing/ })).toBeVisible();
     const imported = await readStoredProgress(mobile);
-    expect(imported).toEqual(relearning);
+    const { exportedAt: _exportTime, ...portableRelearning } = makePortableProgress(relearning);
+    expect(imported).toEqual(portableRelearning);
+    expect(imported.skills.exp.card).toEqual(relearning.skills.exp.card);
     await screenshot(mobile, 'level2-flow-mobile-imported-relearning');
 
     const advanceBy = relearningSkill.card.due - fixedNow + 1000;
@@ -652,7 +655,7 @@ test('Level 2 remediation round trip preserves FSRS and due across contexts', as
     await mobile.getByRole('button', { name: 'Move progress' }).click();
     await mobile.getByRole('button', { name: 'Export progress' }).click();
     const desktopReturnCode = await mobile.locator('#export-code').inputValue();
-    expect(desktopReturnCode).toMatch(/^DSP1\.[a-f0-9]{8}\.[A-Za-z0-9_-]+$/);
+    expect(desktopReturnCode).toMatch(/^DSP2\.[a-f0-9]{8}\.[A-Za-z0-9_-]+$/);
     await mobile.locator('#close-modal').click();
 
     await desktop.getByRole('button', { name: 'Move progress' }).click();
@@ -665,7 +668,8 @@ test('Level 2 remediation round trip preserves FSRS and due across contexts', as
     await expect.poll(async () => (await readStoredProgress(desktop)).sequence).toBe(recovered.sequence);
     await expect(desktop.getByRole('button', { name: /Start practicing/ })).toBeVisible();
     const returned = await readStoredProgress(desktop);
-    expect(returned).toEqual(recovered);
+    const { exportedAt: _returnTime, ...portableRecovered } = makePortableProgress(recovered);
+    expect(returned).toEqual(portableRecovered);
     expect(returned.skills.exp.card.due).toBe(recovered.skills.exp.card.due);
     await screenshot(desktop, 'level2-flow-desktop-returned-recovered');
   } finally {

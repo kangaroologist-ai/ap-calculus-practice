@@ -26,6 +26,7 @@ import {
   encodeProgress,
   decodeProgress,
   splitIntoQrFrames,
+  qrErrorCorrection,
   QrCollector,
   type PortableProgress,
 } from "./transfer";
@@ -601,7 +602,7 @@ async function exportView() {
       frames = splitIntoQrFrames(code);
     modal(
       "Export progress",
-      `<p>Copy the code, or scan ${frames.length === 1 ? "the QR code" : "each numbered QR code"} on your other device.</p><label class="answer-label">Progress code<textarea id="export-code" readonly rows="3">${code}</textarea></label>${button("copy-code", "Copy code", "button primary")}<p id="copy-status" role="status"></p><div class="qr-wrap"><canvas id="qr"></canvas><p id="qr-label"></p><div class="qr-controls">${button("qr-prev", "← Previous", "button subtle")}${button("qr-next", "Next →", "button subtle")}</div></div><p class="fine">This is a snapshot, not a live sync. Export again after practicing. Anyone with the code can read this learning progress.</p>`,
+      `<p>Copy the code, or scan ${frames.length === 1 ? "the QR code" : "each numbered QR code"} on your other device.</p><label class="answer-label">Progress code<textarea id="export-code" readonly rows="3">${code}</textarea></label>${button("copy-code", "Copy code", "button primary")}<p id="copy-status" role="status"></p><div class="qr-wrap"><canvas id="qr"></canvas><p id="qr-label"></p><a id="save-qr" class="text-button" download="ap-calculus-progress.png">Save QR image</a><div class="qr-controls">${button("qr-prev", "← Previous", "button subtle")}${button("qr-next", "Next →", "button subtle")}</div></div><p class="fine">This is a snapshot, not a live sync. Export again after practicing. Anyone with the code can read this learning progress.</p>`,
     );
     on("copy-code", async () => {
       try {
@@ -618,12 +619,22 @@ async function exportView() {
     let index = 0;
     const draw = async () => {
       await QRCode.toCanvas(document.getElementById("qr"), frames[index], {
-        width: 300,
+        scale: 5,
         margin: 4,
-        errorCorrectionLevel: "M",
+        errorCorrectionLevel: qrErrorCorrection(frames[index]),
       });
+      const canvas = document.getElementById("qr") as HTMLCanvasElement;
+      canvas.style.removeProperty("width");
+      canvas.style.removeProperty("height");
+      const download = document.getElementById("save-qr") as HTMLAnchorElement;
+      download.href = (
+        document.getElementById("qr") as HTMLCanvasElement
+      ).toDataURL("image/png");
+      download.download = `ap-calculus-progress-${index + 1}.png`;
       document.getElementById("qr-label")!.textContent =
-        `QR ${index + 1} of ${frames.length}`;
+        frames.length === 1
+          ? "Scan to move your progress"
+          : `QR ${index + 1} of ${frames.length}`;
     };
     on("qr-prev", async () => {
       index = (index + frames.length - 1) % frames.length;
@@ -633,6 +644,8 @@ async function exportView() {
       index = (index + 1) % frames.length;
       await draw();
     });
+    document.querySelector<HTMLElement>(".qr-controls")!.hidden =
+      frames.length === 1;
     await draw();
   } catch (e) {
     modalError(e);
@@ -641,7 +654,7 @@ async function exportView() {
 function importView() {
   modal(
     "Import progress",
-    `<p>Paste a progress code, scan QR codes, or choose QR images. You can review the snapshot before replacing anything.</p><label class="answer-label">Progress code<textarea id="import-code" rows="4" placeholder="DSP1.…"></textarea></label>${button("preview-import", "Review import", "button primary")}<div class="scan-actions">${button("scan", "Scan with camera", "button subtle")}<label class="button subtle file-label">Choose QR images<input id="qr-file" type="file" accept="image/*" multiple></label></div><video id="video" playsinline muted hidden></video><p id="scan-status" role="status"></p><div id="import-preview"></div>`,
+    `<p>Paste a progress code, scan QR codes, or choose QR images. You can review the snapshot before replacing anything.</p><label class="answer-label">Progress code<textarea id="import-code" rows="4" placeholder="DSP2.…"></textarea></label>${button("preview-import", "Review import", "button primary")}<div class="scan-actions">${button("scan", "Scan with camera", "button subtle")}<label class="button subtle file-label">Choose QR images<input id="qr-file" type="file" accept="image/*" multiple></label></div><video id="video" playsinline muted hidden></video><p id="scan-status" role="status"></p><div id="import-preview"></div>`,
   );
   let collector = new QrCollector();
   let stream: MediaStream | undefined,
@@ -793,7 +806,7 @@ function importView() {
     }
   });
 }
-function showImportPreview(p: PortableProgress, id: string) {
+function showImportPreview(p: PortableProgress, id: string, resume = false) {
   const existing = state.progress.updatedAt;
   document.getElementById("import-preview")!.innerHTML =
     `<section class="hint-panel"><h3>Review this snapshot</h3><p>Exported: ${esc(new Date(p.exportedAt).toLocaleString())}</p><p>Unlocked through Level ${p.unlockedLevel} · ${Object.keys(p.skills).length} skills started</p><p>${p.streak ?? 0} in a row · ${todayCount(p)} practiced today</p>${p.updatedAt < existing ? '<p class="notice">This snapshot has older learning activity than this device. Importing will replace your current progress.</p>' : ""}<p>Your current progress will be saved as a local backup. The two histories will not be merged.</p>${button("confirm-import", "Replace with this progress", "button primary")}</section>`;
@@ -817,6 +830,7 @@ function showImportPreview(p: PortableProgress, id: string) {
       replacing = false;
       updateControls();
     }
+    if (resume && state.lastImportedId === id) await startSession();
   });
 }
 function confirmRestore() {
@@ -872,6 +886,11 @@ window.addEventListener("pagehide", () => {
   void persist();
 });
 async function boot() {
+  const progressLink = location.hash.startsWith("#progress=")
+    ? location.href
+    : undefined;
+  if (progressLink)
+    history.replaceState(null, "", location.pathname + location.search);
   try {
     const response = await fetch("/practice-config.json", {
       cache: "no-store",
@@ -892,8 +911,29 @@ async function boot() {
       state = validateLocalState(saved);
     } else state = { version: 1, progress: freshProgress(config) };
     render();
+    if (progressLink) {
+      try {
+        const code = new QrCollector().add(progressLink).code;
+        if (!code) throw Error("This progress link is incomplete.");
+        const snapshot = decodeProgress(code);
+        // Any existing local state gets explicit replacement confirmation.
+        if (saved || temporary) {
+          importView();
+          showImportPreview(snapshot, code, true);
+        } else {
+          state = await replaceState(snapshot, code);
+          await startSession();
+        }
+      } catch (error) {
+        importView();
+        modalError(error);
+      }
+    }
   } catch (e) {
     app.innerHTML = `<main class="boot-error"><h1>We couldn’t open practice.</h1><p>${esc((e as Error).message)}</p><p>Your saved progress has not been changed.</p><button onclick="location.reload()">Try again</button></main>`;
   }
 }
+window.addEventListener("hashchange", () => {
+  if (location.hash.startsWith("#progress=")) location.reload();
+});
 void boot();

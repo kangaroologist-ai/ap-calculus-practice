@@ -87,3 +87,14 @@ npm run test:e2e
 - 26技能×2题对照表由生产生成器生成，52题/52答案核对，SSR数学排版；桌面与390px网页实际渲染通过。
 
 - 线上真实键入后立即Enter暴露MathLive输入通知滞后：提交现在同步读取可见Mathfield值。三引擎专门回归均通过，不依赖手工触发input事件。
+
+## Compact progress and scan-to-resume — 2026-09-19
+
+- DSP2 uses a frozen field-order/profile, signature dictionary and zlib level 9. FSRS numbers and timestamps remain exact; DSP1 import remains supported.
+- Exports retain only two recent evidence entries per skill, matching the two-correct advancement rule. Question expressions are replaced by a 128-bit SHA-256 fingerprint. Old expression signatures and new fingerprints compare consistently. No full question or answer history is exported.
+- QR links contain data only in the URL fragment, cleared before config fetch. Fresh devices import and start practice; existing local state requires confirmation and gets a backup. Damaged links do not replace state. Same-page hash navigation is supported.
+- Full-curriculum stress fixture: 26 skill cards, two evidence entries per skill, 31 daily counts. Copyable DSP2 approximately 2700 characters; one URL QR approximately 3600 characters, version 37-L. Representative ten-question export approximately 544 characters. Exact lengths vary with timestamps.
+- Raster QR → jsQR → decoded portable snapshot compares equal, including FSRS precision. Node crypto independently checks fingerprint known vectors. Fresh-device/existing-device/damaged-link/full-curriculum URL flows pass Chromium, Firefox and WebKit (12 cases). Unit suite: 105 tests passed.
+- Mobile 390×844 and desktop 1280×800 export dialogs rendered and inspected. Dense canvas remains square, fits available width, and saved full-resolution PNG imports through the actual UI.
+- Physical phone-camera scanning is not independently verified. Unusually large imported snapshots can still require numbered QR frames in the in-app scanner; normal/full-curriculum fixtures use one link QR.
+- Reproduction: `npx tsx scripts/qr-size-audit.ts`, `npm test`, `npx playwright test tests/progress-link.spec.ts`, `npx playwright test --grep 'cross-context transfer'`.

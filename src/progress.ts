@@ -1,3 +1,4 @@
+import { questionFingerprint } from "./question-identity";
 import {
   createEmptyCard,
   fsrs,
@@ -185,8 +186,14 @@ export function recordOutcome(
     );
   }
   s.recent = [
-    ...s.recent.filter((x) => x.q !== q.signature),
-    { q: q.signature, template: q.template, correct: good },
+    ...s.recent.filter(
+      (x) => questionFingerprint(x.q) !== questionFingerprint(q.signature),
+    ),
+    {
+      q: questionFingerprint(q.signature),
+      template: q.template,
+      correct: good,
+    },
   ].slice(-5);
   s.lastSeen = ++p.sequence;
   if (good) {
@@ -312,7 +319,12 @@ export function chooseNext(
   let question: Question | undefined;
   for (let n = 0; n < 30; n++) {
     const q = generateQuestion(id, `${p.sequence}:${now}:${n}`, variant);
-    if (!p.recentQuestionSignatures.includes(q.signature)) {
+    if (
+      !p.recentQuestionSignatures.some(
+        (signature) =>
+          questionFingerprint(signature) === questionFingerprint(q.signature),
+      )
+    ) {
       question = q;
       break;
     }
@@ -320,7 +332,7 @@ export function chooseNext(
   question ??= generateQuestion(id, `${p.sequence}:${now}:fallback`, variant);
   p.recentQuestionSignatures = [
     ...p.recentQuestionSignatures,
-    question.signature,
+    questionFingerprint(question.signature),
   ].slice(-10);
   return { question, reason };
 }

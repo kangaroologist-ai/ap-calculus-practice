@@ -986,7 +986,7 @@ dialog::backdrop {
   padding-bottom: 16px;
 }
 .qr-wrap canvas {
-  width: min(260px, 100%);
+  width: min(480px, 100%);
 }
 @media (max-width: 700px) {
   .site-header {
@@ -1191,3 +1191,5 @@ footer > div {
     font-size: 12px;
   }
 }
+
+.qr-controls[hidden] { display: none; }

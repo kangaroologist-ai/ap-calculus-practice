@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { strToU8, zlibSync } from 'fflate';
-import { freshProgress } from '../src/progress';
+import { freshProgress, stateFor } from '../src/progress';
 import {
   QrCollector,
   checksum,
@@ -69,7 +69,7 @@ describe('portable progress encoding and QR transfer', () => {
     const code = encodeProgress(snapshot);
     const decoded = decodeProgress(code);
     expect(decoded).toEqual(snapshot);
-    expect(code).toMatch(/^DSP1\.[a-f0-9]{8}\.[A-Za-z0-9_-]+$/);
+    expect(code).toMatch(/^DSP2\.[a-f0-9]{8}\.[A-Za-z0-9_-]+$/);
   });
 
   it('rejects a code with an altered checksum', () => {
@@ -185,3 +185,25 @@ describe('portable progress encoding and QR transfer', () => {
     expect(decodeProgress(assembled!)).toEqual(expect.objectContaining({ formatVersion: 1 }));
   });
 });
+
+ it('imports legacy DSP1 snapshots without changing their state', () => {
+   const snapshot = portable();
+   const body = base64Url(zlibSync(strToU8(JSON.stringify(snapshot))));
+   expect(decodeProgress(`DSP1.${checksum(body)}.${body}`)).toEqual(snapshot);
+ });
+ it('uses one direct QR for compact progress and validates it on collection', () => {
+   const code = encodeProgress(portable());
+   expect(splitIntoQrFrames(code)).toHaveLength(1);
+   expect(new QrCollector().add(splitIntoQrFrames(code)[0]).code).toBe(code);
+   expect(new QrCollector().add(code).code).toBe(code);
+ });
+
+ it('preserves every card number including fractional timestamps exactly', () => {
+   const snapshot = portable();
+   const s = stateFor(snapshot, 'constant', NOW);
+   s.card.stability = 0.12345678901234567;
+   s.card.difficulty = 4.987654321098765;
+   s.card.due = NOW + 0.25;
+   s.card.last_review = NOW - 123.75;
+   expect(decodeProgress(encodeProgress(snapshot))).toEqual(snapshot);
+ });

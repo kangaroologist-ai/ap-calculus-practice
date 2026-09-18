@@ -1,3 +1,5 @@
+import { questionFingerprint } from "./question-identity";
+import { packProgress, unpackProgress } from "./compact-progress";
 import { strToU8, strFromU8, zlibSync, Unzlib } from "fflate";
 import { SKILLS, CURRICULUM_VERSION } from "./catalog";
 import {
@@ -12,8 +14,16 @@ export function makePortableProgress(
   p: Progress,
   now = Date.now(),
 ): PortableProgress {
+  const copy = structuredClone(p);
+  for (const skill of Object.values(copy.skills)) {
+    skill.recent = skill.recent
+      .slice(-2)
+      .map((e) => ({ ...e, q: questionFingerprint(e.q) }));
+  }
+  copy.recentQuestionSignatures =
+    copy.recentQuestionSignatures.map(questionFingerprint);
   return {
-    ...structuredClone(p),
+    ...copy,
     streak: p.streak ?? 0,
     practiceDays: { ...p.practiceDays },
     exportedAt: now,
@@ -161,18 +171,20 @@ export function checksum(text: string): string {
 }
 export function encodeProgress(p: PortableProgress): string {
   validateSnapshot(p);
-  const body = base64(zlibSync(strToU8(JSON.stringify(p))));
-  const result = `DSP1.${checksum(body)}.${body}`;
+  const body = base64(
+    zlibSync(strToU8(JSON.stringify(packProgress(p))), { level: 9 }),
+  );
+  const result = `DSP2.${checksum(body)}.${body}`;
   if (result.length > 131072) throw Error("Progress is too large to export.");
   return result;
 }
 export function decodeProgress(code: string): PortableProgress {
   const text = code.trim();
   if (text.length > 131072) throw Error("The progress code is too large.");
-  const m = /^DSP1\.([a-f0-9]{8})\.([A-Za-z0-9_-]+)$/.exec(text);
-  if (!m || checksum(m[2]) !== m[1])
+  const m = /^DSP([12])\.([a-f0-9]{8})\.([A-Za-z0-9_-]+)$/.exec(text);
+  if (!m || checksum(m[3]) !== m[2])
     throw Error("This code is incomplete or damaged. Copy it again.");
-  const input = bytes(m[2]);
+  const input = bytes(m[3]);
   let size = 0;
   const chunks: Uint8Array[] = [];
   const z = new Unzlib((chunk) => {
@@ -189,9 +201,66 @@ export function decodeProgress(code: string): PortableProgress {
     out.set(c, offset);
     offset += c.length;
   }
-  return validateSnapshot(JSON.parse(strFromU8(out)));
+  const data = JSON.parse(strFromU8(out));
+  return validateSnapshot(m[1] === "2" ? unpackProgress(data) : data);
+}
+// Base45 uses QR's denser alphanumeric mode; the copyable code stays Base64URL.
+const QR_ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:";
+function qrEncode(input: Uint8Array): string {
+  let result = "";
+  for (let i = 0; i < input.length; i += 2) {
+    let n = i + 1 < input.length ? input[i] * 256 + input[i + 1] : input[i];
+    result += QR_ALPHABET[n % 45];
+    n = Math.floor(n / 45);
+    result += QR_ALPHABET[n % 45];
+    if (i + 1 < input.length) result += QR_ALPHABET[Math.floor(n / 45)];
+  }
+  return result;
+}
+function qrDecode(text: string): Uint8Array {
+  if (text.length > 4200 || text.length % 3 === 1)
+    throw Error("Invalid QR payload.");
+  const output: number[] = [];
+  for (let i = 0; i < text.length; i += 3) {
+    const digits = [...text.slice(i, i + 3)].map((c) => QR_ALPHABET.indexOf(c));
+    if (digits.some((n) => n < 0)) throw Error("Invalid QR characters.");
+    const n = digits[0] + digits[1] * 45 + (digits[2] ?? 0) * 2025;
+    if (n > (digits.length === 3 ? 65535 : 255))
+      throw Error("Invalid QR value.");
+    if (digits.length === 3) output.push(Math.floor(n / 256));
+    output.push(n % 256);
+  }
+  return Uint8Array.from(output);
+}
+const QR_PAGE = "https://ap-calculus-practice.pages.dev/";
+function qrLink(payload: string): string {
+  return `${QR_PAGE}#progress=${encodeURIComponent(payload)}`;
+}
+function linkPayload(frame: string): string {
+  if (!/^https?:\/\//.test(frame)) return frame;
+  if (frame.length > 16384) throw Error("Progress link is too large.");
+  const url = new URL(frame);
+  if (!url.hash.startsWith("#progress="))
+    throw Error("This link has no progress.");
+  return decodeURIComponent(url.hash.slice(10));
+}
+export function qrErrorCorrection(frame: string): "M" | "L" {
+  const payload = linkPayload(frame);
+  if (payload.startsWith("DSA2.")) return frame.length > 3150 ? "L" : "M";
+  return frame.length > 2250 ? "L" : "M";
 }
 export function splitIntoQrFrames(code: string): string[] {
+  const direct = qrLink(code);
+  if (direct.length <= 2250) return [direct];
+  const match = /^DSP2\.([a-f0-9]{8})\.([A-Za-z0-9_-]+)$/.exec(code);
+  if (match) {
+    const dense = qrLink(
+      `DSA2.${match[1].toUpperCase()}.${qrEncode(bytes(match[2]))}`,
+    );
+    // The URL prefix uses byte mode; its uppercase escaped payload uses the
+    // denser alphanumeric mode. Leave margin below version 40-L capacity.
+    if (dense.length <= 4000) return [dense];
+  }
   const id = checksum(code),
     parts = code.match(/.{1,700}/g) ?? [];
   return parts.map(
@@ -204,11 +273,28 @@ export class QrCollector {
   private total = 0;
   private parts = new Map<number, string>();
   add(frame: string): { received: number; total: number; code?: string } {
+    frame = linkPayload(frame);
+    if (frame.startsWith("DSA2.")) {
+      const match = /^DSA2\.([A-F0-9]{8})\.([\s\S]+)$/.exec(frame);
+      if (!match) throw Error("Invalid QR payload.");
+      frame = `DSP2.${match[1].toLowerCase()}.${base64(qrDecode(match[2]))}`;
+    }
+    if (frame.startsWith("DSP")) {
+      decodeProgress(frame);
+      const id = checksum(frame);
+      if (this.id && this.id !== id)
+        throw Error("These QR codes belong to different snapshots.");
+      this.id = id;
+      this.total = 1;
+      this.parts.set(1, frame);
+      return { received: 1, total: 1, code: frame };
+    }
     const m =
       /^DSQ1\.([a-f0-9]{8})\.(\d+)\.(\d+)\.([a-f0-9]{8})\.(.{1,700})$/.exec(
         frame,
       );
-    if (!m) throw Error("This is not a Derivative Studio progress QR code.");
+    if (!m)
+      throw Error("This is not an AP Calculus Practice progress QR code.");
     const [, id, indexText, totalText, hash, body] = m,
       index = Number(indexText),
       total = Number(totalText);
