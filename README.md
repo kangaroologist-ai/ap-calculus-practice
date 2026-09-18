@@ -1,4 +1,4 @@
-# Derivative Studio
+# AP Calculus Practice
 
 无账号的 AP 求导自适应练习网页。电脑与手机均可使用，学习状态只存在浏览器本机，支持进度代码／二维码迁移。
 
@@ -26,14 +26,14 @@ npm run preview
 
 - `initialUnlockedLevel`：新用户初始开放到哪一级，1–6；不是学习上限。默认 1。
 - `disabledFamilies`：禁用技能 ID 列表，ID 见 `src/catalog.ts`。
-- `sessionLength`：每次练习题数，默认 12。
+- `sessionLength`：旧配置兼容字段，当前连续练习不再使用它限制题数。
 - `revision`：修改配置后更新此标签。
 
 配置在新练习开始时重新获取。当前练习使用开始时的快照。静态站点更改配置后重新构建部署。
 
 ## 学生操作
 
-按 Start practicing 开始。输入公式后点击 Check answer 或按 Enter，失焦不会判分。接受合理的未化简等价答案。Need a hint? 依次显示规则、结构、完整解析。查看教学帮助会作为一次非独立完成记录；输入指南不影响学习记录。
+按 Start practicing 开始，焦点进入答题框。输入公式后点击 Check answer 或按 Enter，失焦不会判分。答对后焦点移到 Next question，再按 Enter 立即继续；不操作则倒计时 3 秒自动继续。答错或输入无效时焦点回到答题框。下一题自动聚焦，手机数学键盘保持展开。打开帮助／迁移窗口或切到后台会取消当前倒计时。接受合理的未化简等价答案。Need a hint? 依次显示规则、结构、完整解析。查看教学帮助会作为一次非独立完成记录；输入指南不影响学习记录。
 
 手机可打开 Math keyboard 输入分式、根式、指数和函数。所有角度均为弧度；`ln` 是自然对数，`log` 为常用对数。答案只输入表达式，不写 `y=`。
 
@@ -56,11 +56,11 @@ npm run preview
 
 - 首次独立正确：Good；明确错误或首次查看教学帮助：Again。
 - 每道题最多更新一次；原题重试不重复更新。
-- 未到期的额外练习只更新学习证据，不提前推进 FSRS。
+- 未到期的额外练习只更新学习证据，不提前推进 FSRS。Ready 且未到期的技能不作为兜底练习；新技能按课程顺序安排。到期复习仍按 FSRS 保留，推进不等于永久掌握。
 - 语法无效、无法判断与跳过不会作为错误记分。
-- 最近五道不同题中至少四道首次独立答对，且覆盖两模板，才可 Ready。
+- 最近两道不同题首次无提示答对，且覆盖两种结构，即可 Ready 并推进后续技能。生成器自动交替两种结构。
 - 本级所有启用技能 Ready 且没有未解决补弱项，自动解锁下一级。解锁不会因遗忘倒退。
-- 发生新错误立即补弱；至少一道新的同技能独立成功，且仍满足 Ready 条件，才解除补弱。
+- 发生新错误立即补弱；错误后两道新题首次无提示答对、覆盖两结构后解除补弱。
 - 尽量隔两道其他技能题再补弱。若所有可练技能都在等待，结束这次练习，等 FSRS 到期再继续，不强迫无限刷题。
 
 FSRS 目标保持率不是经过校准的数学掌握概率。随机变式的学习效果仍需真实课堂观察。
@@ -105,8 +105,25 @@ npm run test:e2e
 ```sh
 npm run build
 npx wrangler login
-npx wrangler pages project create ap-derivative-practice --production-branch main
-npx wrangler pages deploy dist --project-name ap-derivative-practice --branch main
+npx wrangler pages project create ap-calculus-practice --production-branch main --force
+npx wrangler pages deploy dist --project-name ap-calculus-practice --branch main
 ```
 
 若 Pages 项目已存在，跳过 create。GitHub 私有仓库用于源码和 CI；当前使用 CLI 直接上传，提交代码不会自动触发生产部署。后续需要自动部署可在 Cloudflare 连接该 GitHub 仓库。
+
+## 项目改名与旧进度
+
+项目名为 `ap-calculus-practice`，线上地址 <https://ap-calculus-practice.pages.dev/>；当前课程为求导，后续可扩展积分。
+
+旧站 <https://ap-derivative-practice.pages.dev/> 保留进度导出入口。不同域名的 IndexedDB 相互隔离，请在旧站用 Move progress 导出，再到新站导入。旧便携快照及完整 FSRS 状态仍兼容；不重置学习记录。内部数据库名保留 `derivative-studio`，避免同域升级造成记录丢失。
+
+题型对照表：<https://ap-calculus-practice.pages.dev/skill-examples.html>，每技能两道真实生成示例与答案。
+
+## 连对与今日题数
+
+题头显示 `in a row` 与 `practiced today`，不再显示 Level / 第几题或固定题数进度条。练习连续进行，直到当前没有可学新技能或到期复习；此时显示 All caught up，避免重复刷已经通过且尚未到期的题。
+
+- 连对：每题首次无提示正确加一；首次错误、教学提示或未作答跳过会中断。重试正确不补回连对，语法无效／无法判定不改变。
+- 今日题数：按设备本地日历日期，每题首次有效判分或教学提示计一次；重试与跳过不重复加数。保存最近 31 个日历日期的计数，换时区后按新设备当前日期显示。
+- 两项计数均随进度快照导出；旧快照没有这些字段时按零处理。
+- 5 连对播放一次轻量动画，10 连对及之后每次独立正确播放庆祝动画；遵循系统减少动态效果设置。

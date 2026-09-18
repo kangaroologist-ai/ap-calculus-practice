@@ -206,7 +206,7 @@ test.describe('Derivative Studio browser flows', () => {
     await screenshot(page, 'constant-01-welcome');
 
     await page.getByRole('button', { name: /Start practicing/ }).click();
-    await expect(page.locator('.skill-name')).toHaveText('Constants');
+    await expect.poll(async () => (await readStoredState(page)).session?.current?.question.primarySkill).toBe('constant');
     const field = page.locator('math-field').first();
     await expect(field).toHaveAttribute('aria-label', "f'(x)");
     await setMathfield(field, '0');
@@ -340,8 +340,9 @@ for (const item of levelCases) {
   test(`level ${item.level} ${item.label} accepts its answer fields`, async ({ page }) => {
     await openApp(page, onlySkill(item.skill, item.level));
     await page.getByRole('button', { name: /Start practicing/ }).click();
-    await expect(page.locator('.skill-name')).toHaveText(item.label);
-    await expect(page.locator('.card-top .tag')).toContainText(`LEVEL ${item.level}`);
+    await expect.poll(async () => (await readStoredState(page)).session?.current?.question.primarySkill).toBe(item.skill);
+    await expect(page.locator('#streak')).toContainText('in a row');
+    await expect(page.locator('.session-track')).toHaveCount(0);
 
     const fields = page.locator('math-field');
     await expect(fields).toHaveCount(item.values.length);
@@ -364,7 +365,7 @@ for (const item of levelCases) {
 test('mobile vector layout has no horizontal clipping', async ({ page }) => {
   await openApp(page, onlySkill('vector', 6), { width: 390, height: 844 });
   await page.getByRole('button', { name: /Start practicing/ }).click();
-  await expect(page.locator('.skill-name')).toHaveText('Vector derivatives');
+  await expect.poll(async () => (await readStoredState(page)).session?.current?.question.primarySkill).toBe('vector');
   await setMathfield(page.locator('math-field').nth(0), 't');
   await setMathfield(page.locator('math-field').nth(1), 'cos(t)');
   await page.locator('.question-body h2').click();
@@ -502,7 +503,7 @@ test('delayed start config keeps global actions disabled until session starts', 
   await expect(page.locator('#restore')).toBeDisabled();
   await expect(page.locator('#reset')).toBeDisabled();
   releaseStart?.();
-  await expect(page.locator('.skill-name')).toHaveText('Constants');
+  await expect.poll(async () => (await readStoredState(page)).session?.current?.question.primarySkill).toBe('constant');
   await expect(page.locator('#transfer')).toBeEnabled();
 });
 
@@ -559,7 +560,7 @@ test('Level 2 remediation round trip preserves FSRS and due across contexts', as
     await desktop.clock.install({ time: fixedNow });
     await openApp(desktop, config, undefined, seeded);
     await desktop.getByRole('button', { name: /Start practicing/ }).click();
-    await expect(desktop.locator('.skill-name')).toHaveText('Constants');
+    await expect.poll(async () => (await readStoredState(desktop)).session?.current?.question.primarySkill).toBe('constant');
     await setMathfield(desktop.locator('math-field').first(), '0');
     await desktop.locator('.question-body h2').click();
     await desktop.getByRole('button', { name: 'Check answer' }).click();
@@ -568,7 +569,7 @@ test('Level 2 remediation round trip preserves FSRS and due across contexts', as
     expect(unlocked.unlockedLevel).toBe(2);
 
     await desktop.locator('#next').click();
-    await expect(desktop.locator('.skill-name')).toHaveText('Exponential functions');
+    await expect.poll(async () => (await readStoredState(desktop)).session?.current?.question.primarySkill).toBe('exp');
     await setMathfield(desktop.locator('math-field').first(), '0');
     await desktop.locator('.question-body h2').click();
     await desktop.getByRole('button', { name: 'Check answer' }).click();
@@ -613,11 +614,11 @@ test('Level 2 remediation round trip preserves FSRS and due across contexts', as
     const advancedNow = await mobile.evaluate(() => Date.now());
     expect(advancedNow).toBeGreaterThan(relearningSkill.card.due);
     await mobile.getByRole('button', { name: /Start practicing/ }).click();
-    await expect(mobile.locator('.skill-name')).toHaveText('Logarithmic functions');
+    await expect.poll(async () => (await readStoredState(mobile)).session?.current?.question.primarySkill).toBe('log');
     await mobile.locator('#next').click();
-    await expect(mobile.locator('.skill-name')).toHaveText('Logarithmic functions');
+    await expect.poll(async () => (await readStoredState(mobile)).session?.current?.question.primarySkill).toBe('log');
     await mobile.locator('#next').click();
-    await expect(mobile.locator('.skill-name')).toHaveText('Exponential functions');
+    await expect.poll(async () => (await readStoredState(mobile)).session?.current?.question.primarySkill).toBe('exp');
 
     // Read the actual question persisted by the UI so this orchestration test
     // remains independent of chooser seed details. Mathematical equivalence
@@ -629,7 +630,18 @@ test('Level 2 remediation round trip preserves FSRS and due across contexts', as
     await mobile.locator('.question-body h2').click();
     await mobile.getByRole('button', { name: 'Check answer' }).click();
     await expect(mobile.locator('#feedback')).toContainText('Correct');
+    const firstRecovery = await readStoredProgress(mobile);
+    expect(firstRecovery.skills.exp.needsRemediation).toBe(true);
+    const cardAfterDueReview = structuredClone(firstRecovery.skills.exp.card);
+    await mobile.locator('#next').click();
+    await expect.poll(async () => (await readStoredState(mobile)).session?.current?.question.primarySkill).toBe('exp');
+    await expect.poll(async () => (await readStoredState(mobile)).session?.current?.question.signature).not.toBe(retryState.session!.current!.question.signature);
+    const secondRetryState = await readStoredState(mobile);
+    await setMathfield(mobile.locator('math-field').first(), latex(secondRetryState.session!.current!.question.answers[0]));
+    await mobile.getByRole('button', { name: 'Check answer' }).click();
+    await expect(mobile.locator('#feedback')).toContainText('Correct');
     const recovered = await readStoredProgress(mobile);
+    expect(recovered.skills.exp.card).toEqual(cardAfterDueReview);
     expect(recovered.skills.exp.needsRemediation).toBe(false);
     expect(recovered.skills.exp.otherSinceFailure).toBe(2);
     expect(recovered.skills.exp.recent.at(-1)?.correct).toBe(true);

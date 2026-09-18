@@ -2,6 +2,7 @@ import { strToU8, strFromU8, zlibSync, Unzlib } from "fflate";
 import { SKILLS, CURRICULUM_VERSION } from "./catalog";
 import {
   PARAMETERS,
+  localPracticeDay,
   SCHEDULER_VERSION,
   ALGORITHM_VERSION,
   type Progress,
@@ -11,7 +12,12 @@ export function makePortableProgress(
   p: Progress,
   now = Date.now(),
 ): PortableProgress {
-  return { ...structuredClone(p), exportedAt: now };
+  return {
+    ...structuredClone(p),
+    streak: p.streak ?? 0,
+    practiceDays: { ...p.practiceDays },
+    exportedAt: now,
+  };
 }
 const finite = (v: unknown, min = 0, max = 1e15) =>
   typeof v === "number" && Number.isFinite(v) && v >= min && v <= max;
@@ -41,6 +47,29 @@ export function validateSnapshot(v: unknown): PortableProgress {
     Array.isArray(p.skills)
   )
     throw Error("Invalid progress data.");
+  if (p.streak !== undefined && !integer(p.streak))
+    throw Error("Invalid streak.");
+  if (p.practiceDays !== undefined) {
+    if (
+      !p.practiceDays ||
+      typeof p.practiceDays !== "object" ||
+      Array.isArray(p.practiceDays) ||
+      Object.keys(p.practiceDays).length > 31
+    )
+      throw Error("Invalid daily practice counts.");
+    const latestLocalDay = new Date();
+    latestLocalDay.setDate(latestLocalDay.getDate() + 2);
+    for (const [day, count] of Object.entries(p.practiceDays)) {
+      if (
+        !/^\d{4}-\d{2}-\d{2}$/.test(day) ||
+        !Number.isFinite(Date.parse(day)) ||
+        new Date(day).toISOString().slice(0, 10) !== day ||
+        day > localPracticeDay(latestLocalDay.getTime()) ||
+        !integer(count)
+      )
+        throw Error("Invalid daily practice counts.");
+    }
+  }
   if (Object.keys(p.skills).length > SKILLS.length)
     throw Error("Too many skills.");
   for (const [id, s] of Object.entries(p.skills)) {

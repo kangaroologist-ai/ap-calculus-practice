@@ -1087,3 +1087,107 @@ footer > div {
     box-shadow: 0 -4px 16px #00000008;
   }
 }
+
+.auto-next {
+  margin: 12px 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+.auto-next > div {
+  height: 3px;
+  margin-top: 6px;
+  background: var(--line);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.auto-next i {
+  display: block;
+  height: 100%;
+  width: 100%;
+  background: var(--accent, #0066cc);
+}
+.auto-next[hidden] {
+  display: none;
+}
+
+.practice-status {
+  gap: 16px;
+}
+.streak {
+  position: relative;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 7px;
+  color: var(--ink);
+  font-size: 14px;
+}
+.streak strong {
+  font-size: 24px;
+  font-variant-numeric: tabular-nums;
+}
+.answer-equation {
+  display: block;
+  margin-bottom: 12px;
+  font-size: 25px;
+  color: var(--ink);
+}
+.answer-equation .ML__mathlive {
+  font-size: 1em;
+}
+.streak.milestone,
+.streak.celebrate {
+  animation: streak-pulse 650ms ease-out;
+}
+.sparks {
+  position: absolute;
+  left: 12px;
+  top: 14px;
+  pointer-events: none;
+}
+.sparks i {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  background: #007aff;
+  border-radius: 2px;
+  animation: streak-spark 800ms ease-out forwards;
+  transform: rotate(var(--angle));
+}
+.sparks i:nth-child(even) {
+  background: #e8a938;
+}
+@keyframes streak-pulse {
+  40% {
+    transform: scale(1.12);
+    color: #007aff;
+  }
+}
+@keyframes streak-spark {
+  from {
+    opacity: 1;
+    transform: rotate(var(--angle)) translateX(5px);
+  }
+  to {
+    opacity: 0;
+    transform: rotate(var(--angle)) translateX(46px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .streak.milestone,
+  .streak.celebrate,
+  .sparks i {
+    animation: none;
+  }
+  .sparks {
+    display: none;
+  }
+}
+@media (max-width: 430px) {
+  .practice-status {
+    padding: 16px 20px;
+    gap: 10px;
+  }
+  #today-count {
+    font-size: 12px;
+  }
+}

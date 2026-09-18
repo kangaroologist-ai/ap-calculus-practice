@@ -44,6 +44,8 @@ export interface Progress {
   fsrsAlgorithmVersion: string;
   fsrsParameters: FSRSParameters;
   unlockedLevel: number;
+  streak?: number;
+  practiceDays?: Record<string, number>;
   skills: Record<string, SkillState>;
   pendingDiagnostics: string[];
   recentQuestionSignatures: string[];
@@ -96,6 +98,8 @@ export function freshProgress(config: Config, now = Date.now()): Progress {
     fsrsAlgorithmVersion: ALGORITHM_VERSION,
     fsrsParameters: structuredClone(PARAMETERS),
     unlockedLevel: config.initialUnlockedLevel,
+    streak: 0,
+    practiceDays: {},
     skills: {},
     pendingDiagnostics: [],
     recentQuestionSignatures: [],
@@ -115,14 +119,17 @@ export function stateFor(p: Progress, id: string, now: number): SkillState {
     lastSeen: 0,
   });
 }
-export function isReady(s?: SkillState): boolean {
+function hasAdvanceEvidence(s: SkillState): boolean {
+  const lastTwo = s.recent.slice(-2);
   return (
-    !!s &&
-    !s.needsRemediation &&
-    s.recent.length === 5 &&
-    s.recent.filter((x) => x.correct).length >= 4 &&
-    new Set(s.recent.map((x) => x.template)).size >= 2
+    lastTwo.length === 2 &&
+    lastTwo.every((entry) => entry.correct) &&
+    new Set(lastTwo.map((entry) => entry.q)).size === 2 &&
+    new Set(lastTwo.map((entry) => entry.template)).size === 2
   );
+}
+export function isReady(s?: SkillState): boolean {
+  return !!s && !s.needsRemediation && hasAdvanceEvidence(s);
 }
 export function unlock(p: Progress, c: Config) {
   p.unlockedLevel = Math.max(p.unlockedLevel, c.initialUnlockedLevel);
@@ -133,6 +140,13 @@ export function unlock(p: Progress, c: Config) {
     if (!enabled.every((s) => isReady(p.skills[s.id]))) break;
     p.unlockedLevel++;
   }
+}
+export function localPracticeDay(now = Date.now()): string {
+  const d = new Date(now);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+export function todayCount(p: Progress, now = Date.now()): number {
+  return p.practiceDays?.[localPracticeDay(now)] ?? 0;
 }
 export function recordOutcome(
   p: Progress,
@@ -147,6 +161,19 @@ export function recordOutcome(
     s = stateFor(p, q.primarySkill, now),
     good = verdict.status === "correct" && current.hintsUsed === 0;
   current.recorded = true;
+  p.streak = good ? Math.min((p.streak ?? 0) + 1, 1e9) : 0;
+  const day = localPracticeDay(now);
+  const days = {
+    ...p.practiceDays,
+    [day]: Math.min(todayCount(p, now) + 1, 1e9),
+  };
+  p.practiceDays = Object.fromEntries([
+    ...Object.entries(days)
+      .filter(([key]) => key !== day)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .slice(-30),
+    [day, days[day]],
+  ]);
   // A question contributes at most one event, including when help precedes submission.
   if (now >= s.card.due) {
     s.card = storeCard(
@@ -164,13 +191,7 @@ export function recordOutcome(
   s.lastSeen = ++p.sequence;
   if (good) {
     s.failureStreak = 0;
-    s.needsRemediation =
-      s.needsRemediation &&
-      !(
-        s.recent.length === 5 &&
-        s.recent.filter((x) => x.correct).length >= 4 &&
-        new Set(s.recent.map((x) => x.template)).size >= 2
-      );
+    s.needsRemediation = s.needsRemediation && !hasAdvanceEvidence(s);
     s.extraPracticeGiven = false;
   } else {
     s.needsRemediation = true;
@@ -259,7 +280,7 @@ export function chooseNext(
     }
   }
   if (!id) {
-    const eligible = sorted.filter((s) =>
+    const eligible = available.filter((s) =>
       s.prerequisites.every(
         (k) => c.disabledFamilies.includes(k) || isReady(p.skills[k]),
       ),
@@ -272,8 +293,6 @@ export function chooseNext(
     );
     const selected =
       weak ??
-      eligible.find((s) => !p.skills[s.id]?.needsRemediation) ??
-      sorted.find((s) => !p.skills[s.id]?.needsRemediation) ??
       sorted.find((s) => {
         const t = p.skills[s.id];
         return (
@@ -311,8 +330,10 @@ export function finishQuestion(state: AppState, skip = false) {
   if (!ses || !cur || cur.closed) return;
   cur.closed = true;
   ses.completed++;
-  if (skip && !cur.recorded) ses.skipped++;
-  else if (
+  if (skip && !cur.recorded) {
+    ses.skipped++;
+    state.progress.streak = 0;
+  } else if (
     cur.verdict?.status === "correct" &&
     state.progress.skills[cur.question.primarySkill]?.recent.at(-1)?.correct
   )
@@ -323,5 +344,5 @@ export function finishQuestion(state: AppState, skip = false) {
       s.otherSinceFailure++;
   state.progress.sequence++;
   state.progress.updatedAt = Date.now();
-  if (ses.completed >= ses.config.sessionLength) ses.finished = true;
+  // Continuous practice ends only when no eligible work is currently available.
 }

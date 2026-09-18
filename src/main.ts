@@ -1,7 +1,7 @@
 import { MathfieldElement, convertLatexToMarkup } from "mathlive";
 import QRCode from "qrcode";
 import jsQR from "jsqr";
-import { SKILLS, skillById, validateConfig } from "./catalog";
+import { SKILLS, validateConfig } from "./catalog";
 import type { Config, Verdict } from "./types";
 import {
   freshProgress,
@@ -10,6 +10,7 @@ import {
   recordHint,
   finishQuestion,
   isReady,
+  todayCount,
   type AppState,
 } from "./progress";
 import {
@@ -69,6 +70,69 @@ window.mathVirtualKeyboard.addEventListener("geometrychange", () => {
   );
   document.body.classList.toggle("keyboard-open", visible);
   if (visible) requestAnimationFrame(keepAnswerVisible);
+});
+let autoNextTimer: ReturnType<typeof setInterval> | undefined;
+function cancelAutoNext() {
+  clearInterval(autoNextTimer);
+  autoNextTimer = undefined;
+  const panel = document.getElementById("auto-next");
+  if (panel) panel.hidden = true;
+}
+function focusAnswer(keepKeyboard = false, retry = false) {
+  const field =
+    retry && activeMathfield?.isConnected
+      ? activeMathfield
+      : document.querySelector<MathfieldElement>("math-field");
+  if (state.session?.finished || !field) {
+    window.mathVirtualKeyboard.hide();
+    document.getElementById("again")?.focus();
+    return;
+  }
+  activeMathfield = field;
+  field.focus();
+  if (keepKeyboard) window.mathVirtualKeyboard.show();
+  requestAnimationFrame(keepAnswerVisible);
+}
+function startAutoNext() {
+  cancelAutoNext();
+  const current = state.session?.current;
+  if (current?.verdict?.status !== "correct" || document.hidden) return;
+  const panel = document.getElementById("auto-next");
+  if (!panel) return;
+  panel.hidden = false;
+  const started = performance.now();
+  const tick = () => {
+    if (
+      state.session?.current !== current ||
+      document.querySelector("dialog[open]") ||
+      document.hidden
+    ) {
+      cancelAutoNext();
+      return;
+    }
+    const remaining = Math.max(0, 3000 - (performance.now() - started));
+    panel.querySelector("span")!.textContent =
+      `Next in ${Math.ceil(remaining / 1000)}s`;
+    (panel.querySelector("i") as HTMLElement).style.width =
+      `${remaining / 30}%`;
+    if (remaining === 0) {
+      cancelAutoNext();
+      void next();
+    }
+  };
+  tick();
+  autoNextTimer = setInterval(tick, 50);
+}
+document.addEventListener(
+  "keydown",
+  (event) => {
+    if (event.key === "Enter" && event.repeat) event.preventDefault();
+  },
+  true,
+);
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) cancelAutoNext();
+  else if (state) updateActivity();
 });
 const esc = (s: unknown) =>
   String(s).replace(
@@ -136,11 +200,12 @@ function readyCount() {
   ).length;
 }
 function render() {
+  cancelAutoNext();
   const p = state.progress,
     ses = state.session,
     cur = ses?.current;
-  app.innerHTML = `<header class="site-header"><a class="brand" href="/">${icon}<span>Derivative<span class="brand-light"> Studio</span></span></a><span class="private-label"><span class="status-dot"></span> On your device</span>${button("transfer", "Move progress", "button subtle")}</header>
- <main><div id="notice" class="notice" role="status" ${temporary ? "" : "hidden"}>${temporary ? "Temporary session: export progress before leaving." : ""}</div>
+  app.innerHTML = `<header class="site-header"><a class="brand" href="/">${icon}<span>AP Calculus<span class="brand-light"> Practice</span></span></a><span class="private-label"><span class="status-dot"></span> On your device</span>${button("transfer", "Move progress", "button subtle")}</header>
+ <main>${location.hostname === "ap-derivative-practice.pages.dev" ? '<p class="notice">We’ve moved to <a href="https://ap-calculus-practice.pages.dev/">AP Calculus Practice</a>. Use Move progress to export here, then import at the new address.</p>' : ""}<div id="notice" class="notice" role="status" ${temporary ? "" : "hidden"}>${temporary ? "Temporary session: export progress before leaving." : ""}</div>
  <div class="workspace"><section class="practice-card" aria-label="Practice">${!ses ? welcome() : ses.finished ? summary() : questionView()}</section>
  <details class="journey"><summary class="progress-summary">Progress <span>Level ${p.unlockedLevel} · ${readyCount()} skills ready</span></summary><div class="aside-heading"><span class="eyebrow">YOUR LEARNING PATH</span><span class="count">${readyCount()} / ${SKILLS.filter((s) => !config.disabledFamilies.includes(s.id)).length}</span></div><div class="level-list">${Array.from({ length: 6 }, (_, i) => levelView(i + 1)).join("")}</div><details class="skills-details"><summary>Skill details & review dates</summary><div>${SKILLS.filter(
    (s) => s.level <= p.unlockedLevel && !config.disabledFamilies.includes(s.id),
@@ -172,17 +237,42 @@ function levelView(level: number) {
   return `<div class="level ${open ? "unlocked" : ""} ${state.session?.current?.question.level === level ? "active" : ""}"><div class="level-number">${open ? String(level).padStart(2, "0") : "⌑"}</div><div><strong>${["", "The foundations", "Essential functions", "Rules in combination", "Deeper compositions", "Beyond the first derivative", "Curves & coordinates"][level]}</strong><small>${!skills.length ? "Not included" : open ? `${ready} of ${skills.length} skills ready` : "Unlock as you learn"}</small></div>${open && skills.length && ready === skills.length ? '<span class="check">✓</span>' : ""}</div>`;
 }
 function welcome() {
-  return `<div class="card-top"><span class="tag">ADAPTIVE PRACTICE</span><span class="muted">${config.sessionLength} questions</span></div><div class="welcome"><div class="welcome-equation">${math("\\frac{d}{dx}\\left[\\sin(x^2)\\right]")}</div><h2>Differentiation</h2><p>Practice the rules. Review what needs work.</p>${button("start", 'Start practicing <span aria-hidden="true">→</span>', "button primary large")}<p class="fine">Your work is saved automatically in this browser.</p></div>`;
+  return `<div class="card-top"><span class="tag">ADAPTIVE PRACTICE</span><span class="muted">At your own pace</span></div><div class="welcome"><div class="welcome-equation">${math("\\frac{d}{dx}\\left[\\sin(x^2)\\right]")}</div><h2>Differentiation</h2><p>Practice the rules. Review what needs work.</p>${button("start", 'Start practicing <span aria-hidden="true">→</span>', "button primary large")}<p class="fine">Your work is saved automatically in this browser.</p></div>`;
 }
 function summary() {
   const s = state.session!;
-  return `<div class="card-top"><span class="tag">SESSION COMPLETE</span><span class="muted">${s.completed} questions</span></div><div class="welcome"><span class="summary-symbol">✓</span><h2>Session complete</h2><p>Your progress is saved. Review dates are under Progress.</p><div class="stats"><div><strong>${s.independent}</strong><span>Independent</span></div><div><strong>${s.assisted}</strong><span>With practice</span></div><div><strong>${s.skipped}</strong><span>Skipped</span></div></div>${button("again", "Start another session", "button primary large")}</div>`;
+  return `<div class="card-top"><span class="tag">ALL CAUGHT UP</span><span class="muted">${s.completed} questions</span></div><div class="welcome"><span class="summary-symbol">✓</span><h2>All caught up</h2><p>Your progress is saved. Review dates are under Progress.</p><div class="stats"><div><strong>${s.independent}</strong><span>Independent</span></div><div><strong>${s.assisted}</strong><span>With practice</span></div><div><strong>${s.skipped}</strong><span>Skipped</span></div></div>${button("again", "Start another session", "button primary large")}</div>`;
+}
+function answerLabel(label: string, index: number): string {
+  let tex = label;
+  if (label === "dy/dx") tex = "\\frac{dy}{dx}";
+  else if (label === "d²y/dx²") tex = "\\frac{d^2y}{dx^2}";
+  else if (label.includes("component")) tex = `r_{${index + 1}}'(t)`;
+  else tex = tex.replace("f⁻¹", "f^{-1}");
+  return convertLatexToMarkup(`${tex}=`);
+}
+function updateActivity(celebrate = false) {
+  const streak = state.progress.streak ?? 0;
+  const badge = document.getElementById("streak");
+  if (badge) {
+    badge.innerHTML = `<strong>${streak}</strong> in a row`;
+    badge.classList.remove("milestone", "celebrate");
+    if (celebrate && (streak === 5 || streak >= 10)) {
+      void badge.offsetWidth;
+      badge.classList.add(streak >= 10 ? "celebrate" : "milestone");
+      if (streak >= 10)
+        badge.innerHTML += `<span class="sparks" aria-hidden="true">${Array.from({ length: 8 }, (_, i) => `<i style="--angle:${i * 45}deg"></i>`).join("")}</span>`;
+    }
+  }
+  const daily = document.getElementById("today-count");
+  if (daily)
+    daily.textContent = `${todayCount(state.progress)} practiced today`;
 }
 function questionView() {
   const s = state.session!,
     c = s.current!,
     q = c.question;
-  return `<div class="card-top"><span class="tag">LEVEL ${q.level} · ${esc(c.reason.toUpperCase())}</span><span class="muted">${s.completed + 1} / ${s.config.sessionLength}</span></div><div class="session-track"><span style="width:${(100 * s.completed) / s.config.sessionLength}%"></span></div><div class="question-body"><p class="skill-name">${esc(skillById(q.family).label)}</p><h2>${esc(q.title)}</h2>${math(q.prompt)}<p class="domain">${esc(q.domainText)}</p><div id="answer-fields">${q.labels.map((label, i) => `<label class="answer-label" for="answer-${i}">${esc(label)}<math-field id="answer-${i}" aria-label="${esc(label)}"></math-field></label>`).join("")}</div><div class="input-caption"><span>Equivalent forms are welcome.</span>${button("keyboard", "⌨ Math keyboard", "text-button")}</div><div id="feedback" class="feedback" aria-live="polite" ${c.verdict ? "" : "hidden"}>${c.verdict ? feedback(c.verdict) : ""}</div><div class="actions">${button("submit", "Check answer", "button primary")}${button("hint", c.hintsUsed >= 3 ? "Solution shown" : c.hintsUsed === 2 ? "Show solution" : c.hintsUsed === 1 ? "Show next hint" : "Need a hint?", "button subtle")}${button("next", c.verdict?.status === "correct" || c.hintsUsed >= 3 ? "Next question →" : "Skip", "text-button next")}</div><div id="hints">${hintContent()}</div>${state.progress.skills[q.primarySkill]?.failureStreak >= 3 ? '<p class="notice">Let’s rebuild the idea. Review the rule, then try the prerequisite checks in your queue.</p>' : ""}</div>`;
+  return `<div class="card-top practice-status" aria-label="Practice activity"><span class="streak" id="streak" aria-live="polite"><strong>${state.progress.streak ?? 0}</strong> in a row</span><span id="today-count" class="muted">${todayCount(state.progress)} practiced today</span></div><div class="question-body"><h2>${esc(q.title)}</h2>${math(q.prompt)}${q.domainText.startsWith("Use radians.") ? "" : `<p class="domain">${esc(q.domainText)}</p>`}<div id="answer-fields">${q.labels.map((label, i) => `<label class="answer-label" for="answer-${i}"><span class="answer-equation">${answerLabel(label, i)}</span><math-field id="answer-${i}" aria-label="${esc(label)}"></math-field></label>`).join("")}</div><div class="input-caption"><span>Equivalent forms are welcome.</span>${button("keyboard", "⌨ Math keyboard", "text-button")}</div><div id="feedback" class="feedback" aria-live="polite" ${c.verdict ? "" : "hidden"}>${c.verdict ? feedback(c.verdict) : ""}</div><div id="auto-next" class="auto-next" hidden><span>Next in 3s</span><div><i></i></div></div><div class="actions">${button("submit", "Check answer", "button primary")}${button("hint", c.hintsUsed >= 3 ? "Solution shown" : c.hintsUsed === 2 ? "Show solution" : c.hintsUsed === 1 ? "Show next hint" : "Need a hint?", "button subtle")}${button("next", c.verdict?.status === "correct" || c.hintsUsed >= 3 ? "Next question →" : "Skip", "text-button next")}</div><div id="hints">${hintContent()}</div>${state.progress.skills[q.primarySkill]?.failureStreak >= 3 ? '<p class="notice">Let’s rebuild the idea. Review the rule, then try the prerequisite checks in your queue.</p>' : ""}</div>`;
 }
 function feedback(v: Verdict) {
   switch (v.status) {
@@ -209,6 +299,7 @@ function mountInputs() {
     mf.setAttribute("inputmode", "none");
     mf.value = c.draft[i] ?? "";
     mf.addEventListener("input", () => {
+      if (c.verdict?.status === "correct") cancelAutoNext();
       activeMathfield = mf;
       c.draft[i] = mf.value;
       scheduleSave();
@@ -216,10 +307,12 @@ function mountInputs() {
     mf.addEventListener("beforeinput", (e) => {
       if ((e as InputEvent).inputType === "insertLineBreak") {
         e.preventDefault();
-        void submit();
+        if (c.verdict?.status === "correct") void next();
+        else void submit();
       }
     });
     mf.addEventListener("focus", () => {
+      if (c.verdict?.status === "correct") cancelAutoNext();
       activeMathfield = mf;
       requestAnimationFrame(keepAnswerVisible);
       if (matchMedia("(pointer:coarse)").matches)
@@ -292,18 +385,20 @@ function mountInputs() {
       ],
     },
   ];
-  on("keyboard", () =>
-    window.mathVirtualKeyboard.visible
-      ? window.mathVirtualKeyboard.hide()
-      : window.mathVirtualKeyboard.show(),
-  );
+  on("keyboard", () => {
+    if (window.mathVirtualKeyboard.visible) window.mathVirtualKeyboard.hide();
+    else {
+      focusAnswer(false, true);
+      window.mathVirtualKeyboard.show();
+    }
+  });
   updateControls();
 }
 function updateControls() {
   const c = state.session?.current;
   document
     .querySelectorAll<MathfieldElement>("math-field")
-    .forEach((mf) => (mf.readOnly = busy || replacing));
+    .forEach((mf) => (mf.readonly = busy || replacing));
   const s = document.querySelector<HTMLButtonElement>("#submit");
   if (s) {
     s.disabled = busy || replacing || c?.verdict?.status === "correct";
@@ -326,6 +421,7 @@ function updateControls() {
 }
 async function startSession() {
   if (busy || replacing) return;
+  cancelAutoNext();
   busy = true;
   updateControls();
   try {
@@ -349,6 +445,7 @@ async function startSession() {
   } finally {
     busy = false;
     updateControls();
+    focusAnswer();
   }
 }
 
@@ -373,6 +470,7 @@ async function submit() {
   const s = state.session,
     c = s?.current;
   if (!s || !c || busy || replacing || c.verdict?.status === "correct") return;
+  const keepKeyboard = window.mathVirtualKeyboard.visible;
   const checkedState = state;
   busy = true;
   updateControls();
@@ -380,7 +478,8 @@ async function submit() {
     const v = await grader.check(c.question, [...c.draft]);
     if (state !== checkedState || state.session?.current !== c) return;
     c.verdict = v;
-    recordOutcome(state.progress, c, s.config, v);
+    const recorded = recordOutcome(state.progress, c, s.config, v);
+    updateActivity(recorded && v.status === "correct" && c.hintsUsed === 0);
     await persist();
     const f = document.getElementById("feedback")!;
     f.hidden = false;
@@ -391,16 +490,25 @@ async function submit() {
   } finally {
     busy = false;
     updateControls();
+    if (state === checkedState && state.session?.current === c) {
+      if (c.verdict?.status === "correct") {
+        document.getElementById("next")?.focus({ preventScroll: true });
+        if (keepKeyboard) window.mathVirtualKeyboard.show();
+        startAutoNext();
+      } else focusAnswer(keepKeyboard, true);
+    }
   }
 }
 async function hint() {
   const s = state.session!,
     c = s.current!;
   if (busy || replacing || c.hintsUsed >= 3) return;
+  cancelAutoNext();
   busy = true;
   updateControls();
   try {
     recordHint(state.progress, c, s.config);
+    updateActivity();
     await persist();
     document.getElementById("hints")!.innerHTML = hintContent();
     observeFormulas();
@@ -419,25 +527,29 @@ async function hint() {
   }
 }
 async function next() {
-  if (busy || replacing) return;
+  if (busy || replacing || !state.session?.current || state.session.finished)
+    return;
+  cancelAutoNext();
+  const keepKeyboard = window.mathVirtualKeyboard.visible;
   busy = true;
   updateControls();
   try {
-    window.mathVirtualKeyboard.hide();
     finishQuestion(state, true);
     if (!state.session!.finished) setNext();
     await persist();
     render();
     document
       .querySelector(".practice-card")
-      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+      ?.scrollIntoView({ behavior: "instant", block: "start" });
   } finally {
     busy = false;
     updateControls();
+    focusAnswer(keepKeyboard);
   }
 }
 
 function modal(title: string, body: string) {
+  cancelAutoNext();
   window.mathVirtualKeyboard.hide();
   modalCleanup();
   document.getElementById("modal-root")!.innerHTML =
@@ -678,7 +790,7 @@ function importView() {
 function showImportPreview(p: PortableProgress, id: string) {
   const existing = state.progress.updatedAt;
   document.getElementById("import-preview")!.innerHTML =
-    `<section class="hint-panel"><h3>Review this snapshot</h3><p>Exported: ${esc(new Date(p.exportedAt).toLocaleString())}</p><p>Unlocked through Level ${p.unlockedLevel} · ${Object.keys(p.skills).length} skills started</p>${p.updatedAt < existing ? '<p class="notice">This snapshot has older learning activity than this device. Importing will replace your current progress.</p>' : ""}<p>Your current progress will be saved as a local backup. The two histories will not be merged.</p>${button("confirm-import", "Replace with this progress", "button primary")}</section>`;
+    `<section class="hint-panel"><h3>Review this snapshot</h3><p>Exported: ${esc(new Date(p.exportedAt).toLocaleString())}</p><p>Unlocked through Level ${p.unlockedLevel} · ${Object.keys(p.skills).length} skills started</p><p>${p.streak ?? 0} in a row · ${todayCount(p)} practiced today</p>${p.updatedAt < existing ? '<p class="notice">This snapshot has older learning activity than this device. Importing will replace your current progress.</p>' : ""}<p>Your current progress will be saved as a local backup. The two histories will not be merged.</p>${button("confirm-import", "Replace with this progress", "button primary")}</section>`;
   on("confirm-import", async () => {
     if (replacing) return;
     replacing = true;

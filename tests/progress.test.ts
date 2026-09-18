@@ -326,6 +326,9 @@ describe('local progress and FSRS boundaries', () => {
     expect(isReady(s)).toBe(false);
 
     expect(recordOutcome(p, current(question('recovery-success', 'power', 1)), config(), correct, NOW)).toBe(true);
+    expect(s.needsRemediation).toBe(true);
+    expect(isReady(s)).toBe(false);
+    expect(recordOutcome(p, current(question('recovery-second', 'power', 0)), config(), correct, NOW + 1)).toBe(true);
     expect(s.needsRemediation).toBe(false);
     expect(isReady(s)).toBe(true);
   });
@@ -346,15 +349,42 @@ describe('local progress and FSRS boundaries', () => {
     expect(isReady(p.skills.power)).toBe(false);
 
     submitAtDue('recovery-two', 0);
-    submitAtDue('recovery-three', 1);
-    expect(p.skills.power.needsRemediation).toBe(true);
-    expect(isReady(p.skills.power)).toBe(false);
-
-    submitAtDue('recovery-four', 0);
-    expect(p.skills.power.recent).toHaveLength(5);
-    expect(p.skills.power.recent.filter((item) => item.correct)).toHaveLength(4);
+    expect(p.skills.power.recent).toHaveLength(3);
     expect(p.skills.power.needsRemediation).toBe(false);
     expect(isReady(p.skills.power)).toBe(true);
+  });
+
+  it('advances after two independent template variants without changing a not-due FSRS card', () => {
+    const p = freshProgress(config(), NOW);
+    recordOutcome(p, current(question('constant-first', 'constant', 0)), config(), correct, NOW);
+    expect(isReady(p.skills.constant)).toBe(false);
+    expect(chooseNext(p, config(), NOW + 1).question.primarySkill).toBe('constant');
+    const card = structuredClone(p.skills.constant.card);
+    recordOutcome(p, current(question('constant-second', 'constant', 1)), config(), correct, NOW + 2);
+    expect(isReady(p.skills.constant)).toBe(true);
+    expect(p.skills.constant.card).toEqual(card);
+    expect(chooseNext(p, config(), NOW + 3).question.primarySkill).toBe('power');
+  });
+
+  it('requires two distinct questions and two structures, not retries or repeated templates', () => {
+    const p = freshProgress(config(), NOW);
+    const s = stateFor(p, 'power', NOW);
+    s.recent = [{q:'a', template:0, correct:true}, {q:'b', template:0, correct:true}];
+    expect(isReady(s)).toBe(false);
+    s.recent[1].template = 1;
+    s.recent[1].q = 'a';
+    expect(isReady(s)).toBe(false);
+    s.recent[1].q = 'b';
+    expect(isReady(s)).toBe(true);
+  });
+
+  it('pauses rather than recycling Ready skills before due, but reviews them when due', () => {
+    const c = config({disabledFamilies: SKILLS.filter(s => s.id !== 'constant').map(s => s.id)});
+    const p = freshProgress(c, NOW);
+    recordOutcome(p, current(question('c1', 'constant', 0)), c, correct, NOW);
+    recordOutcome(p, current(question('c2', 'constant', 1)), c, correct, NOW + 1);
+    expect(() => chooseNext(p, c, NOW + 2)).toThrow('PRACTICE_PAUSE');
+    expect(chooseNext(p, c, p.skills.constant.card.due).reason).toBe('Spaced review');
   });
 
   it('round-trips stored Date fields as epoch milliseconds and revives them', () => {
