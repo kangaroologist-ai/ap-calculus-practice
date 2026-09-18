@@ -57,8 +57,8 @@ npm run test:e2e
 ## 发布前剩余 TODO
 
 - [x] 跨设备重学顺序流程、过期预览／异步扫码回归通过；手机键盘操作区与输入框可见性分别验证。
-- [ ] GitHub 推送及远端 CI 确认。
-- [ ] Cloudflare 重新登录后部署并检查线上构建。
+- [x] GitHub 推送完成；最新 main 提交已同步到远端。
+- [x] Cloudflare Pages 部署完成并通过线上 smoke test。
 - [ ] iPhone Safari 与 Android Chrome 真机输入、物理摄像头扫码。
 
 ## 当前测试结果
@@ -69,3 +69,4 @@ npm run test:e2e
 - 跨设备顺序场景使用受控测试夹具预置接近 Ready 的证据与 Review 卡，以缩短准备阶段；真实页面完成最后一题解锁、错误→Relearning、代码导出、独立手机浏览器 context 导入、虚拟时钟推进、同技能新题正确、再次迁回桌面。FSRS 卡、到期时间与技能证据逐字段比较。它不代表从零人工完成整套课程。
 - 二维码：多帧往返由本地图像→jsQR 集成测试验证；浏览器文件选择验证单帧图片导入。未验证物理摄像头多帧采集。
 - 生产构建页面：真实 Chromium 输入和判分成功；Worker、字体均来自本地站点，检查没有外部请求。
+- Cloudflare Pages：<https://ap-derivative-practice.pages.dev/>；本次生产部署预览为 <https://74bfd486.ap-derivative-practice.pages.dev/>。首页、配置、Worker、MathLive 字体和常数题判分均返回成功。
