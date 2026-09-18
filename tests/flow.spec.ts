@@ -166,6 +166,18 @@ test.describe('session transition flows', () => {
     await expect.poll(() => sessionCompleted(page)).toBe(2);
   });
 
+  test('immediate Enter grades the visible value before a delayed input event', async ({page}) => {
+    await openApp(page, flowConfig());
+    await page.getByRole('button', {name:/Start practicing/}).click();
+    const field = page.locator('math-field').first();
+    await expect(field).toBeFocused();
+    // Reproduce MathLive's visible-value update preceding draft notification.
+    await field.evaluate((element) => { (element as HTMLElement & {value:string}).value = '0'; });
+    await page.keyboard.press('Enter');
+    await expect(page.locator('#feedback')).toContainText('Correct');
+    await expect(page.locator('#next')).toBeFocused();
+  });
+
   test('the three-second countdown advances only once', async ({ page }) => {
     const config = flowConfig();
     await page.clock.install({ time: FIXED_NOW });

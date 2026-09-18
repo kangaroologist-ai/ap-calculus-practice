@@ -470,6 +470,12 @@ async function submit() {
   const s = state.session,
     c = s?.current;
   if (!s || !c || busy || replacing || c.verdict?.status === "correct") return;
+  // MathLive may deliver its input event after an immediate Enter key.
+  // Grade the visible value, rather than a potentially one-event-old draft.
+  c.draft = Array.from(
+    document.querySelectorAll<MathfieldElement>("math-field"),
+    (field) => field.value,
+  );
   const keepKeyboard = window.mathVirtualKeyboard.visible;
   const checkedState = state;
   busy = true;
