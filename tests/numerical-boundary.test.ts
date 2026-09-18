@@ -12,3 +12,12 @@ it("does not penalize precision/range limitations as domain errors", () => {
   expect(grade(q, ["\\frac{0}{10^{-40}}"]).status).toBe("inconclusive");
   expect(grade(q, ["\\frac{0}{0}"]).status).toBe("incorrect");
 });
+
+it("does not penalize rounding near an algebraic domain boundary", () => {
+  const q = generateQuestion("constant", "trig-sqrt", 0);
+  expect(grade(q, ["\\sqrt{1-\\sin^2(x)-\\cos^2(x)}"]).status).toBe(
+    "inconclusive",
+  );
+  expect(grade(q, ["0/(x-(x+10^{-80}))"]).status).toBe("inconclusive");
+  expect(grade(q, ["\\sqrt{-1}"]).status).toBe("incorrect");
+});

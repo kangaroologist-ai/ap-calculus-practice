@@ -41,6 +41,35 @@ let config: Config,
   saveTimer: ReturnType<typeof setTimeout> | undefined;
 let modalCleanup: () => void = () => {};
 const grader = new Grader();
+let activeMathfield: MathfieldElement | undefined;
+function keepAnswerVisible() {
+  if (
+    !window.mathVirtualKeyboard.visible ||
+    !matchMedia("(max-width: 700px)").matches
+  )
+    return;
+  const field = activeMathfield?.isConnected
+    ? activeMathfield
+    : document.querySelector<MathfieldElement>("math-field");
+  const actions = document.querySelector(".actions");
+  if (!field || !actions) return;
+  const bounds = field.getBoundingClientRect();
+  const bottom = actions.getBoundingClientRect().top - 16;
+  if (bounds.bottom > bottom)
+    window.scrollBy({ top: bounds.bottom - bottom, behavior: "instant" });
+  else if (bounds.top < 16)
+    window.scrollBy({ top: bounds.top - 16, behavior: "instant" });
+}
+window.mathVirtualKeyboard.addEventListener("geometrychange", () => {
+  const keyboard = window.mathVirtualKeyboard;
+  const visible = keyboard.visible && keyboard.boundingRect.height > 0;
+  document.documentElement.style.setProperty(
+    "--practice-keyboard-height",
+    `${visible ? keyboard.boundingRect.height : 0}px`,
+  );
+  document.body.classList.toggle("keyboard-open", visible);
+  if (visible) requestAnimationFrame(keepAnswerVisible);
+});
 const esc = (s: unknown) =>
   String(s).replace(
     /[&<>"']/g,
@@ -180,6 +209,7 @@ function mountInputs() {
     mf.setAttribute("inputmode", "none");
     mf.value = c.draft[i] ?? "";
     mf.addEventListener("input", () => {
+      activeMathfield = mf;
       c.draft[i] = mf.value;
       scheduleSave();
     });
@@ -190,6 +220,8 @@ function mountInputs() {
       }
     });
     mf.addEventListener("focus", () => {
+      activeMathfield = mf;
+      requestAnimationFrame(keepAnswerVisible);
       if (matchMedia("(pointer:coarse)").matches)
         window.mathVirtualKeyboard.show();
     });
@@ -222,7 +254,7 @@ function mountInputs() {
         [
           { label: "ln", insert: "\\ln(#0)", class: "small" },
           "e^{#0}",
-          "\\pi",
+          "[hide-keyboard]",
           "0",
           ".",
           "[left]",
@@ -256,7 +288,7 @@ function mountInputs() {
           { label: "arctan", insert: "\\arctan(#0)", class: "small", width: 2 },
           { latex: "\\sqrt[3]{x}", insert: "\\sqrt[3]{#0}", width: 2 },
         ],
-        ["[left]", "[right]", "[backspace]", "[hide-keyboard]"],
+        ["\\pi", "[left]", "[right]", "[backspace]", "[hide-keyboard]"],
       ],
     },
   ];
@@ -274,7 +306,7 @@ function updateControls() {
     .forEach((mf) => (mf.readOnly = busy || replacing));
   const s = document.querySelector<HTMLButtonElement>("#submit");
   if (s) {
-    s.disabled = busy || c?.verdict?.status === "correct";
+    s.disabled = busy || replacing || c?.verdict?.status === "correct";
     s.textContent = busy ? "Checking…" : "Check answer";
   }
   for (const id of [
@@ -340,11 +372,13 @@ function setNext() {
 async function submit() {
   const s = state.session,
     c = s?.current;
-  if (!s || !c || busy || c.verdict?.status === "correct") return;
+  if (!s || !c || busy || replacing || c.verdict?.status === "correct") return;
+  const checkedState = state;
   busy = true;
   updateControls();
   try {
     const v = await grader.check(c.question, [...c.draft]);
+    if (state !== checkedState || state.session?.current !== c) return;
     c.verdict = v;
     recordOutcome(state.progress, c, s.config, v);
     await persist();

@@ -705,6 +705,11 @@ test('mobile visual representatives: 360, 390 keyboard, 430, landscape, and 200%
     }
     if (mode === 'zoom') {
       await page.evaluate(() => { document.documentElement.style.zoom = '2'; });
+      const widthMetrics = await page.evaluate(() => ({
+        viewport: document.documentElement.clientWidth,
+        documentWidth: document.documentElement.scrollWidth,
+      }));
+      expect(widthMetrics.documentWidth).toBeLessThanOrEqual(widthMetrics.viewport + 1);
     }
     await screenshot(page, name);
   };
@@ -714,6 +719,39 @@ test('mobile visual representatives: 360, 390 keyboard, 430, landscape, and 200%
   await renderState('mobile-430-portrait', { width: 430, height: 932 });
   await renderState('mobile-landscape', { width: 844, height: 390 });
   await renderState('mobile-200-percent-zoom', { width: 390, height: 844 }, 'zoom');
+});
+
+test('mobile keyboard keeps submit above keys, hides, and grades', async ({ page, browserName }) => {
+  test.skip(browserName !== 'chromium', 'Mobile keyboard geometry is verified once in Chromium.');
+  await openApp(page, onlySkill('constant', 1), { width: 390, height: 844 });
+  await page.getByRole('button', { name: /Start practicing/ }).click();
+  await setMathfield(page.locator('math-field').first(), '0');
+  await page.locator('.question-body h2').click();
+  await page.evaluate(() => window.mathVirtualKeyboard.hide());
+  await page.getByRole('button', { name: 'Math keyboard' }).click();
+  await expect(page.locator('.ML__keyboard')).toBeVisible();
+
+  // Both custom layouts expose the primary hide action; use the active layer
+  // so this remains stable if MathLive restores the last selected tab.
+  const hideKey = page.locator('.ML__keyboard [data-command*="hideVirtualKeyboard"]:visible');
+  await expect(hideKey).toHaveCount(1);
+  const geometry = await page.evaluate(() => {
+    const keyboard = window.mathVirtualKeyboard.boundingRect;
+    const submit = document.querySelector('#submit')!.getBoundingClientRect();
+    return { keyboardTop: keyboard.top, submitBottom: submit.bottom, viewportHeight: innerHeight };
+  });
+  expect(geometry.submitBottom).toBeLessThanOrEqual(geometry.keyboardTop + 1);
+  expect(geometry.keyboardTop).toBeLessThanOrEqual(geometry.viewportHeight + 1);
+  await screenshot(page, 'mobile-keyboard-submit-above-keyboard');
+
+  await hideKey.click();
+  await expect.poll(() => page.evaluate(() => window.mathVirtualKeyboard.visible)).toBe(false);
+  await expect(page.locator('.ML__keyboard [data-command*="hideVirtualKeyboard"]:visible')).toHaveCount(0);
+
+  await page.getByRole('button', { name: 'Math keyboard' }).click();
+  await expect.poll(() => page.evaluate(() => window.mathVirtualKeyboard.visible)).toBe(true);
+  await page.getByRole('button', { name: 'Check answer' }).click();
+  await expect(page.locator('#feedback')).toContainText('Correct');
 });
 
 test('Functions math keyboard exposes y and inverse-trig insertion', async ({ page, browserName }) => {

@@ -173,8 +173,19 @@ export function evaluator(precision = 50) {
       u = a[0],
       v = a[1];
     let r: Decimal;
+    const cancellationBoundary = (expr: Expr) => {
+      if (Array.isArray(expr))
+        throw new NumericalUncertainty("Cancellation at a domain boundary");
+    };
+    const negativeBoundary = (value: Decimal) => {
+      if (value.abs().lt(new D(10).pow(-precision + 8)))
+        throw new NumericalUncertainty("Rounding at a domain boundary");
+    };
     const reciprocal = (x: Decimal) => {
-      if (x.isZero()) throw new MathDomainError("Singularity");
+      if (x.isZero()) {
+        cancellationBoundary(args[0]);
+        throw new MathDomainError("Singularity");
+      }
       if (x.abs().lt("1e-30"))
         throw new NumericalUncertainty("Near singularity");
       return new D(1).div(x);
@@ -193,7 +204,10 @@ export function evaluator(precision = 50) {
         r = u.minus(v);
         break;
       case "Divide":
-        if (v.isZero()) throw new MathDomainError("Singularity");
+        if (v.isZero()) {
+          cancellationBoundary(args[1]);
+          throw new MathDomainError("Singularity");
+        }
         if (v.abs().lt("1e-30"))
           throw new NumericalUncertainty("Near singularity");
         r = u.div(v);
@@ -212,29 +226,46 @@ export function evaluator(precision = 50) {
             .times(Math.abs(rational[0]) % 2 === 1 ? -1 : 1);
           break;
         }
-        if (
-          (u.isNegative() && !v.isInteger()) ||
-          (u.isZero() && v.isNegative())
-        )
+        if (u.isNegative() && !v.isInteger()) {
+          negativeBoundary(u);
           throw new MathDomainError("Outside the real domain");
+        }
+        if (u.isZero() && v.isNegative()) {
+          cancellationBoundary(args[0]);
+          throw new MathDomainError("Outside the real domain");
+        }
         r = u.pow(v);
         break;
       }
       case "Sqrt":
-        if (u.isNegative())
+        if (u.isNegative()) {
+          negativeBoundary(u);
           throw new MathDomainError("Outside the real domain");
+        }
         r = u.sqrt();
         break;
       case "Exp":
         r = u.exp();
         break;
       case "Ln":
-        if (u.lte(0)) throw new MathDomainError("Outside the real domain");
+        if (u.lte(0)) {
+          if (u.isZero()) cancellationBoundary(args[0]);
+          else negativeBoundary(u);
+          throw new MathDomainError("Outside the real domain");
+        }
         r = u.ln();
         break;
       case "Log":
-        if (u.lte(0) || (v && (v.lte(0) || v.eq(1))))
+        if (u.lte(0)) {
+          if (u.isZero()) cancellationBoundary(args[0]);
+          else negativeBoundary(u);
           throw new MathDomainError("Outside the real domain");
+        }
+        if (v && (v.lte(0) || v.eq(1))) {
+          if (v.isZero() || v.eq(1)) cancellationBoundary(args[1]);
+          else negativeBoundary(v);
+          throw new MathDomainError("Outside the real domain");
+        }
         r = args.length === 1 ? u.log(10) : u.log(v);
         break;
       case "Sin":

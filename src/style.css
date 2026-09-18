@@ -1059,3 +1059,31 @@ dialog::backdrop {
     margin-left: 0;
   }
 }
+.site-header {
+  flex-wrap: wrap;
+}
+.card-top > .muted {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+footer > div {
+  flex-wrap: wrap;
+}
+
+@media (max-width: 700px) {
+  body.keyboard-open {
+    padding-bottom: calc(var(--practice-keyboard-height, 0px) + 80px);
+  }
+  .keyboard-open .actions {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: var(--practice-keyboard-height, 0px);
+    z-index: 999;
+    margin: 0;
+    padding: 10px 14px;
+    background: #fff;
+    border-top: 1px solid var(--line);
+    box-shadow: 0 -4px 16px #00000008;
+  }
+}
