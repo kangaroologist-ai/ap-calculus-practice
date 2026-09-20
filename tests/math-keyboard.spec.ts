@@ -88,6 +88,9 @@ async function append(page: Page, text = 'z'): Promise<MathState> {
 }
 
 test('custom math keys match physical input in every editing context', async ({ page }) => {
+  // This single matrix exercises 333 cases (including continuation), not one interaction.
+  // CI runners need a larger total budget; per-action and assertion limits stay unchanged.
+  test.setTimeout(120_000);
   await installMathLive(page);
   const initials = ['', 'x', 'x+1', '(x+1)', '\\sin(x)'];
 
