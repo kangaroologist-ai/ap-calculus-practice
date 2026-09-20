@@ -230,11 +230,13 @@ test.describe('session transition flows', () => {
     await expect(page.locator('#today-count')).toContainText('1 practiced today');
   });
 
-  test('streak milestones render at five and ten consecutive answers', async ({ page }) => {
+  test('every success celebrates from five, with full-screen celebration from ten', async ({ page }) => {
     const config = flowConfig();
     await page.clock.install({ time: FIXED_NOW });
     const cases = [
-      { before: 4, className: 'milestone' },
+      { before: 4, className: 'celebrate' },
+      { before: 5, className: 'celebrate' },
+      { before: 8, className: 'celebrate' },
       { before: 9, className: 'celebrate' },
       { before: 10, className: 'celebrate' },
     ] as const;
@@ -251,8 +253,28 @@ test.describe('session transition flows', () => {
       await expect(page.locator('#feedback')).toContainText('Correct');
       await expect(page.locator('#streak')).toHaveClass(new RegExp(`\\b${item.className}\\b`));
       await expect(page.locator('#streak')).toContainText(`${item.before + 1} in a row`);
+      await expect(page.locator('.full-celebration')).toHaveCount(item.before >= 9 ? 1 : 0);
+      if (item.before === 9) {
+        await page.clock.runFor(350);
+        await page.screenshot({path:'artifacts/ux-refresh/verified-celebration.png'});
+        await expect(page.locator('.full-celebration')).toHaveCSS('pointer-events','none');
+      }
       await expect(page.locator('#today-count')).toContainText(`${item.before + 1} practiced today`);
     }
+  });
+
+  test('reduced motion keeps the streak without full-screen animation', async ({page}) => {
+    await page.emulateMedia({reducedMotion:'reduce'});
+    const config = flowConfig();
+    const progress = freshProgress(config, FIXED_NOW);
+    progress.streak = 9;
+    await openApp(page, config, undefined, progress);
+    await page.getByRole('button', {name:/Start practicing/}).click();
+    await setMathfield(page.locator('math-field').first(), await currentAnswer(page));
+    await page.getByRole('button', {name:'Check answer'}).click();
+    await expect(page.locator('#streak')).toContainText('10 in a row');
+    await expect(page.locator('.full-celebration')).toHaveCount(0);
+    await expect(page.locator('#streak')).toHaveCSS('animation-name','none');
   });
 
   test('opening a modal cancels an armed automatic advance', async ({ page }) => {

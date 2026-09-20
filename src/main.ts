@@ -1,3 +1,5 @@
+import { mathKeyboardLayouts } from "./math-keyboard";
+import { celebrateFullScreen, stopCelebration } from "./celebration";
 import { MathfieldElement, convertLatexToMarkup } from "mathlive";
 import QRCode from "qrcode";
 import jsQR from "jsqr";
@@ -132,7 +134,7 @@ document.addEventListener(
   true,
 );
 document.addEventListener("visibilitychange", () => {
-  if (document.hidden) cancelAutoNext();
+  if (document.hidden) { cancelAutoNext(); stopCelebration(); }
   else if (state) updateActivity();
 });
 const esc = (s: unknown) =>
@@ -201,22 +203,18 @@ function readyCount() {
   ).length;
 }
 function render() {
+  const journeyOpen = document.querySelector<HTMLDetailsElement>(".journey")?.open ?? false;
+  const expandedLevels = new Set(Array.from(document.querySelectorAll<HTMLDetailsElement>(".path-level[open]"), el => Number(el.dataset.level)));
   cancelAutoNext();
+  stopCelebration();
   const p = state.progress,
     ses = state.session,
     cur = ses?.current;
   app.innerHTML = `<header class="site-header"><a class="brand" href="/">${icon}<span>AP Calculus<span class="brand-light"> Practice</span></span></a><span class="private-label"><span class="status-dot"></span> On your device</span>${button("transfer", "Move progress", "button subtle")}</header>
  <main>${location.hostname === "ap-derivative-practice.pages.dev" ? '<p class="notice">We’ve moved to <a href="https://ap-calculus-practice.pages.dev/">AP Calculus Practice</a>. Use Move progress to export here, then import at the new address.</p>' : ""}<div id="notice" class="notice" role="status" ${temporary ? "" : "hidden"}>${temporary ? "Temporary session: export progress before leaving." : ""}</div>
  <div class="workspace"><section class="practice-card" aria-label="Practice">${!ses ? welcome() : ses.finished ? summary() : questionView()}</section>
- <details class="journey"><summary class="progress-summary">Progress <span>Level ${p.unlockedLevel} · ${readyCount()} skills ready</span></summary><div class="aside-heading"><span class="eyebrow">YOUR LEARNING PATH</span><span class="count">${readyCount()} / ${SKILLS.filter((s) => !config.disabledFamilies.includes(s.id)).length}</span></div><div class="level-list">${Array.from({ length: 6 }, (_, i) => levelView(i + 1)).join("")}</div><details class="skills-details"><summary>Skill details & review dates</summary><div>${SKILLS.filter(
-   (s) => s.level <= p.unlockedLevel && !config.disabledFamilies.includes(s.id),
- )
-   .map((s) => {
-     const t = p.skills[s.id];
-     return `<div class="skill-row"><strong>${esc(s.label)}</strong><span>${isReady(t) ? "Ready" : t?.needsRemediation ? "Rebuilding" : t?.recent.length ? "Learning" : "Not checked"}</span>${t?.card.reps ? `<small>Next review: ${esc(new Date(t.card.due).toLocaleString())}</small>` : ""}</div>`;
-   })
-   .join("")}</div></details></details></div>
- <footer><span>No account. No uploaded answers.</span><div>${button("input-help", "Input guide", "text-button")}${button("restore", "Restore backup", "text-button")}${button("reset", "Reset progress", "text-button")}</div></footer></main><div id="modal-root"></div>`;
+ <details class="journey" ${journeyOpen ? "open" : ""}><summary class="progress-summary">Progress <span>Level ${p.unlockedLevel} · ${readyCount()} skills ready</span></summary><div class="aside-heading"><span class="eyebrow">YOUR LEARNING PATH</span><span class="count">${readyCount()} / ${SKILLS.filter((s) => !config.disabledFamilies.includes(s.id)).length}</span></div><div class="level-list">${Array.from({ length: 6 }, (_, i) => levelView(i + 1, expandedLevels.has(i + 1))).join("")}</div></details></div>
+ <footer><span>No account. No uploaded answers.</span><div><a class="text-button" href="/help.html">How to use</a>${button("input-help", "Input guide", "text-button")}${button("restore", "Restore backup", "text-button")}${button("reset", "Reset progress", "text-button")}</div></footer></main><div id="modal-root"></div>`;
   on("transfer", openTransfer);
   on("start", startSession);
   on("again", startSession);
@@ -229,13 +227,18 @@ function render() {
   if (cur && !ses?.finished) mountInputs();
   observeFormulas();
 }
-function levelView(level: number) {
-  const skills = SKILLS.filter(
-      (s) => s.level === level && !config.disabledFamilies.includes(s.id),
-    ),
-    ready = skills.filter((s) => isReady(state.progress.skills[s.id])).length,
-    open = state.progress.unlockedLevel >= level;
-  return `<div class="level ${open ? "unlocked" : ""} ${state.session?.current?.question.level === level ? "active" : ""}"><div class="level-number">${open ? String(level).padStart(2, "0") : "⌑"}</div><div><strong>${["", "The foundations", "Essential functions", "Rules in combination", "Deeper compositions", "Beyond the first derivative", "Curves & coordinates"][level]}</strong><small>${!skills.length ? "Not included" : open ? `${ready} of ${skills.length} skills ready` : "Unlock as you learn"}</small></div>${open && skills.length && ready === skills.length ? '<span class="check">✓</span>' : ""}</div>`;
+function levelView(level: number, expanded = false) {
+  const skills = SKILLS.filter(s => s.level === level && !config.disabledFamilies.includes(s.id));
+  const ready = skills.filter(s => isReady(state.progress.skills[s.id])).length;
+  const unlocked = state.progress.unlockedLevel >= level;
+  const currentId = state.session?.current?.question.primarySkill;
+  return `<details class="path-level ${unlocked ? "unlocked" : ""}" data-level="${level}" ${expanded ? "open" : ""}>
+    <summary class="level ${unlocked ? "unlocked" : ""} ${skills.some(s => s.id === currentId) ? "active" : ""}"><span class="level-number">${String(level).padStart(2, "0")}</span><span class="level-copy"><strong>${["", "The foundations", "Essential functions", "Rules in combination", "Deeper compositions", "Beyond the first derivative", "Curves & coordinates"][level]}</strong><small>${!skills.length ? "Not included" : unlocked ? `${ready} of ${skills.length} skills ready` : "Locked · preview skills"}</small></span><span class="path-chevron" aria-hidden="true"></span></summary>
+    <div class="path-skills">${skills.map(s => {
+      const t = state.progress.skills[s.id];
+      const status = !unlocked ? "Locked" : isReady(t) ? "Ready" : t?.needsRemediation ? "Rebuilding" : t?.recent.length ? "Learning" : "Not started";
+      return `<div class="path-skill ${currentId === s.id ? "current" : ""}" ${currentId === s.id ? 'aria-current="step"' : ""}><div><strong>${esc(s.label)}</strong><span class="skill-status">${status}</span></div>${t?.card.reps ? `<small>Review ${esc(new Date(t.card.due).toLocaleString("en-US", {month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}))}</small>` : ""}</div>`;
+    }).join("") || '<p class="fine">No enabled skills in this level.</p>'}</div></details>`;
 }
 function welcome() {
   return `<div class="card-top"><span class="tag">ADAPTIVE PRACTICE</span><span class="muted">At your own pace</span></div><div class="welcome"><div class="welcome-equation">${math("\\frac{d}{dx}\\left[\\sin(x^2)\\right]")}</div><h2>Differentiation</h2><p>Practice the rules. Review what needs work.</p>${button("start", 'Start practicing <span aria-hidden="true">→</span>', "button primary large")}<p class="fine">Your work is saved automatically in this browser.</p></div>`;
@@ -258,11 +261,11 @@ function updateActivity(celebrate = false) {
   if (badge) {
     badge.innerHTML = `<strong>${streak}</strong> in a row`;
     badge.classList.remove("milestone", "celebrate");
-    if (celebrate && (streak === 5 || streak >= 10)) {
+    if (celebrate && streak >= 5) {
       void badge.offsetWidth;
-      badge.classList.add(streak >= 10 ? "celebrate" : "milestone");
-      if (streak >= 10)
-        badge.innerHTML += `<span class="sparks" aria-hidden="true">${Array.from({ length: 8 }, (_, i) => `<i style="--angle:${i * 45}deg"></i>`).join("")}</span>`;
+      badge.classList.add("celebrate");
+      badge.innerHTML += `<span class="sparks" aria-hidden="true">${Array.from({ length: 8 }, (_, i) => `<i style="--angle:${i * 45}deg"></i>`).join("")}</span>`;
+      if (streak >= 10) celebrateFullScreen();
     }
   }
   const daily = document.getElementById("today-count");
@@ -320,72 +323,7 @@ function mountInputs() {
         window.mathVirtualKeyboard.show();
     });
   });
-  window.mathVirtualKeyboard.layouts = [
-    {
-      label: "Derivatives",
-      rows: [
-        ["x", "t", "\\theta", "7", "8", "9", "+", "-"],
-        [
-          "\\frac{#0}{#?}",
-          "#0^{#?}",
-          "\\sqrt{#0}",
-          "4",
-          "5",
-          "6",
-          "\\times",
-          "\\div",
-        ],
-        [
-          { label: "sin", insert: "\\sin(#0)", class: "small" },
-          { label: "cos", insert: "\\cos(#0)", class: "small" },
-          { label: "tan", insert: "\\tan(#0)", class: "small" },
-          "1",
-          "2",
-          "3",
-          "(",
-          ")",
-        ],
-        [
-          { label: "ln", insert: "\\ln(#0)", class: "small" },
-          "e^{#0}",
-          "[hide-keyboard]",
-          "0",
-          ".",
-          "[left]",
-          "[right]",
-          "[backspace]",
-        ],
-      ],
-    },
-    {
-      label: "Functions",
-      rows: [
-        ["x", "y", "t", "\\theta"].map((latex) => ({
-          latex,
-          width: 2 as const,
-        })),
-        [
-          { label: "sin", insert: "\\sin(#0)", class: "small", width: 2 },
-          { label: "cos", insert: "\\cos(#0)", class: "small", width: 2 },
-          { label: "tan", insert: "\\tan(#0)", class: "small", width: 2 },
-          { label: "ln", insert: "\\ln(#0)", class: "small", width: 2 },
-        ],
-        [
-          { label: "sec", insert: "\\sec(#0)", class: "small", width: 2 },
-          { label: "csc", insert: "\\csc(#0)", class: "small", width: 2 },
-          { label: "cot", insert: "\\cot(#0)", class: "small", width: 2 },
-          { label: "log", insert: "\\log(#0)", class: "small", width: 2 },
-        ],
-        [
-          { label: "arcsin", insert: "\\arcsin(#0)", class: "small", width: 2 },
-          { label: "arccos", insert: "\\arccos(#0)", class: "small", width: 2 },
-          { label: "arctan", insert: "\\arctan(#0)", class: "small", width: 2 },
-          { latex: "\\sqrt[3]{x}", insert: "\\sqrt[3]{#0}", width: 2 },
-        ],
-        ["\\pi", "[left]", "[right]", "[backspace]", "[hide-keyboard]"],
-      ],
-    },
-  ];
+  window.mathVirtualKeyboard.layouts = mathKeyboardLayouts;
   on("keyboard", () => {
     if (window.mathVirtualKeyboard.visible) window.mathVirtualKeyboard.hide();
     else {

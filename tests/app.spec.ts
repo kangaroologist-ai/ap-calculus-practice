@@ -593,7 +593,8 @@ test('Level 2 remediation round trip preserves FSRS and due across contexts', as
     await desktop.locator('#close-modal').click();
 
     await mobile.clock.install({ time: fixedNow });
-    await openApp(mobile, config, { width: 390, height: 844 });
+    // Seed with the same virtual clock as the browser, not the test runner's wall clock.
+    await openApp(mobile, config, { width: 390, height: 844 }, freshProgress(config, fixedNow));
     await mobile.getByRole('button', { name: 'Move progress' }).click();
     await mobile.getByRole('button', { name: 'Import progress' }).click();
     await mobile.locator('#import-code').fill(mobileImportCode);
@@ -799,7 +800,7 @@ test('Functions math keyboard exposes y and inverse-trig insertion', async ({ pa
   expect(toolbarText.join(' ')).toContain('Derivatives');
   expect(toolbarText.join(' ')).toContain('Functions');
   const functionKeys = await page.locator('.ML__keyboard .MLK__keycap').evaluateAll((keys) =>
-    keys.map((key) => key.getAttribute('aria-label')).filter(Boolean),
+    keys.map((key) => key.getAttribute('aria-label')?.replace(/^Type /, '')).filter(Boolean),
   );
   expect(functionKeys).toEqual(expect.arrayContaining([
     'y',
@@ -814,9 +815,9 @@ test('Functions math keyboard exposes y and inverse-trig insertion', async ({ pa
   expect(keyText.some((label) => /√|∛|root|sqrt/i.test(label))).toBe(true);
 
   await page.locator('.MLK__toolbar .layer-switch').filter({ hasText: 'Functions' }).click();
-  await page.locator('.ML__keyboard .MLK__keycap[aria-label="y"]').click();
+  await page.locator('.ML__keyboard .MLK__keycap[aria-label="Type y"]').click();
   await expect(field).toHaveJSProperty('value', 'y');
-  await page.locator('.ML__keyboard .MLK__keycap[aria-label="arcsin"]').click();
+  await page.locator('.ML__keyboard .MLK__keycap[aria-label="Type arcsin"]').click();
   const inserted = await field.evaluate((element) => (element as HTMLElement & { value: string }).value);
   expect(inserted).toContain('arcsin');
   expect(inserted).toContain('y');
