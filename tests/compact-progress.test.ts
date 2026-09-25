@@ -4,6 +4,14 @@ import { isDeepStrictEqual } from "node:util";
 import QRCode from "qrcode";
 import jsQR from "jsqr";
 import { describe, expect, it } from "vitest";
+import { SKILLS } from "../src/catalog";
+import {
+  LATEST_PROFILE,
+  LATEST_PROFILE_SKILLS,
+  packProgress,
+  unpackProgress,
+} from "../src/compact-progress";
+import { migrateProgress, NewerProgressError } from "../src/migrate";
 import {
   decodeProgress,
   encodeProgress,
@@ -19,6 +27,8 @@ import { questionFingerprint } from "../src/question-identity";
 const snapshot = JSON.parse(
   readFileSync(new URL("./fixtures/compact-full-snapshot.json", import.meta.url), "utf8"),
 ) as PortableProgress;
+const fixture = (name: string) =>
+  readFileSync(new URL(`./fixtures/${name}`, import.meta.url), "utf8");
 
 function decodeRenderedQr(frame: string): string {
   const qr = QRCode.create(frame, { errorCorrectionLevel: qrErrorCorrection(frame) });
@@ -76,21 +86,80 @@ describe("full compact progress transfer fixture", () => {
     const code = encodeProgress(portable);
     const decoded = decodeProgress(code);
     expect(isDeepStrictEqual(decoded, portable)).toBe(true);
-    expect(code.length).toBeGreaterThan(2300);
+    expect(code.length).toBeGreaterThan(0);
   });
 
-  it("round-trips the dense single QR through rendered pixels", () => {
-    const code = encodeProgress(makePortableProgress(snapshot, snapshot.exportedAt));
+  it("keeps the latest profile skill table in curriculum order", () => {
+    expect(LATEST_PROFILE).toBe(2);
+    expect(LATEST_PROFILE_SKILLS).toEqual(SKILLS.map((skill) => skill.id));
+  });
+
+  it("imports the frozen DSP1 and profile 1 fixtures as their migrated snapshots", () => {
+    const dsp1 = JSON.parse(
+      fixture("compact-full-snapshot.json"),
+    ) as PortableProgress;
+    const dsp1Expected = {
+      ...migrateProgress(dsp1).progress,
+      exportedAt: dsp1.exportedAt,
+    };
+    expect(decodeProgress(fixture("dsp1.txt"))).toEqual(dsp1Expected);
+
+    const profile1 = makePortableProgress(dsp1, dsp1.exportedAt);
+    const profile1Expected = {
+      ...migrateProgress(profile1).progress,
+      exportedAt: profile1.exportedAt,
+    };
+    expect(decodeProgress(fixture("dsp2-profile1.txt"))).toEqual(
+      profile1Expected,
+    );
+  });
+
+  it("round-trips profile 2 and rejects newer or malformed profile data", () => {
+    const portable = makePortableProgress(snapshot, snapshot.exportedAt);
+    const tuple = packProgress(portable);
+    expect(tuple[0]).toBe(2);
+    expect(decodeProgress(encodeProgress(portable))).toEqual(portable);
+
+    expect(() => unpackProgress([99])).toThrow(NewerProgressError);
+    expect(() => unpackProgress([99])).toThrow(
+      "This code was made by a newer version of the app. Reload the page to update, then try again.",
+    );
+
+    const badHex = structuredClone(tuple);
+    const dictionary = badHex[7] as unknown[];
+    dictionary[0] = "not-hex!";
+    expect(() => unpackProgress(badHex)).toThrow(/signatures/i);
+
+    const firstDay = Date.parse("2026-09-25T00:00:00.000Z") / 86400000;
+    const badFlatDelta = structuredClone(tuple);
+    badFlatDelta[6] = [firstDay, 1, 0, 1];
+    expect(() => unpackProgress(badFlatDelta)).toThrow(/delta/i);
+
+    const nestedDays = structuredClone(tuple);
+    nestedDays[6] = [firstDay, 1, [1, 1]];
+    expect(() => unpackProgress(nestedDays)).toThrow();
+
+    const longGap = structuredClone(portable);
+    longGap.practiceDays = { "2026-01-02": 3, "2026-09-19": 4 };
+    expect(decodeProgress(encodeProgress(longGap)).practiceDays).toEqual(longGap.practiceDays);
+  });
+
+  it("meets the profile 2 full-fixture size and rendered QR targets", () => {
+    const portable = makePortableProgress(snapshot, snapshot.exportedAt);
+    const code = encodeProgress(portable);
     const frames = splitIntoQrFrames(code);
+    expect(code.length).toBeLessThan(2000);
     expect(frames).toHaveLength(1);
-    expect(frames[0].length).toBeGreaterThan(0);
+    const qr = QRCode.create(frames[0], {
+      errorCorrectionLevel: qrErrorCorrection(frames[0]),
+    });
+    expect(qr.version).toBeLessThanOrEqual(30);
     const scanned = decodeRenderedQr(frames[0]);
     expect(scanned).toBe(frames[0]);
     const result = new QrCollector().add(scanned);
     expect(result.code).toBe(code);
-    expect(isDeepStrictEqual(
-      decodeProgress(result.code!),
-      makePortableProgress(snapshot, snapshot.exportedAt),
-    )).toBe(true);
+    expect(isDeepStrictEqual(decodeProgress(result.code!), portable)).toBe(
+      true,
+    );
   });
 });

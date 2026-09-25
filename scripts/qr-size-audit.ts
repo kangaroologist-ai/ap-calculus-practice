@@ -162,6 +162,7 @@ function measure(name: string, p: PortableProgress) {
   console.log(
     JSON.stringify({
       name,
+      profile: JSON.parse(packedJson)[0],
       skills: Object.keys(p.skills).length,
       evidence: Object.values(p.skills).reduce((n, s) => n + s.recent.length, 0),
       practiceDays: Object.keys(p.practiceDays ?? {}).length,

@@ -1,6 +1,7 @@
 import { questionFingerprint } from "./question-identity";
 import { packProgress, unpackProgress } from "./compact-progress";
 import { strToU8, strFromU8, zlibSync, Unzlib } from "fflate";
+import QRCode from "qrcode";
 import { localPracticeDay, type Progress } from "./progress";
 import { dedupeKeepLast, migrateProgress, validateCurrent } from "./migrate";
 export type PortableProgress = Progress & { exportedAt: number };
@@ -138,29 +139,52 @@ function linkPayload(frame: string): string {
     throw Error("This link has no progress.");
   return decodeURIComponent(url.hash.slice(10));
 }
+// Medium correction tolerates glare better, but past version 30 the denser
+// modules hurt phone-camera scanning more than the extra redundancy helps.
 export function qrErrorCorrection(frame: string): "M" | "L" {
-  const payload = linkPayload(frame);
-  if (payload.startsWith("DSA2.")) return frame.length > 3150 ? "L" : "M";
-  return frame.length > 2250 ? "L" : "M";
+  try {
+    if (QRCode.create(frame, { errorCorrectionLevel: "M" }).version <= 30)
+      return "M";
+  } catch {
+    /* Too long for medium correction at any version. */
+  }
+  return "L";
 }
 export function splitIntoQrFrames(code: string): string[] {
   const direct = qrLink(code);
-  if (direct.length <= 2250) return [direct];
+  const directVersion = qrVersion(direct);
+  let selected = directVersion === undefined ? undefined : direct;
+  let selectedVersion = directVersion;
   const match = /^DSP2\.([a-f0-9]{8})\.([A-Za-z0-9_-]+)$/.exec(code);
   if (match) {
     const dense = qrLink(
       `DSA2.${match[1].toUpperCase()}.${qrEncode(bytes(match[2]))}`,
     );
-    // The URL prefix uses byte mode; its uppercase escaped payload uses the
-    // denser alphanumeric mode. Leave margin below version 40-L capacity.
-    if (dense.length <= 4000) return [dense];
+    const denseVersion = qrVersion(dense);
+    if (
+      denseVersion !== undefined &&
+      (selectedVersion === undefined || denseVersion < selectedVersion)
+    ) {
+      selected = dense;
+      selectedVersion = denseVersion;
+    }
   }
+  if (selected) return [selected];
   const id = checksum(code),
     parts = code.match(/.{1,700}/g) ?? [];
   return parts.map(
     (part, i) =>
       `DSQ1.${id}.${i + 1}.${parts.length}.${checksum(part)}.${part}`,
   );
+}
+function qrVersion(frame: string): number | undefined {
+  try {
+    return QRCode.create(frame, {
+      errorCorrectionLevel: qrErrorCorrection(frame),
+    }).version;
+  } catch {
+    return undefined;
+  }
 }
 export class QrCollector {
   private id = "";

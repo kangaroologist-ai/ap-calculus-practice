@@ -138,3 +138,16 @@ FSRS 参数固定为：`request_retention=0.9`、`maximum_interval=180`、`enabl
 如果目标只是让正常全课程导出更短，当前实现已经用一张 37-L 密集 URL QR 完成迁移，删字段后是否能降低二维码版本，还需要实测。若必须精简且要保留教学行为，优先评估“移除当前未读取的 `lastFailureAt`”和“按固定目录规范化行、移除 `skillIndex`”；两者都要新 profile 和旧码迁移，预期只省约 76/80 个 DSP2 字符。
 
 若愿意改变产品功能，`practiceDays` 是唯一能带来明显节省的简单开关，但代价是活动计数和“今日已练”显示消失。题目指纹缩短只在压缩前看起来节省约 520 字符，压缩后本 fixture 只省 9 个代码字符。`template`、`correct`、任何 FSRS card 数值、`otherSinceFailure`、`extraPracticeGiven`、`failureStreak` 和 `lastSeen` 都承载当前调度或推进逻辑，不应仅因载荷审查而移除。
+
+## Profile 2 实测（Step 7）
+
+Profile 2 用 32-bit `q2` 指纹（字典只存 8 位 hex）和 `practiceDays` 差分编码 `[首日 UTC 日序号, 次数, Δ日, 次数, …]`；行结构与 profile 1 相同。编码只用最新 profile；profile 1 与 DSP1 永久可解码，并经 `migrateProgress` 升级。同一 fixture（`scripts/qr-size-audit.ts`，26 技能 × 2 条证据、31 个练习日）：
+
+| 指标 | Profile 1 | Profile 2 |
+|---|---:|---:|
+| tuple JSON 字符 | 5,193 | 3,452 |
+| zlib 字节 | 2,010 | 1,144 |
+| DSP2 字符 | 2,694 | 1,540 |
+| 单张 QR（链接字符 / 纠错 / 版本） | 3,588 / L / 37 | 2,031 / L / 27 |
+
+上一节“压缩后指纹缩短收益很小”的估算针对的是 16-byte 表示；截到 4 byte 后熵真正减少，zlib 省下约 870 字节。纠错等级改为：M 级能控制在 30 版以内就用 M，否则用 L——小进度仍用更强的 M，全课程进度用 L 保持在 30 版以下（同一载荷用 M 为 31 版）。
