@@ -8,6 +8,8 @@ import {
   makePortableProgress,
   type PortableProgress,
 } from "../src/transfer";
+import { questionFingerprint } from "../src/question-identity";
+import type { AppState } from "../src/progress";
 import type { Question } from "../src/types";
 
 /**
@@ -21,6 +23,46 @@ const FIXTURES = (name: string) => new URL(`../tests/fixtures/${name}`, import.m
 const raw = JSON.parse(
   readFileSync(FIXTURES("compact-full-snapshot.json"), "utf8"),
 ) as PortableProgress;
+
+// Phase 2 fixtures are captured separately so this command exits before the
+// original frozen-fixture block below can rewrite any of its four outputs.
+if (process.argv.includes("--phase2-only")) {
+  writeFileSync(
+    FIXTURES("dsp2-profile2.txt"),
+    `${encodeProgress(makePortableProgress(raw, raw.exportedAt))}\n`,
+  );
+
+  function normalizeQ2(value: unknown): unknown {
+    if (Array.isArray(value)) return value.map(normalizeQ2);
+    if (!value || typeof value !== "object") return value;
+    return Object.fromEntries(
+      Object.entries(value).map(([key, child]) => [
+        key,
+        key === "q" && typeof child === "string"
+          ? questionFingerprint(child)
+          : normalizeQ2(child),
+      ]),
+    );
+  }
+
+  const state = JSON.parse(
+    readFileSync(FIXTURES("local-state-v1.json"), "utf8"),
+  ) as AppState;
+  state.progress = normalizeQ2(state.progress) as AppState["progress"];
+  state.progress.formatVersion = 1;
+  if (!state.session?.current)
+    throw Error("The frozen local-state fixture has no current question.");
+  state.session.current.question = generateQuestion("implicit", "fixture", 0);
+  writeFileSync(
+    FIXTURES("local-state-v1-q2.json"),
+    `${JSON.stringify(state, null, 2)}\n`,
+  );
+
+  console.log(
+    "Captured tests/fixtures/dsp2-profile2.txt and tests/fixtures/local-state-v1-q2.json",
+  );
+  process.exit(0);
+}
 
 // DSP2, compact profile 1: today's export format for the frozen snapshot.
 writeFileSync(

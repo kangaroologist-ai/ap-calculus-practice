@@ -15,9 +15,29 @@
 | 9 导入、备份、兼容 | `storage.ts`、`transfer.ts`、`main.ts` | 非法版本/日期/数值/长度拒绝，确认替换、取消不变，事务备份与恢复 | 本地通过，专项复核通过 |
 | 10 构建、完整流程、部署 | `README.md`、CI、`wrangler.toml` | 本地生产构建成功；三引擎共 81 项：69 通过、12 项按设计仅在 Chromium 执行而跳过、0 失败 | 本地生产页面通过；GitHub/线上状态见下方 |
 
+## Phase 1 SPEC 验收映射
+
+| SPEC | 验证测试 |
+|---|---|
+| G1 题量与答案随参数变化 | `tests/generator-variety.test.ts` |
+| G2 声明式模板注册表与稳定 key | `tests/templates.test.ts`；`tests/generator-golden.test.ts` |
+| G3 按题推断 `requiredSkills` | `tests/skill-inference.test.ts` |
+| G4 模板与隐函数曲线修复 | `tests/generator-variety.test.ts`；`tests/grading-regression.test.ts` |
+| S1 首次连续失败诊断与 Ready 先修过滤 | `tests/progress.test.ts` |
+| M1 入口统一迁移、未知身份／新版本处理 | `tests/migrate.test.ts`；`tests/storage.test.ts`；`tests/transfer.test.ts`；`tests/legacy-fixtures.test.ts` |
+| M2 本机迁移留底，不占用 `backup` | `tests/storage.test.ts` |
+| M3 冻结 profile 注册表与 profile 2 导出 | `tests/compact-progress.test.ts`；`tests/legacy-fixtures.test.ts` |
+| M4 q2 短指纹与旧指纹归一化 | `tests/migrate.test.ts`；`tests/compact-progress.test.ts`；`tests/legacy-fixtures.test.ts` |
+| M5 导出尺寸、二维码纠错与图像往返 | `tests/compact-progress.test.ts`；`tests/transfer.test.ts`；`tests/qr-image.test.ts` |
+| U1 正体微分 d | `tests/notation.test.ts`；`tests/app.spec.ts` |
+| U3 最小字号（12px） | `tests/visual-tokens.spec.ts` |
+| U4 浅／深主题 token 对比度 | `tests/contrast.test.ts`；`tests/visual-tokens.spec.ts` |
+
+Phase 1 的测试映射不替代真机验收；U3/U4 的浏览器截图与真机安全区边界仍按本文件下方记录区分。
+
 ## 生成而非固定题库
 
-部署的应用包含受限表达式树、求导规则与结构模板，不包含测试 corpus。每次选择技能后，根据随机种子实时生成题干、答案与解析。生成版本为 `1.1.0`；组合技能随机选择 Sin/Cos/Exp 及内部幂次。生成器有复杂度限制和有限重试。固定随机种子用于可重复测试，不是学生题库。
+部署的应用包含受限表达式树、求导规则与带稳定 key 的模板注册表，不包含测试 corpus。每次选择技能后，根据随机种子实时生成题干、答案与解析。生成版本为 `1.2.0`；每道题按实际表达式记录 `requiredSkills`，隐函数以通用 graph curve 供判分采样。生成器有复杂度限制和有限重试。固定随机种子用于可重复测试，不是学生题库。
 
 ## 可复现命令
 

@@ -1,0 +1,1504 @@
+{
+  "version": 1,
+  "progress": {
+    "formatVersion": 1,
+    "curriculumVersion": "ap-derivatives-1",
+    "schedulerPackageVersion": "5.4.2",
+    "fsrsAlgorithmVersion": "v5.4.2 using FSRS-6.0",
+    "fsrsParameters": {
+      "request_retention": 0.9,
+      "maximum_interval": 180,
+      "w": [
+        0.212,
+        1.2931,
+        2.3065,
+        8.2956,
+        6.4133,
+        0.8334,
+        3.0194,
+        0.001,
+        1.8722,
+        0.1666,
+        0.796,
+        1.4835,
+        0.0614,
+        0.2629,
+        1.6483,
+        0.6014,
+        1.8729,
+        0.5425,
+        0.0912,
+        0.0658,
+        0.1542
+      ],
+      "enable_fuzz": false,
+      "enable_short_term": true,
+      "learning_steps": [
+        "1m",
+        "10m"
+      ],
+      "relearning_steps": [
+        "10m"
+      ]
+    },
+    "unlockedLevel": 6,
+    "streak": 4,
+    "practiceDays": {
+      "2026-08-20": 1,
+      "2026-08-21": 2,
+      "2026-08-22": 3,
+      "2026-08-23": 4,
+      "2026-08-24": 5,
+      "2026-08-25": 5,
+      "2026-08-26": 4,
+      "2026-08-27": 4,
+      "2026-08-28": 4,
+      "2026-08-29": 4,
+      "2026-08-30": 4,
+      "2026-08-31": 5,
+      "2026-09-01": 4,
+      "2026-09-02": 4,
+      "2026-09-03": 4,
+      "2026-09-04": 4,
+      "2026-09-05": 4,
+      "2026-09-06": 5,
+      "2026-09-07": 4,
+      "2026-09-08": 4,
+      "2026-09-09": 4,
+      "2026-09-10": 4,
+      "2026-09-11": 4,
+      "2026-09-12": 5,
+      "2026-09-13": 4,
+      "2026-09-14": 4,
+      "2026-09-15": 4,
+      "2026-09-16": 4,
+      "2026-09-17": 4,
+      "2026-09-18": 5,
+      "2026-09-19": 10
+    },
+    "skills": {
+      "constant": {
+        "card": {
+          "stability": 7.31530068,
+          "difficulty": 2.11121424,
+          "elapsed_days": 1,
+          "scheduled_days": 7,
+          "reps": 2,
+          "lapses": 0,
+          "learning_steps": 0,
+          "state": 2,
+          "due": 1787849993272,
+          "last_review": 1787245193272
+        },
+        "recent": [
+          {
+            "q": "q2:012243ee",
+            "template": 0,
+            "correct": true
+          },
+          {
+            "q": "q2:abe2574d",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "q2:7fffb9e1",
+            "template": 0,
+            "correct": true
+          },
+          {
+            "q": "q2:47db0fdb",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "q2:98fb6b84",
+            "template": 0,
+            "correct": true
+          }
+        ],
+        "needsRemediation": false,
+        "failureStreak": 0,
+        "lastFailureAt": 0,
+        "otherSinceFailure": 0,
+        "extraPracticeGiven": false,
+        "lastSeen": 9
+      },
+      "power": {
+        "card": {
+          "stability": 4.47481716,
+          "difficulty": 6.39094132,
+          "elapsed_days": 1,
+          "scheduled_days": 4,
+          "reps": 3,
+          "lapses": 0,
+          "learning_steps": 0,
+          "state": 2,
+          "due": 1787763653272,
+          "last_review": 1787418053272
+        },
+        "recent": [
+          {
+            "q": "q2:37212e9e",
+            "template": 0,
+            "correct": false
+          },
+          {
+            "q": "q2:a91f076e",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "q2:9000d17e",
+            "template": 0,
+            "correct": true
+          },
+          {
+            "q": "q2:d36b613a",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "q2:e37ca8bb",
+            "template": 0,
+            "correct": true
+          }
+        ],
+        "needsRemediation": false,
+        "failureStreak": 0,
+        "lastFailureAt": 11,
+        "otherSinceFailure": 0,
+        "extraPracticeGiven": false,
+        "lastSeen": 19
+      },
+      "sum": {
+        "card": {
+          "stability": 4.3811614,
+          "difficulty": 7.37018264,
+          "elapsed_days": 1,
+          "scheduled_days": 4,
+          "reps": 4,
+          "lapses": 0,
+          "learning_steps": 0,
+          "state": 2,
+          "due": 1787936513272,
+          "last_review": 1787590913272
+        },
+        "recent": [
+          {
+            "q": "q2:1245f4c9",
+            "template": 0,
+            "correct": true
+          },
+          {
+            "q": "q2:f9b62bdd",
+            "template": 1,
+            "correct": false
+          },
+          {
+            "q": "q2:65aa14b4",
+            "template": 0,
+            "correct": true
+          },
+          {
+            "q": "q2:c4decf8c",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "q2:bd4c5732",
+            "template": 0,
+            "correct": true
+          }
+        ],
+        "needsRemediation": false,
+        "failureStreak": 0,
+        "lastFailureAt": 23,
+        "otherSinceFailure": 0,
+        "extraPracticeGiven": false,
+        "lastSeen": 29
+      },
+      "root": {
+        "card": {
+          "stability": 1.80599612,
+          "difficulty": 8.77916217,
+          "elapsed_days": 1,
+          "scheduled_days": 2,
+          "reps": 4,
+          "lapses": 0,
+          "learning_steps": 0,
+          "state": 2,
+          "due": 1787850113272,
+          "last_review": 1787677313272
+        },
+        "recent": [
+          {
+            "q": "q2:f35803a5",
+            "template": 0,
+            "correct": false
+          },
+          {
+            "q": "q2:f5bb192b",
+            "template": 1,
+            "correct": false
+          },
+          {
+            "q": "q2:767d7fb9",
+            "template": 0,
+            "correct": true
+          },
+          {
+            "q": "q2:b6866c08",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "q2:9b870f44",
+            "template": 0,
+            "correct": true
+          }
+        ],
+        "needsRemediation": false,
+        "failureStreak": 0,
+        "lastFailureAt": 33,
+        "otherSinceFailure": 0,
+        "extraPracticeGiven": false,
+        "lastSeen": 39
+      },
+      "exp": {
+        "card": {
+          "stability": 7.31530068,
+          "difficulty": 2.11121424,
+          "elapsed_days": 1,
+          "scheduled_days": 7,
+          "reps": 2,
+          "lapses": 0,
+          "learning_steps": 0,
+          "state": 2,
+          "due": 1788195593272,
+          "last_review": 1787590793272
+        },
+        "recent": [
+          {
+            "q": "q2:db9b3414",
+            "template": 0,
+            "correct": true
+          },
+          {
+            "q": "q2:4edbc878",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "q2:5151a783",
+            "template": 0,
+            "correct": false
+          },
+          {
+            "q": "q2:54e2ca40",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "q2:7426cebd",
+            "template": 0,
+            "correct": true
+          }
+        ],
+        "needsRemediation": false,
+        "failureStreak": 0,
+        "lastFailureAt": 45,
+        "otherSinceFailure": 0,
+        "extraPracticeGiven": false,
+        "lastSeen": 49
+      },
+      "log": {
+        "card": {
+          "stability": 1.88998205,
+          "difficulty": 9.10103214,
+          "elapsed_days": 1,
+          "scheduled_days": 2,
+          "reps": 5,
+          "lapses": 0,
+          "learning_steps": 0,
+          "state": 2,
+          "due": 1788109373272,
+          "last_review": 1787936573272
+        },
+        "recent": [
+          {
+            "q": "q2:7864d4fd",
+            "template": 0,
+            "correct": true
+          },
+          {
+            "q": "q2:f5241669",
+            "template": 1,
+            "correct": false
+          },
+          {
+            "q": "q2:fa5cdd70",
+            "template": 0,
+            "correct": false
+          },
+          {
+            "q": "q2:51f3d289",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "q2:63806393",
+            "template": 0,
+            "correct": true
+          }
+        ],
+        "needsRemediation": false,
+        "failureStreak": 0,
+        "lastFailureAt": 55,
+        "otherSinceFailure": 0,
+        "extraPracticeGiven": false,
+        "lastSeen": 59
+      },
+      "sin": {
+        "card": {
+          "stability": 2.737177,
+          "difficulty": 8.77549312,
+          "elapsed_days": 1,
+          "scheduled_days": 3,
+          "reps": 5,
+          "lapses": 0,
+          "learning_steps": 0,
+          "state": 2,
+          "due": 1788368573272,
+          "last_review": 1788109373272
+        },
+        "recent": [
+          {
+            "q": "q2:36bef06b",
+            "template": 0,
+            "correct": false
+          },
+          {
+            "q": "q2:7d84be03",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "q2:e255fd54",
+            "template": 0,
+            "correct": false
+          },
+          {
+            "q": "q2:c524e540",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "q2:89f3ac39",
+            "template": 0,
+            "correct": true
+          }
+        ],
+        "needsRemediation": false,
+        "failureStreak": 0,
+        "lastFailureAt": 65,
+        "otherSinceFailure": 0,
+        "extraPracticeGiven": false,
+        "lastSeen": 69
+      },
+      "cos": {
+        "card": {
+          "stability": 0.93334886,
+          "difficulty": 9.56415413,
+          "elapsed_days": 1,
+          "scheduled_days": 1,
+          "reps": 5,
+          "lapses": 0,
+          "learning_steps": 0,
+          "state": 2,
+          "due": 1788282173272,
+          "last_review": 1788195773272
+        },
+        "recent": [
+          {
+            "q": "q2:2b17ba66",
+            "template": 0,
+            "correct": false
+          },
+          {
+            "q": "q2:485ae70f",
+            "template": 1,
+            "correct": false
+          },
+          {
+            "q": "q2:fef88860",
+            "template": 0,
+            "correct": false
+          },
+          {
+            "q": "q2:72b27a74",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "q2:c0566d21",
+            "template": 0,
+            "correct": true
+          }
+        ],
+        "needsRemediation": false,
+        "failureStreak": 0,
+        "lastFailureAt": 75,
+        "otherSinceFailure": 0,
+        "extraPracticeGiven": false,
+        "lastSeen": 79
+      },
+      "tan": {
+        "card": {
+          "stability": 7.31530068,
+          "difficulty": 2.11121424,
+          "elapsed_days": 1,
+          "scheduled_days": 7,
+          "reps": 2,
+          "lapses": 0,
+          "learning_steps": 0,
+          "state": 2,
+          "due": 1788627593272,
+          "last_review": 1788022793272
+        },
+        "recent": [
+          {
+            "q": "q2:253d75d4",
+            "template": 0,
+            "correct": true
+          },
+          {
+            "q": "q2:5d866081",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "q2:b92fd6c3",
+            "template": 0,
+            "correct": true
+          },
+          {
+            "q": "q2:70b7e988",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "q2:99898808",
+            "template": 0,
+            "correct": true
+          }
+        ],
+        "needsRemediation": false,
+        "failureStreak": 0,
+        "lastFailureAt": 0,
+        "otherSinceFailure": 0,
+        "extraPracticeGiven": false,
+        "lastSeen": 89
+      },
+      "cot": {
+        "card": {
+          "stability": 4.47481716,
+          "difficulty": 6.39094132,
+          "elapsed_days": 1,
+          "scheduled_days": 4,
+          "reps": 3,
+          "lapses": 0,
+          "learning_steps": 0,
+          "state": 2,
+          "due": 1788541253272,
+          "last_review": 1788195653272
+        },
+        "recent": [
+          {
+            "q": "q2:de1b55c0",
+            "template": 0,
+            "correct": false
+          },
+          {
+            "q": "q2:eda560ea",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "q2:f9b35500",
+            "template": 0,
+            "correct": true
+          },
+          {
+            "q": "q2:25772a9a",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "q2:f1935edf",
+            "template": 0,
+            "correct": true
+          }
+        ],
+        "needsRemediation": false,
+        "failureStreak": 0,
+        "lastFailureAt": 91,
+        "otherSinceFailure": 0,
+        "extraPracticeGiven": false,
+        "lastSeen": 99
+      },
+      "sec": {
+        "card": {
+          "stability": 4.3811614,
+          "difficulty": 7.37018264,
+          "elapsed_days": 1,
+          "scheduled_days": 4,
+          "reps": 4,
+          "lapses": 0,
+          "learning_steps": 0,
+          "state": 2,
+          "due": 1788714113272,
+          "last_review": 1788368513272
+        },
+        "recent": [
+          {
+            "q": "q2:82fa748c",
+            "template": 0,
+            "correct": true
+          },
+          {
+            "q": "q2:3ec75a4d",
+            "template": 1,
+            "correct": false
+          },
+          {
+            "q": "q2:196536e7",
+            "template": 0,
+            "correct": true
+          },
+          {
+            "q": "q2:84fcdd37",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "q2:c31516f1",
+            "template": 0,
+            "correct": true
+          }
+        ],
+        "needsRemediation": false,
+        "failureStreak": 0,
+        "lastFailureAt": 103,
+        "otherSinceFailure": 0,
+        "extraPracticeGiven": false,
+        "lastSeen": 109
+      },
+      "csc": {
+        "card": {
+          "stability": 1.80599612,
+          "difficulty": 8.77916217,
+          "elapsed_days": 1,
+          "scheduled_days": 2,
+          "reps": 4,
+          "lapses": 0,
+          "learning_steps": 0,
+          "state": 2,
+          "due": 1788714113272,
+          "last_review": 1788541313272
+        },
+        "recent": [
+          {
+            "q": "q2:a4e37010",
+            "template": 0,
+            "correct": false
+          },
+          {
+            "q": "q2:a15f35c4",
+            "template": 1,
+            "correct": false
+          },
+          {
+            "q": "q2:bb808225",
+            "template": 0,
+            "correct": true
+          },
+          {
+            "q": "q2:91249db0",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "q2:0402d50b",
+            "template": 0,
+            "correct": true
+          }
+        ],
+        "needsRemediation": false,
+        "failureStreak": 0,
+        "lastFailureAt": 113,
+        "otherSinceFailure": 0,
+        "extraPracticeGiven": false,
+        "lastSeen": 119
+      },
+      "asin": {
+        "card": {
+          "stability": 7.31530068,
+          "difficulty": 2.11121424,
+          "elapsed_days": 1,
+          "scheduled_days": 7,
+          "reps": 2,
+          "lapses": 0,
+          "learning_steps": 0,
+          "state": 2,
+          "due": 1789059593272,
+          "last_review": 1788454793272
+        },
+        "recent": [
+          {
+            "q": "q2:e38a6a1e",
+            "template": 0,
+            "correct": true
+          },
+          {
+            "q": "q2:d957e285",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "q2:52b0e03b",
+            "template": 0,
+            "correct": false
+          },
+          {
+            "q": "q2:a33d7e29",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "q2:20248375",
+            "template": 0,
+            "correct": true
+          }
+        ],
+        "needsRemediation": false,
+        "failureStreak": 0,
+        "lastFailureAt": 125,
+        "otherSinceFailure": 0,
+        "extraPracticeGiven": false,
+        "lastSeen": 129
+      },
+      "acos": {
+        "card": {
+          "stability": 1.88998205,
+          "difficulty": 9.10103214,
+          "elapsed_days": 1,
+          "scheduled_days": 2,
+          "reps": 5,
+          "lapses": 0,
+          "learning_steps": 0,
+          "state": 2,
+          "due": 1788973373272,
+          "last_review": 1788800573272
+        },
+        "recent": [
+          {
+            "q": "q2:571ea796",
+            "template": 0,
+            "correct": true
+          },
+          {
+            "q": "q2:cd4de71b",
+            "template": 1,
+            "correct": false
+          },
+          {
+            "q": "q2:ee11a977",
+            "template": 0,
+            "correct": false
+          },
+          {
+            "q": "q2:7842c12c",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "q2:a6defb02",
+            "template": 0,
+            "correct": true
+          }
+        ],
+        "needsRemediation": false,
+        "failureStreak": 0,
+        "lastFailureAt": 135,
+        "otherSinceFailure": 0,
+        "extraPracticeGiven": false,
+        "lastSeen": 139
+      },
+      "atan": {
+        "card": {
+          "stability": 2.737177,
+          "difficulty": 8.77549312,
+          "elapsed_days": 1,
+          "scheduled_days": 3,
+          "reps": 5,
+          "lapses": 0,
+          "learning_steps": 0,
+          "state": 2,
+          "due": 1789146173272,
+          "last_review": 1788886973272
+        },
+        "recent": [
+          {
+            "q": "q2:8b02fc6c",
+            "template": 0,
+            "correct": false
+          },
+          {
+            "q": "q2:5aba93b7",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "q2:0dd68e90",
+            "template": 0,
+            "correct": false
+          },
+          {
+            "q": "q2:a5787c16",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "q2:3e2d12b5",
+            "template": 0,
+            "correct": true
+          }
+        ],
+        "needsRemediation": false,
+        "failureStreak": 0,
+        "lastFailureAt": 145,
+        "otherSinceFailure": 0,
+        "extraPracticeGiven": false,
+        "lastSeen": 149
+      },
+      "product": {
+        "card": {
+          "stability": 0.93334886,
+          "difficulty": 9.56415413,
+          "elapsed_days": 1,
+          "scheduled_days": 1,
+          "reps": 5,
+          "lapses": 0,
+          "learning_steps": 0,
+          "state": 2,
+          "due": 1789059773272,
+          "last_review": 1788973373272
+        },
+        "recent": [
+          {
+            "q": "q2:e005c72c",
+            "template": 0,
+            "correct": false
+          },
+          {
+            "q": "q2:23e4f684",
+            "template": 1,
+            "correct": false
+          },
+          {
+            "q": "q2:375155f7",
+            "template": 0,
+            "correct": false
+          },
+          {
+            "q": "q2:0a0c0780",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "q2:ddb1fbca",
+            "template": 0,
+            "correct": true
+          }
+        ],
+        "needsRemediation": false,
+        "failureStreak": 0,
+        "lastFailureAt": 155,
+        "otherSinceFailure": 0,
+        "extraPracticeGiven": false,
+        "lastSeen": 159
+      },
+      "quotient": {
+        "card": {
+          "stability": 7.31530068,
+          "difficulty": 2.11121424,
+          "elapsed_days": 1,
+          "scheduled_days": 7,
+          "reps": 2,
+          "lapses": 0,
+          "learning_steps": 0,
+          "state": 2,
+          "due": 1789491593272,
+          "last_review": 1788886793272
+        },
+        "recent": [
+          {
+            "q": "q2:553d7641",
+            "template": 0,
+            "correct": true
+          },
+          {
+            "q": "q2:6a101d19",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "q2:a14bfffa",
+            "template": 0,
+            "correct": true
+          },
+          {
+            "q": "q2:5d677fd1",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "q2:dad4ae05",
+            "template": 0,
+            "correct": true
+          }
+        ],
+        "needsRemediation": false,
+        "failureStreak": 0,
+        "lastFailureAt": 0,
+        "otherSinceFailure": 0,
+        "extraPracticeGiven": false,
+        "lastSeen": 169
+      },
+      "chain": {
+        "card": {
+          "stability": 4.47481716,
+          "difficulty": 6.39094132,
+          "elapsed_days": 1,
+          "scheduled_days": 4,
+          "reps": 3,
+          "lapses": 0,
+          "learning_steps": 0,
+          "state": 2,
+          "due": 1789405253272,
+          "last_review": 1789059653272
+        },
+        "recent": [
+          {
+            "q": "q2:c493a657",
+            "template": 0,
+            "correct": false
+          },
+          {
+            "q": "q2:868981cc",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "q2:4f07008f",
+            "template": 0,
+            "correct": true
+          },
+          {
+            "q": "q2:fd22e730",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "q2:60bc0599",
+            "template": 0,
+            "correct": true
+          }
+        ],
+        "needsRemediation": false,
+        "failureStreak": 0,
+        "lastFailureAt": 171,
+        "otherSinceFailure": 0,
+        "extraPracticeGiven": false,
+        "lastSeen": 179
+      },
+      "nested": {
+        "card": {
+          "stability": 4.3811614,
+          "difficulty": 7.37018264,
+          "elapsed_days": 1,
+          "scheduled_days": 4,
+          "reps": 4,
+          "lapses": 0,
+          "learning_steps": 0,
+          "state": 2,
+          "due": 1789578113272,
+          "last_review": 1789232513272
+        },
+        "recent": [
+          {
+            "q": "q2:0b907f1f",
+            "template": 0,
+            "correct": true
+          },
+          {
+            "q": "q2:1d6ebcac",
+            "template": 1,
+            "correct": false
+          },
+          {
+            "q": "q2:3b67b8c8",
+            "template": 0,
+            "correct": true
+          },
+          {
+            "q": "q2:385739fd",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "q2:c7d11869",
+            "template": 0,
+            "correct": true
+          }
+        ],
+        "needsRemediation": false,
+        "failureStreak": 0,
+        "lastFailureAt": 183,
+        "otherSinceFailure": 0,
+        "extraPracticeGiven": false,
+        "lastSeen": 189
+      },
+      "mixed": {
+        "card": {
+          "stability": 1.80599612,
+          "difficulty": 8.77916217,
+          "elapsed_days": 1,
+          "scheduled_days": 2,
+          "reps": 4,
+          "lapses": 0,
+          "learning_steps": 0,
+          "state": 2,
+          "due": 1789491713272,
+          "last_review": 1789318913272
+        },
+        "recent": [
+          {
+            "q": "q2:b8bf4072",
+            "template": 0,
+            "correct": false
+          },
+          {
+            "q": "q2:e6ee8817",
+            "template": 1,
+            "correct": false
+          },
+          {
+            "q": "q2:676dea3a",
+            "template": 0,
+            "correct": true
+          },
+          {
+            "q": "q2:9b55edd7",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "q2:96e2c388",
+            "template": 0,
+            "correct": true
+          }
+        ],
+        "needsRemediation": false,
+        "failureStreak": 0,
+        "lastFailureAt": 193,
+        "otherSinceFailure": 0,
+        "extraPracticeGiven": false,
+        "lastSeen": 199
+      },
+      "implicit": {
+        "card": {
+          "stability": 7.31530068,
+          "difficulty": 2.11121424,
+          "elapsed_days": 1,
+          "scheduled_days": 7,
+          "reps": 2,
+          "lapses": 0,
+          "learning_steps": 0,
+          "state": 2,
+          "due": 1789837193272,
+          "last_review": 1789232393272
+        },
+        "recent": [
+          {
+            "q": "q2:d4af9592",
+            "template": 0,
+            "correct": true
+          },
+          {
+            "q": "q2:35976512",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "q2:88646de0",
+            "template": 0,
+            "correct": false
+          },
+          {
+            "q": "q2:5ac4186c",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "q2:1d2285da",
+            "template": 0,
+            "correct": true
+          }
+        ],
+        "needsRemediation": false,
+        "failureStreak": 0,
+        "lastFailureAt": 205,
+        "otherSinceFailure": 0,
+        "extraPracticeGiven": false,
+        "lastSeen": 209
+      },
+      "inverse": {
+        "card": {
+          "stability": 1.88998205,
+          "difficulty": 9.10103214,
+          "elapsed_days": 1,
+          "scheduled_days": 2,
+          "reps": 5,
+          "lapses": 0,
+          "learning_steps": 0,
+          "state": 2,
+          "due": 1789837373272,
+          "last_review": 1789664573272
+        },
+        "recent": [
+          {
+            "q": "q2:c21e4119",
+            "template": 0,
+            "correct": true
+          },
+          {
+            "q": "q2:ecb31b14",
+            "template": 1,
+            "correct": false
+          },
+          {
+            "q": "q2:2ddd7f3a",
+            "template": 0,
+            "correct": false
+          },
+          {
+            "q": "q2:9d73ed37",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "q2:be32711a",
+            "template": 0,
+            "correct": true
+          }
+        ],
+        "needsRemediation": false,
+        "failureStreak": 0,
+        "lastFailureAt": 215,
+        "otherSinceFailure": 0,
+        "extraPracticeGiven": false,
+        "lastSeen": 219
+      },
+      "higher": {
+        "card": {
+          "stability": 2.737177,
+          "difficulty": 8.77549312,
+          "elapsed_days": 1,
+          "scheduled_days": 3,
+          "reps": 5,
+          "lapses": 0,
+          "learning_steps": 0,
+          "state": 2,
+          "due": 1790010173272,
+          "last_review": 1789750973272
+        },
+        "recent": [
+          {
+            "q": "q2:9c0e97f7",
+            "template": 0,
+            "correct": false
+          },
+          {
+            "q": "q2:196e95f0",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "q2:dc1401f2",
+            "template": 0,
+            "correct": false
+          },
+          {
+            "q": "q2:5f9b6dea",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "q2:3ed3198d",
+            "template": 0,
+            "correct": true
+          }
+        ],
+        "needsRemediation": false,
+        "failureStreak": 0,
+        "lastFailureAt": 225,
+        "otherSinceFailure": 0,
+        "extraPracticeGiven": false,
+        "lastSeen": 229
+      },
+      "parametric": {
+        "card": {
+          "stability": 0.32936546,
+          "difficulty": 9.57850426,
+          "elapsed_days": 1,
+          "scheduled_days": 0,
+          "reps": 4,
+          "lapses": 0,
+          "learning_steps": 1,
+          "state": 1,
+          "due": 1789751513272,
+          "last_review": 1789750913272
+        },
+        "recent": [
+          {
+            "q": "q2:453a6c4c",
+            "template": 0,
+            "correct": false
+          },
+          {
+            "q": "q2:61cf3323",
+            "template": 1,
+            "correct": false
+          },
+          {
+            "q": "q2:2b4336a7",
+            "template": 0,
+            "correct": false
+          },
+          {
+            "q": "q2:d261796d",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "q2:a1dfb786",
+            "template": 0,
+            "correct": true
+          }
+        ],
+        "needsRemediation": false,
+        "failureStreak": 0,
+        "lastFailureAt": 235,
+        "otherSinceFailure": 0,
+        "extraPracticeGiven": false,
+        "lastSeen": 239
+      },
+      "vector": {
+        "card": {
+          "stability": 7.31530068,
+          "difficulty": 2.11121424,
+          "elapsed_days": 1,
+          "scheduled_days": 7,
+          "reps": 2,
+          "lapses": 0,
+          "learning_steps": 0,
+          "state": 2,
+          "due": 1790269193272,
+          "last_review": 1789664393272
+        },
+        "recent": [
+          {
+            "q": "q2:fe3614e9",
+            "template": 0,
+            "correct": true
+          },
+          {
+            "q": "q2:776d739f",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "q2:167fd72f",
+            "template": 0,
+            "correct": true
+          },
+          {
+            "q": "q2:6a2f27a9",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "q2:4e5593e3",
+            "template": 0,
+            "correct": true
+          }
+        ],
+        "needsRemediation": false,
+        "failureStreak": 0,
+        "lastFailureAt": 0,
+        "otherSinceFailure": 0,
+        "extraPracticeGiven": false,
+        "lastSeen": 249
+      },
+      "polar": {
+        "card": {
+          "stability": 1.88678762,
+          "difficulty": 6.40211507,
+          "elapsed_days": 1,
+          "scheduled_days": 0,
+          "reps": 2,
+          "lapses": 0,
+          "learning_steps": 1,
+          "state": 1,
+          "due": 1789751393272,
+          "last_review": 1789750793272
+        },
+        "recent": [
+          {
+            "q": "q2:809a7f81",
+            "template": 0,
+            "correct": false
+          },
+          {
+            "q": "q2:d65605e7",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "q2:7db68196",
+            "template": 0,
+            "correct": true
+          },
+          {
+            "q": "q2:2f1f292f",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "q2:de31a692",
+            "template": 0,
+            "correct": true
+          }
+        ],
+        "needsRemediation": false,
+        "failureStreak": 0,
+        "lastFailureAt": 251,
+        "otherSinceFailure": 0,
+        "extraPracticeGiven": false,
+        "lastSeen": 259
+      }
+    },
+    "pendingDiagnostics": [
+      "power",
+      "constant",
+      "root",
+      "sum",
+      "sin",
+      "exp",
+      "chain",
+      "product",
+      "quotient",
+      "higher",
+      "parametric"
+    ],
+    "recentQuestionSignatures": [],
+    "sequence": 260,
+    "updatedAt": 1789750793289
+  },
+  "session": {
+    "config": {
+      "schemaVersion": 1,
+      "revision": "2026-09-19-1",
+      "initialUnlockedLevel": 1,
+      "disabledFamilies": [],
+      "sessionLength": 12
+    },
+    "completed": 3,
+    "independent": 2,
+    "assisted": 1,
+    "skipped": 0,
+    "finished": false,
+    "current": {
+      "question": {
+        "id": "implicit:0:fixture",
+        "seed": "fixture",
+        "generatorVersion": "1.2.0",
+        "template": 0,
+        "templateKey": "implicit.ellipse",
+        "family": "implicit",
+        "level": 5,
+        "primarySkill": "implicit",
+        "supportingSkills": [
+          "power",
+          "sum",
+          "chain"
+        ],
+        "requiredSkills": [
+          "power",
+          "sum",
+          "chain"
+        ],
+        "title": "Differentiate implicitly",
+        "prompt": "3\\cdot x^{2}+2\\cdot y^{2}-24=0",
+        "source": [
+          [
+            "Add",
+            [
+              "Multiply",
+              3,
+              [
+                "Power",
+                "x",
+                2
+              ]
+            ],
+            [
+              "Multiply",
+              2,
+              [
+                "Power",
+                "y",
+                2
+              ]
+            ],
+            -24
+          ]
+        ],
+        "answers": [
+          [
+            "Negate",
+            [
+              "Divide",
+              [
+                "Multiply",
+                3,
+                [
+                  "Multiply",
+                  2,
+                  "x"
+                ]
+              ],
+              [
+                "Multiply",
+                2,
+                [
+                  "Multiply",
+                  2,
+                  "y"
+                ]
+              ]
+            ]
+          ]
+        ],
+        "labels": [
+          "dy/dx"
+        ],
+        "domain": {
+          "variable": "x",
+          "intervals": [
+            [
+              -2.4041630560342617,
+              -0.28284271247461906
+            ],
+            [
+              0.28284271247461906,
+              2.4041630560342617
+            ]
+          ],
+          "curve": {
+            "type": "graph",
+            "free": "x",
+            "branches": [
+              [
+                "Sqrt",
+                [
+                  "Divide",
+                  [
+                    "Add",
+                    24,
+                    [
+                      "Negate",
+                      [
+                        "Multiply",
+                        3,
+                        [
+                          "Power",
+                          "x",
+                          2
+                        ]
+                      ]
+                    ]
+                  ],
+                  2
+                ]
+              ],
+              [
+                "Negate",
+                [
+                  "Sqrt",
+                  [
+                    "Divide",
+                    [
+                      "Add",
+                      24,
+                      [
+                        "Negate",
+                        [
+                          "Multiply",
+                          3,
+                          [
+                            "Power",
+                            "x",
+                            2
+                          ]
+                        ]
+                      ]
+                    ],
+                    2
+                  ]
+                ]
+              ]
+            ]
+          },
+          "guards": []
+        },
+        "domainText": "Compare on the given curve, where y ≠ 0.",
+        "hints": [
+          "Differentiate F(x,y)=0 with respect to x; every derivative of y introduces dy/dx.",
+          "Identify the parts below, then apply the rule to each part."
+        ],
+        "hintMath": "x\\text{ is the differentiation variable.}\\quad 3\\cdot x^{2}+2\\cdot y^{2}-24",
+        "steps": [
+          {
+            "text": "Differentiate both sides, remembering that y depends on x.",
+            "math": "3\\cdot 2\\cdot x+2\\cdot 2\\cdot y\\frac{\\mathrm{d}y}{\\mathrm{d}x}=0"
+          },
+          {
+            "text": "Isolate the requested derivative.",
+            "math": "\\frac{\\mathrm{d}y}{\\mathrm{d}x}=-\\left(\\frac{3\\cdot 2\\cdot x}{2\\cdot 2\\cdot y}\\right)"
+          }
+        ],
+        "signature": "[\"implicit\",0,[[\"Add\",[\"Multiply\",3,[\"Power\",\"x\",2]],[\"Multiply\",2,[\"Power\",\"y\",2]],-24]]]"
+      },
+      "draft": [
+        ""
+      ],
+      "hintsUsed": 0,
+      "recorded": false,
+      "closed": false,
+      "reason": "New skill"
+    }
+  }
+}

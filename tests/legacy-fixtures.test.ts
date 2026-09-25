@@ -1,12 +1,16 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { decodeProgress, type PortableProgress } from '../src/transfer';
+import {
+  decodeProgress,
+  makePortableProgress,
+  type PortableProgress,
+} from '../src/transfer';
 import { validateLocalState } from '../src/storage';
 import type { AppState } from '../src/progress';
+import { generateQuestion } from '../src/questions';
 
-// These fixtures are frozen samples of formats produced by past code (see
-// scripts/capture-fixtures.ts). This baseline must keep passing forever: it
-// is how every later migration step proves it can still read old data.
+// These fixtures freeze old formats and the current Phase 2 migration inputs
+// (see scripts/capture-fixtures.ts). Keep every later migration able to read them.
 const fixture = (name: string) =>
   readFileSync(new URL(`./fixtures/${name}`, import.meta.url), 'utf8');
 
@@ -27,7 +31,7 @@ function expectQ2Fingerprints(value: unknown) {
   expect(qFields(value).every((q) => /^q2:[a-f0-9]{8}$/.test(q))).toBe(true);
 }
 
-describe('legacy fixtures stay readable by the current code', () => {
+describe('frozen fixtures stay readable by the current code', () => {
   it('decodes the frozen DSP1 export and normalizes all evidence fingerprints', () => {
     const decoded = decodeProgress(fixture('dsp1.txt'));
     expect(decoded.unlockedLevel).toBe(rawSnapshot.unlockedLevel);
@@ -59,12 +63,37 @@ describe('legacy fixtures stay readable by the current code', () => {
     expectQ2Fingerprints(decoded);
   });
 
+  it('decodes the frozen DSP2 profile 2 export', () => {
+    const code = fixture('dsp2-profile2.txt').trim();
+    expect(code).toHaveLength(1540);
+    const decoded = decodeProgress(code);
+    expect(decoded).toEqual(
+      makePortableProgress(rawSnapshot, rawSnapshot.exportedAt),
+    );
+    expectQ2Fingerprints(decoded);
+  });
+
   it('validates the frozen formatVersion-1 local state', () => {
     const state = JSON.parse(fixture('local-state-v1.json')) as AppState;
     const result = validateLocalState(state);
     expect(result.migrated).toBe(true);
     expect(result.from).toBe(1);
     expectQ2Fingerprints(result.state.progress);
+  });
+
+  it('validates the frozen q2 local state and graph question', () => {
+    const state = JSON.parse(
+      fixture('local-state-v1-q2.json'),
+    ) as AppState;
+    const result = validateLocalState(state);
+    expect(result.from).toBe(1);
+    expect(result.migrated).toBe(false);
+    expect(result.state).toEqual(state);
+    expectQ2Fingerprints(state.progress);
+    expect(state.session?.current?.question).toEqual(
+      generateQuestion('implicit', 'fixture', 0),
+    );
+    expect(state.session?.current?.question.domain.curve?.type).toBe('graph');
   });
 
   it('loads the frozen golden generator output at its full size', () => {
