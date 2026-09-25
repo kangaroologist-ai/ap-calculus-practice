@@ -12,7 +12,13 @@ const golden = JSON.parse(
 
 // Fields a later step is allowed to change on purpose get added here, with a
 // comment explaining why, instead of being deleted from the comparison.
-const EXCLUDED_FIELDS = new Set<string>([]);
+const EXCLUDED_FIELDS = new Set<string>([
+  // SPEC-G3 (Step 2): supportingSkills now legitimately reflects the skills a
+  // question's own expression tree exercises, not a copy of the catalog's
+  // static prerequisite list, so it is allowed to differ from the frozen
+  // v1.1.0 fixture.
+  'supportingSkills',
+]);
 
 // Template keys a later step is allowed to change the generated content for
 // (e.g. once a template is rewritten for SPEC-G1/G4 variety) go here, keyed

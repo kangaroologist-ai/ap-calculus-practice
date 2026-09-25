@@ -346,6 +346,9 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
   implicit: [
     {
       key: "implicit.circle",
+      // Differentiating y^2 always introduces a chain-rule factor of dy/dx,
+      // even though that composition never shows up in the source constraint.
+      requires: ["chain"],
       build: ({ a }) =>
         implicitBuilt(
           "circle",
@@ -360,6 +363,7 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
     },
     {
       key: "implicit.hyperbola",
+      requires: ["chain"],
       build: ({ a }) =>
         implicitBuilt(
           "hyperbola",
@@ -399,11 +403,15 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
     {
       key: "parametric.linear",
       meta: { derivativeOrder: 1 },
+      // The slope (dy/dt)/(dx/dt) is a quotient of derivatives; that division
+      // never appears in the x(t)/y(t) source expressions themselves.
+      requires: ["quotient"],
       build: ({ a, b }) => parametricBuilt(A(M(a, "t"), b), F("Sin", "t"), 1),
     },
     {
       key: "parametric.poly",
       meta: { derivativeOrder: 2 },
+      requires: ["quotient"],
       build: () => parametricBuilt(P("t", 2), P("t", 3), 2),
     },
   ],
@@ -418,7 +426,18 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
     },
   ],
   polar: [
-    { key: "polar.sin", build: ({ a }) => polarBuilt(M(a, F("Sin", "theta"))) },
-    { key: "polar.cos", build: ({ a }) => polarBuilt(A(a, F("Cos", "theta"))) },
+    {
+      key: "polar.sin",
+      // Converting to Cartesian (x=r cos theta, y=r sin theta) always brings
+      // in product, quotient, sin, and cos, none of which need appear in the
+      // bare radius expression r(theta).
+      requires: ["product", "quotient", "sin", "cos"],
+      build: ({ a }) => polarBuilt(M(a, F("Sin", "theta"))),
+    },
+    {
+      key: "polar.cos",
+      requires: ["product", "quotient", "sin", "cos"],
+      build: ({ a }) => polarBuilt(A(a, F("Cos", "theta"))),
+    },
   ],
 };

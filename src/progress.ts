@@ -206,7 +206,7 @@ export function recordOutcome(
     s.lastFailureAt = p.sequence;
     s.otherSinceFailure = 0;
     s.extraPracticeGiven = false;
-    const diagnostic = q.supportingSkills.filter(
+    const diagnostic = (q.requiredSkills ?? q.supportingSkills).filter(
       (id) => !c.disabledFamilies.includes(id),
     );
     if (diagnostic.length) {

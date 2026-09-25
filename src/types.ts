@@ -39,6 +39,11 @@ export interface Question {
   level: number;
   primarySkill: string;
   supportingSkills: string[];
+  // The skills this specific question actually exercises, inferred from its
+  // expression tree (SPEC-G3). Optional because questions saved by generator
+  // <= 1.1.0 predate this field; readers should use
+  // `q.requiredSkills ?? q.supportingSkills`.
+  requiredSkills?: string[];
   title: string;
   prompt: string;
   source: Expr[];

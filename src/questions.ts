@@ -1,8 +1,9 @@
 import type { Expr, Question, Domain, Skill } from "./types";
 import { derivative as d, latex as L, random, complexity } from "./math";
-import { skillById } from "./catalog";
+import { SKILLS, skillById } from "./catalog";
 import { ddx } from "./notation";
 import { TEMPLATES, makeCtx, type Built, type Template } from "./templates";
+import { inferSkills } from "./skill-inference";
 export const GENERATOR_VERSION = "1.1.0";
 export function generateQuestion(
   id: string,
@@ -76,6 +77,19 @@ function finalize(
           },
         ];
   const hintMath = structureHint(skill.id, source, variable);
+  // What this specific question actually uses, not the catalog's static
+  // prerequisite list (SPEC-G3): every source expression's inferred skills,
+  // plus whatever the template declares as type-inherent (e.g. implicit
+  // differentiation always needs the chain rule for dy/dx), minus the skill
+  // itself, in catalog order. An implicit question infers over both x and y.
+  const inferenceVars = built.curve ? ["x", "y"] : [variable];
+  const inferred = new Set<string>();
+  for (const expr of source) inferSkills(expr, inferenceVars, inferred);
+  for (const req of template.requires ?? []) inferred.add(req);
+  inferred.delete(skill.id);
+  const requiredSkills = SKILLS.filter((s) => inferred.has(s.id)).map(
+    (s) => s.id,
+  );
   return {
     id: `${skill.id}:${v}:${seed}`,
     seed,
@@ -86,7 +100,8 @@ function finalize(
     family: skill.id,
     level: skill.level,
     primarySkill: skill.id,
-    supportingSkills: skill.prerequisites,
+    supportingSkills: requiredSkills,
+    requiredSkills,
     title,
     prompt,
     source,
