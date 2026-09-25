@@ -1,6 +1,7 @@
 import { openDB } from "idb";
 import type { AppState } from "./progress";
-import { validateSnapshot, type PortableProgress } from "./transfer";
+import { migrateProgress, LATEST_FORMAT } from "./migrate";
+import type { PortableProgress } from "./transfer";
 let dbPromise: ReturnType<typeof openDB> | undefined;
 const db = () =>
   (dbPromise ??= openDB("derivative-studio", 1, {
@@ -17,13 +18,37 @@ function enqueue<T>(operation: () => Promise<T>): Promise<T> {
   writes = next.catch(() => {});
   return next;
 }
-export function validateLocalState(s: AppState): AppState {
+export function validateLocalState(s: AppState): {
+  state: AppState;
+  migrated: boolean;
+  from: number;
+} {
   if (!s || s.version !== 1)
     throw Error(
       "This saved progress version is not supported. It has not been changed.",
     );
-  validateSnapshot({ ...s.progress, exportedAt: Date.now() });
-  return s;
+  const { progress, from } = migrateProgress(s.progress);
+  const state = { ...s, progress };
+  if (from !== LATEST_FORMAT) delete state.session;
+  return {
+    state,
+    migrated: JSON.stringify(state) !== JSON.stringify(s),
+    from,
+  };
+}
+export function commitMigration(
+  before: AppState,
+  after: AppState,
+  formatUpgrade: boolean,
+) {
+  return enqueue(async () => {
+    const tx = (await db()).transaction("state", "readwrite");
+    const original = await tx.store.get("pre-migration");
+    if (formatUpgrade || original === undefined)
+      await tx.store.put(before, "pre-migration");
+    await tx.store.put(after, "current");
+    await tx.done;
+  });
 }
 export function saveState(s: AppState) {
   const snapshot = structuredClone(s);
@@ -64,18 +89,19 @@ export function restoreBackup(): Promise<AppState> {
       await tx.done;
       throw Error("There is no saved backup to restore.");
     }
+    let restored: AppState;
     try {
-      validateLocalState(backup);
+      restored = validateLocalState(backup).state;
     } catch (error) {
       tx.abort();
       await tx.done.catch(() => {});
       throw error;
     }
     const current = await tx.store.get("current");
-    await tx.store.put(backup, "current");
+    await tx.store.put(restored, "current");
     if (current) await tx.store.put(current, "backup");
     await tx.done;
-    return backup;
+    return restored;
   });
 }
 export function resetState(s: AppState) {

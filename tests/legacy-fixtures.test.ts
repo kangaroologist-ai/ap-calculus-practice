@@ -35,7 +35,7 @@ describe('legacy fixtures stay readable by the current code', () => {
 
   it('validates the frozen formatVersion-1 local state', () => {
     const state = JSON.parse(fixture('local-state-v1.json')) as AppState;
-    expect(validateLocalState(state)).toEqual(state);
+    expect(validateLocalState(state).state).toEqual(state);
   });
 
   it('loads the frozen golden generator output at its full size', () => {

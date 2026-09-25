@@ -1,14 +1,8 @@
 import { questionFingerprint } from "./question-identity";
 import { packProgress, unpackProgress } from "./compact-progress";
 import { strToU8, strFromU8, zlibSync, Unzlib } from "fflate";
-import { SKILLS, CURRICULUM_VERSION } from "./catalog";
-import {
-  PARAMETERS,
-  localPracticeDay,
-  SCHEDULER_VERSION,
-  ALGORITHM_VERSION,
-  type Progress,
-} from "./progress";
+import { localPracticeDay, type Progress } from "./progress";
+import { migrateProgress, validateCurrent } from "./migrate";
 export type PortableProgress = Progress & { exportedAt: number };
 export function makePortableProgress(
   p: Progress,
@@ -35,123 +29,10 @@ const integer = (v: unknown, min = 0, max = 1e9) =>
   finite(v, min, max) && Number.isInteger(v);
 export function validateSnapshot(v: unknown): PortableProgress {
   const p = v as PortableProgress;
-  if (
-    !p ||
-    p.formatVersion !== 1 ||
-    p.curriculumVersion !== CURRICULUM_VERSION ||
-    p.schedulerPackageVersion !== SCHEDULER_VERSION ||
-    p.fsrsAlgorithmVersion !== ALGORITHM_VERSION
-  )
-    throw Error(
-      "This progress version is not supported. Use the same app version on both devices.",
-    );
-  if (JSON.stringify(p.fsrsParameters) !== JSON.stringify(PARAMETERS))
-    throw Error("Unsupported review settings. No progress was changed.");
-  if (
-    !finite(p.exportedAt, 946684800000, Date.now() + 86400000) ||
-    !finite(p.updatedAt, 946684800000, Date.now() + 86400000) ||
-    !integer(p.unlockedLevel, 1, 6) ||
-    !integer(p.sequence) ||
-    !p.skills ||
-    typeof p.skills !== "object" ||
-    Array.isArray(p.skills)
-  )
+  if (!p || !finite(p.exportedAt, 946684800000, Date.now() + 86400000))
     throw Error("Invalid progress data.");
-  if (p.streak !== undefined && !integer(p.streak))
-    throw Error("Invalid streak.");
-  if (p.practiceDays !== undefined) {
-    if (
-      !p.practiceDays ||
-      typeof p.practiceDays !== "object" ||
-      Array.isArray(p.practiceDays) ||
-      Object.keys(p.practiceDays).length > 31
-    )
-      throw Error("Invalid daily practice counts.");
-    const latestLocalDay = new Date();
-    latestLocalDay.setDate(latestLocalDay.getDate() + 2);
-    for (const [day, count] of Object.entries(p.practiceDays)) {
-      if (
-        !/^\d{4}-\d{2}-\d{2}$/.test(day) ||
-        !Number.isFinite(Date.parse(day)) ||
-        new Date(day).toISOString().slice(0, 10) !== day ||
-        day > localPracticeDay(latestLocalDay.getTime()) ||
-        !integer(count)
-      )
-        throw Error("Invalid daily practice counts.");
-    }
-  }
-  if (Object.keys(p.skills).length > SKILLS.length)
-    throw Error("Too many skills.");
-  for (const [id, s] of Object.entries(p.skills)) {
-    if (
-      !SKILLS.some((x) => x.id === id) ||
-      !s ||
-      typeof s !== "object" ||
-      !s.card
-    )
-      throw Error("Unknown or invalid skill.");
-    const c = s.card;
-    for (const key of [
-      "stability",
-      "difficulty",
-      "elapsed_days",
-      "scheduled_days",
-      "learning_steps",
-      "reps",
-      "lapses",
-      "state",
-      "due",
-    ] as const)
-      if (!finite(c[key])) throw Error("Invalid review state.");
-    if (
-      !integer(c.state, 0, 3) ||
-      c.difficulty > 10 ||
-      c.stability > 1e6 ||
-      !finite(c.due, 946684800000, Date.now() + 366 * 86400000) ||
-      (c.last_review !== undefined &&
-        !finite(c.last_review, 946684800000, Date.now() + 86400000))
-    )
-      throw Error("Invalid review dates or values.");
-    for (const k of ["reps", "lapses", "learning_steps"] as const)
-      if (!integer(c[k])) throw Error("Invalid review count.");
-    if (
-      !Array.isArray(s.recent) ||
-      s.recent.length > 5 ||
-      s.recent.some(
-        (e) =>
-          !e ||
-          typeof e.q !== "string" ||
-          e.q.length > 4096 ||
-          !integer(e.template, 0, 1) ||
-          typeof e.correct !== "boolean",
-      ) ||
-      new Set(s.recent.map((x) => x.q)).size !== s.recent.length
-    )
-      throw Error("Invalid skill evidence.");
-    if (
-      typeof s.needsRemediation !== "boolean" ||
-      typeof s.extraPracticeGiven !== "boolean" ||
-      ![
-        s.failureStreak,
-        s.lastFailureAt,
-        s.otherSinceFailure,
-        s.lastSeen,
-      ].every((x) => integer(x))
-    )
-      throw Error("Invalid practice state.");
-  }
-  if (
-    !Array.isArray(p.pendingDiagnostics) ||
-    p.pendingDiagnostics.length > SKILLS.length ||
-    p.pendingDiagnostics.some((id) => !SKILLS.some((s) => s.id === id)) ||
-    !Array.isArray(p.recentQuestionSignatures) ||
-    p.recentQuestionSignatures.length > 10 ||
-    p.recentQuestionSignatures.some(
-      (s) => typeof s !== "string" || s.length > 4096,
-    )
-  )
-    throw Error("Invalid practice queue.");
-  return p;
+  const { progress } = migrateProgress(p);
+  return { ...progress, exportedAt: p.exportedAt } as PortableProgress;
 }
 function base64(a: Uint8Array) {
   let s = "";
@@ -170,7 +51,9 @@ export function checksum(text: string): string {
   return (h >>> 0).toString(16).padStart(8, "0");
 }
 export function encodeProgress(p: PortableProgress): string {
-  validateSnapshot(p);
+  if (!finite(p.exportedAt, 946684800000, Date.now() + 86400000))
+    throw Error("Invalid progress data.");
+  validateCurrent(p);
   const body = base64(
     zlibSync(strToU8(JSON.stringify(packProgress(p))), { level: 9 }),
   );
@@ -202,7 +85,12 @@ export function decodeProgress(code: string): PortableProgress {
     offset += c.length;
   }
   const data = JSON.parse(strFromU8(out));
-  return validateSnapshot(m[1] === "2" ? unpackProgress(data) : data);
+  const raw = m[1] === "2" ? unpackProgress(data) : data;
+  const exportedAt = (raw as { exportedAt?: unknown })?.exportedAt;
+  if (!finite(exportedAt, 946684800000, Date.now() + 86400000))
+    throw Error("Invalid progress data.");
+  const { progress } = migrateProgress(raw);
+  return { ...progress, exportedAt } as PortableProgress;
 }
 // Base45 uses QR's denser alphanumeric mode; the copyable code stays Base64URL.
 const QR_ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:";

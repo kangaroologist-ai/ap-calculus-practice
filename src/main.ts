@@ -22,7 +22,9 @@ import {
   restoreBackup,
   resetState,
   validateLocalState,
+  commitMigration,
 } from "./storage";
+import { LATEST_FORMAT } from "./migrate";
 import {
   makePortableProgress,
   encodeProgress,
@@ -847,7 +849,10 @@ async function boot() {
         throw Error(
           "This saved progress uses an unsupported version. It has not been changed.",
         );
-      state = validateLocalState(saved);
+      const result = validateLocalState(saved);
+      state = result.state;
+      if (result.migrated && !temporary)
+        await commitMigration(saved, state, result.from < LATEST_FORMAT);
     } else state = { version: 1, progress: freshProgress(config) };
     render();
     if (progressLink) {

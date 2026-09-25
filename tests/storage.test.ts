@@ -1,10 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { freshProgress } from '../src/progress';
 import { makePortableProgress } from '../src/transfer';
 import type { AppState, Progress } from '../src/progress';
 import type { Config } from '../src/types';
 
-type StoreKey = 'current' | 'backup';
+type StoreKey = 'current' | 'backup' | 'pre-migration';
 
 const fakeIdb = vi.hoisted(() => {
   const records = new Map<StoreKey, unknown>();
@@ -102,6 +103,37 @@ describe('serialized local persistence and backup replacement', () => {
     const state = appState(progress);
     await storage.saveState(state);
     expect(await storage.loadState()).toEqual(state);
+  });
+
+  it('keeps the first pre-migration state across normalization-only commits', async () => {
+    const backup = appState(freshProgress(config, NOW - 1), 'manual-backup');
+    const before = appState(freshProgress(config, NOW));
+    const firstAfter = appState(freshProgress(config, NOW + 1));
+    const laterBefore = appState(freshProgress(config, NOW + 1));
+    const laterAfter = appState(freshProgress(config, NOW + 2));
+    fakeIdb.records.set('backup', backup);
+
+    await storage.commitMigration(before, firstAfter, false);
+    await storage.commitMigration(laterBefore, laterAfter, false);
+
+    expect(fakeIdb.records.get('pre-migration')).toEqual(before);
+    expect(await storage.loadState()).toEqual(laterAfter);
+    expect(fakeIdb.records.get('backup')).toEqual(backup);
+  });
+
+  it('replaces pre-migration only for a format upgrade and leaves backup alone', async () => {
+    const oldPreMigration = appState(freshProgress(config, NOW - 2));
+    const backup = appState(freshProgress(config, NOW - 1), 'manual-backup');
+    const before = appState(freshProgress(config, NOW));
+    const after = appState(freshProgress(config, NOW + 1));
+    fakeIdb.records.set('pre-migration', oldPreMigration);
+    fakeIdb.records.set('backup', backup);
+
+    await storage.commitMigration(before, after, true);
+
+    expect(fakeIdb.records.get('pre-migration')).toEqual(before);
+    expect(await storage.loadState()).toEqual(after);
+    expect(fakeIdb.records.get('backup')).toEqual(backup);
   });
 
   it('serializes save, replace, and later save calls in order', async () => {
@@ -231,6 +263,25 @@ describe('serialized local persistence and backup replacement', () => {
     expect(await storage.restoreBackup()).toEqual(first);
     expect(await storage.loadState()).toEqual(first);
     expect(fakeIdb.records.get('backup')).toEqual(second);
+  });
+
+  it('restores the validated, migrated backup and saves the old current in backup', async () => {
+    const current = appState(freshProgress(config, NOW), 'current-id');
+    const backup = JSON.parse(
+      readFileSync(
+        new URL('./fixtures/local-state-v1.json', import.meta.url),
+        'utf8',
+      ),
+    ) as AppState;
+    await storage.saveState(current);
+    fakeIdb.records.set('backup', backup);
+    const expected = storage.validateLocalState(backup).state;
+
+    const restored = await storage.restoreBackup();
+
+    expect(restored).toEqual(expected);
+    expect(await storage.loadState()).toEqual(expected);
+    expect(fakeIdb.records.get('backup')).toEqual(current);
   });
 
   it('serializes a failed write before a following valid write', async () => {
