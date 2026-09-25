@@ -102,6 +102,8 @@ npm run test:e2e
 
 `test:math` 生成固定随机种子 corpus 并使用 SymPy 独立求导核对。浏览器测试使用临时测试数据；真机证据与模拟视口证据分别记录在 `docs/acceptance.md`。
 
+`tests/fixtures/dsp1.txt`、`dsp2-profile1.txt`、`local-state-v1.json`、`generator-1.1.0.json` 是旧格式的冻结样本，由 `scripts/capture-fixtures.ts` 一次性生成并提交。它们不得重新生成或手工编辑：`tests/legacy-fixtures.test.ts` 用当前代码解码它们，保证任何后续改动都不会让老数据读不出来。保留该脚本只是为了留档，不在测试或构建中运行。
+
 ## Cloudflare Pages
 
 纯静态部署，无 Workers Functions 和数据库需求。使用现有账号免费计划即可；不在仓库保存 token。

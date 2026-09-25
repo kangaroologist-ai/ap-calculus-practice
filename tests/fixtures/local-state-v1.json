@@ -1,0 +1,1430 @@
+{
+  "version": 1,
+  "progress": {
+    "formatVersion": 1,
+    "curriculumVersion": "ap-derivatives-1",
+    "schedulerPackageVersion": "5.4.2",
+    "fsrsAlgorithmVersion": "v5.4.2 using FSRS-6.0",
+    "fsrsParameters": {
+      "request_retention": 0.9,
+      "maximum_interval": 180,
+      "w": [
+        0.212,
+        1.2931,
+        2.3065,
+        8.2956,
+        6.4133,
+        0.8334,
+        3.0194,
+        0.001,
+        1.8722,
+        0.1666,
+        0.796,
+        1.4835,
+        0.0614,
+        0.2629,
+        1.6483,
+        0.6014,
+        1.8729,
+        0.5425,
+        0.0912,
+        0.0658,
+        0.1542
+      ],
+      "enable_fuzz": false,
+      "enable_short_term": true,
+      "learning_steps": [
+        "1m",
+        "10m"
+      ],
+      "relearning_steps": [
+        "10m"
+      ]
+    },
+    "unlockedLevel": 6,
+    "streak": 4,
+    "practiceDays": {
+      "2026-08-20": 1,
+      "2026-08-21": 2,
+      "2026-08-22": 3,
+      "2026-08-23": 4,
+      "2026-08-24": 5,
+      "2026-08-25": 5,
+      "2026-08-26": 4,
+      "2026-08-27": 4,
+      "2026-08-28": 4,
+      "2026-08-29": 4,
+      "2026-08-30": 4,
+      "2026-08-31": 5,
+      "2026-09-01": 4,
+      "2026-09-02": 4,
+      "2026-09-03": 4,
+      "2026-09-04": 4,
+      "2026-09-05": 4,
+      "2026-09-06": 5,
+      "2026-09-07": 4,
+      "2026-09-08": 4,
+      "2026-09-09": 4,
+      "2026-09-10": 4,
+      "2026-09-11": 4,
+      "2026-09-12": 5,
+      "2026-09-13": 4,
+      "2026-09-14": 4,
+      "2026-09-15": 4,
+      "2026-09-16": 4,
+      "2026-09-17": 4,
+      "2026-09-18": 5,
+      "2026-09-19": 10
+    },
+    "skills": {
+      "constant": {
+        "card": {
+          "stability": 7.31530068,
+          "difficulty": 2.11121424,
+          "elapsed_days": 1,
+          "scheduled_days": 7,
+          "reps": 2,
+          "lapses": 0,
+          "learning_steps": 0,
+          "state": 2,
+          "due": 1787849993272,
+          "last_review": 1787245193272
+        },
+        "recent": [
+          {
+            "q": "[\"constant\",0,[7]]",
+            "template": 0,
+            "correct": true
+          },
+          {
+            "q": "[\"constant\",1,[[\"Add\",8,[\"Divide\",9,5]]]]",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "[\"constant\",0,[6]]",
+            "template": 0,
+            "correct": true
+          },
+          {
+            "q": "[\"constant\",1,[[\"Add\",8,[\"Divide\",3,4]]]]",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "[\"constant\",0,[5]]",
+            "template": 0,
+            "correct": true
+          }
+        ],
+        "needsRemediation": false,
+        "failureStreak": 0,
+        "lastFailureAt": 0,
+        "otherSinceFailure": 0,
+        "extraPracticeGiven": false,
+        "lastSeen": 9
+      },
+      "power": {
+        "card": {
+          "stability": 4.47481716,
+          "difficulty": 6.39094132,
+          "elapsed_days": 1,
+          "scheduled_days": 4,
+          "reps": 3,
+          "lapses": 0,
+          "learning_steps": 0,
+          "state": 2,
+          "due": 1787763653272,
+          "last_review": 1787418053272
+        },
+        "recent": [
+          {
+            "q": "[\"power\",0,[[\"Power\",\"x\",4]]]",
+            "template": 0,
+            "correct": false
+          },
+          {
+            "q": "[\"power\",1,[[\"Multiply\",5,[\"Power\",\"x\",-5]]]]",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "[\"power\",0,[[\"Power\",\"x\",3]]]",
+            "template": 0,
+            "correct": true
+          },
+          {
+            "q": "[\"power\",1,[[\"Multiply\",9,[\"Power\",\"x\",-5]]]]",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "[\"power\",0,[[\"Power\",\"x\",2]]]",
+            "template": 0,
+            "correct": true
+          }
+        ],
+        "needsRemediation": false,
+        "failureStreak": 0,
+        "lastFailureAt": 11,
+        "otherSinceFailure": 0,
+        "extraPracticeGiven": false,
+        "lastSeen": 19
+      },
+      "sum": {
+        "card": {
+          "stability": 4.3811614,
+          "difficulty": 7.37018264,
+          "elapsed_days": 1,
+          "scheduled_days": 4,
+          "reps": 4,
+          "lapses": 0,
+          "learning_steps": 0,
+          "state": 2,
+          "due": 1787936513272,
+          "last_review": 1787590913272
+        },
+        "recent": [
+          {
+            "q": "[\"sum\",0,[[\"Add\",[\"Power\",\"x\",4],[\"Multiply\",2,[\"Power\",\"x\",2]],9]]]",
+            "template": 0,
+            "correct": true
+          },
+          {
+            "q": "[\"sum\",1,[[\"Add\",[\"Multiply\",3,[\"Power\",\"x\",2]],[\"Multiply\",-2,\"x\"],2]]]",
+            "template": 1,
+            "correct": false
+          },
+          {
+            "q": "[\"sum\",0,[[\"Add\",[\"Power\",\"x\",4],[\"Power\",\"x\",2],3]]]",
+            "template": 0,
+            "correct": true
+          },
+          {
+            "q": "[\"sum\",1,[[\"Add\",[\"Multiply\",9,[\"Power\",\"x\",3]],[\"Multiply\",-4,\"x\"],3]]]",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "[\"sum\",0,[[\"Add\",[\"Power\",\"x\",3],[\"Multiply\",9,[\"Power\",\"x\",2]],8]]]",
+            "template": 0,
+            "correct": true
+          }
+        ],
+        "needsRemediation": false,
+        "failureStreak": 0,
+        "lastFailureAt": 23,
+        "otherSinceFailure": 0,
+        "extraPracticeGiven": false,
+        "lastSeen": 29
+      },
+      "root": {
+        "card": {
+          "stability": 1.80599612,
+          "difficulty": 8.77916217,
+          "elapsed_days": 1,
+          "scheduled_days": 2,
+          "reps": 4,
+          "lapses": 0,
+          "learning_steps": 0,
+          "state": 2,
+          "due": 1787850113272,
+          "last_review": 1787677313272
+        },
+        "recent": [
+          {
+            "q": "[\"root\",0,[[\"Multiply\",5,[\"Power\",\"x\",[\"Divide\",1,2]]]]]",
+            "template": 0,
+            "correct": false
+          },
+          {
+            "q": "[\"root\",1,[[\"Multiply\",4,[\"Power\",\"x\",[\"Divide\",1,3]]]]]",
+            "template": 1,
+            "correct": false
+          },
+          {
+            "q": "[\"root\",0,[[\"Multiply\",4,[\"Power\",\"x\",[\"Divide\",1,2]]]]]",
+            "template": 0,
+            "correct": true
+          },
+          {
+            "q": "[\"root\",1,[[\"Multiply\",5,[\"Power\",\"x\",[\"Divide\",1,3]]]]]",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "[\"root\",0,[[\"Multiply\",8,[\"Power\",\"x\",[\"Divide\",1,2]]]]]",
+            "template": 0,
+            "correct": true
+          }
+        ],
+        "needsRemediation": false,
+        "failureStreak": 0,
+        "lastFailureAt": 33,
+        "otherSinceFailure": 0,
+        "extraPracticeGiven": false,
+        "lastSeen": 39
+      },
+      "exp": {
+        "card": {
+          "stability": 7.31530068,
+          "difficulty": 2.11121424,
+          "elapsed_days": 1,
+          "scheduled_days": 7,
+          "reps": 2,
+          "lapses": 0,
+          "learning_steps": 0,
+          "state": 2,
+          "due": 1788195593272,
+          "last_review": 1787590793272
+        },
+        "recent": [
+          {
+            "q": "[\"exp\",0,[[\"Exp\",[\"Add\",[\"Multiply\",3,\"x\"],9]]]]",
+            "template": 0,
+            "correct": true
+          },
+          {
+            "q": "[\"exp\",1,[[\"Power\",8,\"x\"]]]",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "[\"exp\",0,[[\"Exp\",[\"Add\",[\"Multiply\",5,\"x\"],2]]]]",
+            "template": 0,
+            "correct": false
+          },
+          {
+            "q": "[\"exp\",1,[[\"Power\",3,\"x\"]]]",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "[\"exp\",0,[[\"Exp\",[\"Add\",[\"Multiply\",5,\"x\"],1]]]]",
+            "template": 0,
+            "correct": true
+          }
+        ],
+        "needsRemediation": false,
+        "failureStreak": 0,
+        "lastFailureAt": 45,
+        "otherSinceFailure": 0,
+        "extraPracticeGiven": false,
+        "lastSeen": 49
+      },
+      "log": {
+        "card": {
+          "stability": 1.88998205,
+          "difficulty": 9.10103214,
+          "elapsed_days": 1,
+          "scheduled_days": 2,
+          "reps": 5,
+          "lapses": 0,
+          "learning_steps": 0,
+          "state": 2,
+          "due": 1788109373272,
+          "last_review": 1787936573272
+        },
+        "recent": [
+          {
+            "q": "[\"log\",0,[[\"Ln\",[\"Add\",[\"Multiply\",4,\"x\"],4]]]]",
+            "template": 0,
+            "correct": true
+          },
+          {
+            "q": "[\"log\",1,[[\"Divide\",[\"Ln\",\"x\"],[\"Ln\",7]]]]",
+            "template": 1,
+            "correct": false
+          },
+          {
+            "q": "[\"log\",0,[[\"Ln\",[\"Add\",[\"Multiply\",2,\"x\"],7]]]]",
+            "template": 0,
+            "correct": false
+          },
+          {
+            "q": "[\"log\",1,[[\"Divide\",[\"Ln\",\"x\"],[\"Ln\",9]]]]",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "[\"log\",0,[[\"Ln\",[\"Add\",[\"Multiply\",5,\"x\"],8]]]]",
+            "template": 0,
+            "correct": true
+          }
+        ],
+        "needsRemediation": false,
+        "failureStreak": 0,
+        "lastFailureAt": 55,
+        "otherSinceFailure": 0,
+        "extraPracticeGiven": false,
+        "lastSeen": 59
+      },
+      "sin": {
+        "card": {
+          "stability": 2.737177,
+          "difficulty": 8.77549312,
+          "elapsed_days": 1,
+          "scheduled_days": 3,
+          "reps": 5,
+          "lapses": 0,
+          "learning_steps": 0,
+          "state": 2,
+          "due": 1788368573272,
+          "last_review": 1788109373272
+        },
+        "recent": [
+          {
+            "q": "[\"sin\",0,[[\"Multiply\",2,[\"Sin\",\"x\"]]]]",
+            "template": 0,
+            "correct": false
+          },
+          {
+            "q": "[\"sin\",1,[[\"Sin\",[\"Add\",[\"Multiply\",5,\"x\"],4]]]]",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "[\"sin\",0,[[\"Multiply\",8,[\"Sin\",\"x\"]]]]",
+            "template": 0,
+            "correct": false
+          },
+          {
+            "q": "[\"sin\",1,[[\"Sin\",[\"Add\",[\"Multiply\",6,\"x\"],6]]]]",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "[\"sin\",0,[[\"Multiply\",6,[\"Sin\",\"x\"]]]]",
+            "template": 0,
+            "correct": true
+          }
+        ],
+        "needsRemediation": false,
+        "failureStreak": 0,
+        "lastFailureAt": 65,
+        "otherSinceFailure": 0,
+        "extraPracticeGiven": false,
+        "lastSeen": 69
+      },
+      "cos": {
+        "card": {
+          "stability": 0.93334886,
+          "difficulty": 9.56415413,
+          "elapsed_days": 1,
+          "scheduled_days": 1,
+          "reps": 5,
+          "lapses": 0,
+          "learning_steps": 0,
+          "state": 2,
+          "due": 1788282173272,
+          "last_review": 1788195773272
+        },
+        "recent": [
+          {
+            "q": "[\"cos\",0,[[\"Multiply\",7,[\"Cos\",\"x\"]]]]",
+            "template": 0,
+            "correct": false
+          },
+          {
+            "q": "[\"cos\",1,[[\"Cos\",[\"Add\",[\"Multiply\",3,\"x\"],3]]]]",
+            "template": 1,
+            "correct": false
+          },
+          {
+            "q": "[\"cos\",0,[[\"Multiply\",8,[\"Cos\",\"x\"]]]]",
+            "template": 0,
+            "correct": false
+          },
+          {
+            "q": "[\"cos\",1,[[\"Cos\",[\"Add\",[\"Multiply\",5,\"x\"],5]]]]",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "[\"cos\",0,[[\"Multiply\",6,[\"Cos\",\"x\"]]]]",
+            "template": 0,
+            "correct": true
+          }
+        ],
+        "needsRemediation": false,
+        "failureStreak": 0,
+        "lastFailureAt": 75,
+        "otherSinceFailure": 0,
+        "extraPracticeGiven": false,
+        "lastSeen": 79
+      },
+      "tan": {
+        "card": {
+          "stability": 7.31530068,
+          "difficulty": 2.11121424,
+          "elapsed_days": 1,
+          "scheduled_days": 7,
+          "reps": 2,
+          "lapses": 0,
+          "learning_steps": 0,
+          "state": 2,
+          "due": 1788627593272,
+          "last_review": 1788022793272
+        },
+        "recent": [
+          {
+            "q": "[\"tan\",0,[[\"Multiply\",8,[\"Tan\",\"x\"]]]]",
+            "template": 0,
+            "correct": true
+          },
+          {
+            "q": "[\"tan\",1,[[\"Tan\",[\"Add\",[\"Multiply\",6,\"x\"],5]]]]",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "[\"tan\",0,[[\"Multiply\",4,[\"Tan\",\"x\"]]]]",
+            "template": 0,
+            "correct": true
+          },
+          {
+            "q": "[\"tan\",1,[[\"Tan\",[\"Add\",[\"Multiply\",6,\"x\"],6]]]]",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "[\"tan\",0,[[\"Multiply\",7,[\"Tan\",\"x\"]]]]",
+            "template": 0,
+            "correct": true
+          }
+        ],
+        "needsRemediation": false,
+        "failureStreak": 0,
+        "lastFailureAt": 0,
+        "otherSinceFailure": 0,
+        "extraPracticeGiven": false,
+        "lastSeen": 89
+      },
+      "cot": {
+        "card": {
+          "stability": 4.47481716,
+          "difficulty": 6.39094132,
+          "elapsed_days": 1,
+          "scheduled_days": 4,
+          "reps": 3,
+          "lapses": 0,
+          "learning_steps": 0,
+          "state": 2,
+          "due": 1788541253272,
+          "last_review": 1788195653272
+        },
+        "recent": [
+          {
+            "q": "[\"cot\",0,[[\"Multiply\",7,[\"Cot\",\"x\"]]]]",
+            "template": 0,
+            "correct": false
+          },
+          {
+            "q": "[\"cot\",1,[[\"Cot\",[\"Add\",[\"Multiply\",5,\"x\"],6]]]]",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "[\"cot\",0,[[\"Multiply\",5,[\"Cot\",\"x\"]]]]",
+            "template": 0,
+            "correct": true
+          },
+          {
+            "q": "[\"cot\",1,[[\"Cot\",[\"Add\",[\"Multiply\",5,\"x\"],5]]]]",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "[\"cot\",0,[[\"Multiply\",3,[\"Cot\",\"x\"]]]]",
+            "template": 0,
+            "correct": true
+          }
+        ],
+        "needsRemediation": false,
+        "failureStreak": 0,
+        "lastFailureAt": 91,
+        "otherSinceFailure": 0,
+        "extraPracticeGiven": false,
+        "lastSeen": 99
+      },
+      "sec": {
+        "card": {
+          "stability": 4.3811614,
+          "difficulty": 7.37018264,
+          "elapsed_days": 1,
+          "scheduled_days": 4,
+          "reps": 4,
+          "lapses": 0,
+          "learning_steps": 0,
+          "state": 2,
+          "due": 1788714113272,
+          "last_review": 1788368513272
+        },
+        "recent": [
+          {
+            "q": "[\"sec\",0,[[\"Multiply\",9,[\"Sec\",\"x\"]]]]",
+            "template": 0,
+            "correct": true
+          },
+          {
+            "q": "[\"sec\",1,[[\"Sec\",[\"Add\",[\"Multiply\",7,\"x\"],5]]]]",
+            "template": 1,
+            "correct": false
+          },
+          {
+            "q": "[\"sec\",0,[[\"Multiply\",3,[\"Sec\",\"x\"]]]]",
+            "template": 0,
+            "correct": true
+          },
+          {
+            "q": "[\"sec\",1,[[\"Sec\",[\"Add\",[\"Multiply\",7,\"x\"],1]]]]",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "[\"sec\",0,[[\"Multiply\",7,[\"Sec\",\"x\"]]]]",
+            "template": 0,
+            "correct": true
+          }
+        ],
+        "needsRemediation": false,
+        "failureStreak": 0,
+        "lastFailureAt": 103,
+        "otherSinceFailure": 0,
+        "extraPracticeGiven": false,
+        "lastSeen": 109
+      },
+      "csc": {
+        "card": {
+          "stability": 1.80599612,
+          "difficulty": 8.77916217,
+          "elapsed_days": 1,
+          "scheduled_days": 2,
+          "reps": 4,
+          "lapses": 0,
+          "learning_steps": 0,
+          "state": 2,
+          "due": 1788714113272,
+          "last_review": 1788541313272
+        },
+        "recent": [
+          {
+            "q": "[\"csc\",0,[[\"Multiply\",4,[\"Csc\",\"x\"]]]]",
+            "template": 0,
+            "correct": false
+          },
+          {
+            "q": "[\"csc\",1,[[\"Csc\",[\"Add\",[\"Multiply\",3,\"x\"],9]]]]",
+            "template": 1,
+            "correct": false
+          },
+          {
+            "q": "[\"csc\",0,[[\"Multiply\",3,[\"Csc\",\"x\"]]]]",
+            "template": 0,
+            "correct": true
+          },
+          {
+            "q": "[\"csc\",1,[[\"Csc\",[\"Add\",[\"Multiply\",7,\"x\"],3]]]]",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "[\"csc\",0,[[\"Multiply\",5,[\"Csc\",\"x\"]]]]",
+            "template": 0,
+            "correct": true
+          }
+        ],
+        "needsRemediation": false,
+        "failureStreak": 0,
+        "lastFailureAt": 113,
+        "otherSinceFailure": 0,
+        "extraPracticeGiven": false,
+        "lastSeen": 119
+      },
+      "asin": {
+        "card": {
+          "stability": 7.31530068,
+          "difficulty": 2.11121424,
+          "elapsed_days": 1,
+          "scheduled_days": 7,
+          "reps": 2,
+          "lapses": 0,
+          "learning_steps": 0,
+          "state": 2,
+          "due": 1789059593272,
+          "last_review": 1788454793272
+        },
+        "recent": [
+          {
+            "q": "[\"asin\",0,[[\"Multiply\",5,[\"Arcsin\",\"x\"]]]]",
+            "template": 0,
+            "correct": true
+          },
+          {
+            "q": "[\"asin\",1,[[\"Arcsin\",[\"Divide\",\"x\",6]]]]",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "[\"asin\",0,[[\"Multiply\",2,[\"Arcsin\",\"x\"]]]]",
+            "template": 0,
+            "correct": false
+          },
+          {
+            "q": "[\"asin\",1,[[\"Arcsin\",[\"Divide\",\"x\",4]]]]",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "[\"asin\",0,[[\"Multiply\",4,[\"Arcsin\",\"x\"]]]]",
+            "template": 0,
+            "correct": true
+          }
+        ],
+        "needsRemediation": false,
+        "failureStreak": 0,
+        "lastFailureAt": 125,
+        "otherSinceFailure": 0,
+        "extraPracticeGiven": false,
+        "lastSeen": 129
+      },
+      "acos": {
+        "card": {
+          "stability": 1.88998205,
+          "difficulty": 9.10103214,
+          "elapsed_days": 1,
+          "scheduled_days": 2,
+          "reps": 5,
+          "lapses": 0,
+          "learning_steps": 0,
+          "state": 2,
+          "due": 1788973373272,
+          "last_review": 1788800573272
+        },
+        "recent": [
+          {
+            "q": "[\"acos\",0,[[\"Multiply\",8,[\"Arccos\",\"x\"]]]]",
+            "template": 0,
+            "correct": true
+          },
+          {
+            "q": "[\"acos\",1,[[\"Arccos\",[\"Divide\",\"x\",8]]]]",
+            "template": 1,
+            "correct": false
+          },
+          {
+            "q": "[\"acos\",0,[[\"Multiply\",9,[\"Arccos\",\"x\"]]]]",
+            "template": 0,
+            "correct": false
+          },
+          {
+            "q": "[\"acos\",1,[[\"Arccos\",[\"Divide\",\"x\",5]]]]",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "[\"acos\",0,[[\"Multiply\",5,[\"Arccos\",\"x\"]]]]",
+            "template": 0,
+            "correct": true
+          }
+        ],
+        "needsRemediation": false,
+        "failureStreak": 0,
+        "lastFailureAt": 135,
+        "otherSinceFailure": 0,
+        "extraPracticeGiven": false,
+        "lastSeen": 139
+      },
+      "atan": {
+        "card": {
+          "stability": 2.737177,
+          "difficulty": 8.77549312,
+          "elapsed_days": 1,
+          "scheduled_days": 3,
+          "reps": 5,
+          "lapses": 0,
+          "learning_steps": 0,
+          "state": 2,
+          "due": 1789146173272,
+          "last_review": 1788886973272
+        },
+        "recent": [
+          {
+            "q": "[\"atan\",0,[[\"Multiply\",7,[\"Arctan\",\"x\"]]]]",
+            "template": 0,
+            "correct": false
+          },
+          {
+            "q": "[\"atan\",1,[[\"Arctan\",[\"Divide\",\"x\",5]]]]",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "[\"atan\",0,[[\"Multiply\",4,[\"Arctan\",\"x\"]]]]",
+            "template": 0,
+            "correct": false
+          },
+          {
+            "q": "[\"atan\",1,[[\"Arctan\",[\"Divide\",\"x\",9]]]]",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "[\"atan\",0,[[\"Multiply\",2,[\"Arctan\",\"x\"]]]]",
+            "template": 0,
+            "correct": true
+          }
+        ],
+        "needsRemediation": false,
+        "failureStreak": 0,
+        "lastFailureAt": 145,
+        "otherSinceFailure": 0,
+        "extraPracticeGiven": false,
+        "lastSeen": 149
+      },
+      "product": {
+        "card": {
+          "stability": 0.93334886,
+          "difficulty": 9.56415413,
+          "elapsed_days": 1,
+          "scheduled_days": 1,
+          "reps": 5,
+          "lapses": 0,
+          "learning_steps": 0,
+          "state": 2,
+          "due": 1789059773272,
+          "last_review": 1788973373272
+        },
+        "recent": [
+          {
+            "q": "[\"product\",0,[[\"Multiply\",[\"Power\",\"x\",3],[\"Cos\",\"x\"]]]]",
+            "template": 0,
+            "correct": false
+          },
+          {
+            "q": "[\"product\",1,[[\"Multiply\",[\"Add\",[\"Power\",\"x\",2],3],[\"Sin\",\"x\"]]]]",
+            "template": 1,
+            "correct": false
+          },
+          {
+            "q": "[\"product\",0,[[\"Multiply\",[\"Power\",\"x\",5],[\"Cos\",\"x\"]]]]",
+            "template": 0,
+            "correct": false
+          },
+          {
+            "q": "[\"product\",1,[[\"Multiply\",[\"Add\",[\"Power\",\"x\",2],2],[\"Sin\",\"x\"]]]]",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "[\"product\",0,[[\"Multiply\",[\"Power\",\"x\",5],[\"Exp\",\"x\"]]]]",
+            "template": 0,
+            "correct": true
+          }
+        ],
+        "needsRemediation": false,
+        "failureStreak": 0,
+        "lastFailureAt": 155,
+        "otherSinceFailure": 0,
+        "extraPracticeGiven": false,
+        "lastSeen": 159
+      },
+      "quotient": {
+        "card": {
+          "stability": 7.31530068,
+          "difficulty": 2.11121424,
+          "elapsed_days": 1,
+          "scheduled_days": 7,
+          "reps": 2,
+          "lapses": 0,
+          "learning_steps": 0,
+          "state": 2,
+          "due": 1789491593272,
+          "last_review": 1788886793272
+        },
+        "recent": [
+          {
+            "q": "[\"quotient\",0,[[\"Divide\",[\"Add\",[\"Power\",\"x\",2],9],[\"Add\",[\"Multiply\",3,\"x\"],9]]]]",
+            "template": 0,
+            "correct": true
+          },
+          {
+            "q": "[\"quotient\",1,[[\"Divide\",[\"Exp\",\"x\"],[\"Add\",[\"Power\",\"x\",2],3]]]]",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "[\"quotient\",0,[[\"Divide\",[\"Add\",[\"Power\",\"x\",2],6],[\"Add\",[\"Multiply\",2,\"x\"],6]]]]",
+            "template": 0,
+            "correct": true
+          },
+          {
+            "q": "[\"quotient\",1,[[\"Divide\",[\"Cos\",\"x\"],[\"Add\",[\"Power\",\"x\",2],8]]]]",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "[\"quotient\",0,[[\"Divide\",[\"Add\",[\"Power\",\"x\",2],7],[\"Add\",[\"Multiply\",4,\"x\"],7]]]]",
+            "template": 0,
+            "correct": true
+          }
+        ],
+        "needsRemediation": false,
+        "failureStreak": 0,
+        "lastFailureAt": 0,
+        "otherSinceFailure": 0,
+        "extraPracticeGiven": false,
+        "lastSeen": 169
+      },
+      "chain": {
+        "card": {
+          "stability": 4.47481716,
+          "difficulty": 6.39094132,
+          "elapsed_days": 1,
+          "scheduled_days": 4,
+          "reps": 3,
+          "lapses": 0,
+          "learning_steps": 0,
+          "state": 2,
+          "due": 1789405253272,
+          "last_review": 1789059653272
+        },
+        "recent": [
+          {
+            "q": "[\"chain\",0,[[\"Power\",[\"Add\",[\"Multiply\",8,\"x\"],9],2]]]",
+            "template": 0,
+            "correct": false
+          },
+          {
+            "q": "[\"chain\",1,[[\"Sin\",[\"Add\",[\"Power\",\"x\",2],7]]]]",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "[\"chain\",0,[[\"Power\",[\"Add\",[\"Multiply\",2,\"x\"],3],2]]]",
+            "template": 0,
+            "correct": true
+          },
+          {
+            "q": "[\"chain\",1,[[\"Cos\",[\"Add\",[\"Power\",\"x\",2],2]]]]",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "[\"chain\",0,[[\"Power\",[\"Add\",[\"Multiply\",5,\"x\"],5],3]]]",
+            "template": 0,
+            "correct": true
+          }
+        ],
+        "needsRemediation": false,
+        "failureStreak": 0,
+        "lastFailureAt": 171,
+        "otherSinceFailure": 0,
+        "extraPracticeGiven": false,
+        "lastSeen": 179
+      },
+      "nested": {
+        "card": {
+          "stability": 4.3811614,
+          "difficulty": 7.37018264,
+          "elapsed_days": 1,
+          "scheduled_days": 4,
+          "reps": 4,
+          "lapses": 0,
+          "learning_steps": 0,
+          "state": 2,
+          "due": 1789578113272,
+          "last_review": 1789232513272
+        },
+        "recent": [
+          {
+            "q": "[\"nested\",0,[[\"Cos\",[\"Sin\",[\"Add\",[\"Multiply\",4,\"x\"],1]]]]]",
+            "template": 0,
+            "correct": true
+          },
+          {
+            "q": "[\"nested\",1,[[\"Exp\",[\"Power\",[\"Add\",[\"Multiply\",5,\"x\"],9],2]]]]",
+            "template": 1,
+            "correct": false
+          },
+          {
+            "q": "[\"nested\",0,[[\"Sin\",[\"Sin\",[\"Add\",[\"Multiply\",9,\"x\"],9]]]]]",
+            "template": 0,
+            "correct": true
+          },
+          {
+            "q": "[\"nested\",1,[[\"Cos\",[\"Power\",[\"Add\",[\"Multiply\",9,\"x\"],9],2]]]]",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "[\"nested\",0,[[\"Cos\",[\"Sin\",[\"Add\",[\"Multiply\",4,\"x\"],3]]]]]",
+            "template": 0,
+            "correct": true
+          }
+        ],
+        "needsRemediation": false,
+        "failureStreak": 0,
+        "lastFailureAt": 183,
+        "otherSinceFailure": 0,
+        "extraPracticeGiven": false,
+        "lastSeen": 189
+      },
+      "mixed": {
+        "card": {
+          "stability": 1.80599612,
+          "difficulty": 8.77916217,
+          "elapsed_days": 1,
+          "scheduled_days": 2,
+          "reps": 4,
+          "lapses": 0,
+          "learning_steps": 0,
+          "state": 2,
+          "due": 1789491713272,
+          "last_review": 1789318913272
+        },
+        "recent": [
+          {
+            "q": "[\"mixed\",0,[[\"Multiply\",[\"Add\",[\"Power\",\"x\",2],3],[\"Sin\",[\"Multiply\",8,\"x\"]]]]]",
+            "template": 0,
+            "correct": false
+          },
+          {
+            "q": "[\"mixed\",1,[[\"Divide\",[\"Cos\",[\"Add\",[\"Multiply\",2,\"x\"],8]],[\"Add\",[\"Power\",\"x\",2],8]]]]",
+            "template": 1,
+            "correct": false
+          },
+          {
+            "q": "[\"mixed\",0,[[\"Multiply\",[\"Add\",[\"Power\",\"x\",2],1],[\"Exp\",[\"Multiply\",5,\"x\"]]]]]",
+            "template": 0,
+            "correct": true
+          },
+          {
+            "q": "[\"mixed\",1,[[\"Divide\",[\"Exp\",[\"Add\",[\"Multiply\",8,\"x\"],1]],[\"Add\",[\"Power\",\"x\",2],1]]]]",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "[\"mixed\",0,[[\"Multiply\",[\"Add\",[\"Power\",\"x\",2],8],[\"Exp\",[\"Multiply\",8,\"x\"]]]]]",
+            "template": 0,
+            "correct": true
+          }
+        ],
+        "needsRemediation": false,
+        "failureStreak": 0,
+        "lastFailureAt": 193,
+        "otherSinceFailure": 0,
+        "extraPracticeGiven": false,
+        "lastSeen": 199
+      },
+      "implicit": {
+        "card": {
+          "stability": 7.31530068,
+          "difficulty": 2.11121424,
+          "elapsed_days": 1,
+          "scheduled_days": 7,
+          "reps": 2,
+          "lapses": 0,
+          "learning_steps": 0,
+          "state": 2,
+          "due": 1789837193272,
+          "last_review": 1789232393272
+        },
+        "recent": [
+          {
+            "q": "[\"implicit\",0,[[\"Add\",[\"Power\",\"x\",2],[\"Power\",\"y\",2],-4]]]",
+            "template": 0,
+            "correct": true
+          },
+          {
+            "q": "[\"implicit\",1,[[\"Add\",[\"Power\",\"y\",2],[\"Negate\",[\"Power\",\"x\",2]],-3]]]",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "[\"implicit\",0,[[\"Add\",[\"Power\",\"x\",2],[\"Power\",\"y\",2],-36]]]",
+            "template": 0,
+            "correct": false
+          },
+          {
+            "q": "[\"implicit\",1,[[\"Add\",[\"Power\",\"y\",2],[\"Negate\",[\"Power\",\"x\",2]],-5]]]",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "[\"implicit\",0,[[\"Add\",[\"Power\",\"x\",2],[\"Power\",\"y\",2],-49]]]",
+            "template": 0,
+            "correct": true
+          }
+        ],
+        "needsRemediation": false,
+        "failureStreak": 0,
+        "lastFailureAt": 205,
+        "otherSinceFailure": 0,
+        "extraPracticeGiven": false,
+        "lastSeen": 209
+      },
+      "inverse": {
+        "card": {
+          "stability": 1.88998205,
+          "difficulty": 9.10103214,
+          "elapsed_days": 1,
+          "scheduled_days": 2,
+          "reps": 5,
+          "lapses": 0,
+          "learning_steps": 0,
+          "state": 2,
+          "due": 1789837373272,
+          "last_review": 1789664573272
+        },
+        "recent": [
+          {
+            "q": "[\"inverse\",0,[[\"Add\",[\"Multiply\",6,\"x\"],6]]]",
+            "template": 0,
+            "correct": true
+          },
+          {
+            "q": "[\"inverse\",1,[[\"Add\",[\"Power\",\"x\",3],[\"Multiply\",9,\"x\"]]]]",
+            "template": 1,
+            "correct": false
+          },
+          {
+            "q": "[\"inverse\",0,[[\"Add\",[\"Multiply\",7,\"x\"],4]]]",
+            "template": 0,
+            "correct": false
+          },
+          {
+            "q": "[\"inverse\",1,[[\"Add\",[\"Power\",\"x\",3],[\"Multiply\",2,\"x\"]]]]",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "[\"inverse\",0,[[\"Add\",[\"Multiply\",5,\"x\"],7]]]",
+            "template": 0,
+            "correct": true
+          }
+        ],
+        "needsRemediation": false,
+        "failureStreak": 0,
+        "lastFailureAt": 215,
+        "otherSinceFailure": 0,
+        "extraPracticeGiven": false,
+        "lastSeen": 219
+      },
+      "higher": {
+        "card": {
+          "stability": 2.737177,
+          "difficulty": 8.77549312,
+          "elapsed_days": 1,
+          "scheduled_days": 3,
+          "reps": 5,
+          "lapses": 0,
+          "learning_steps": 0,
+          "state": 2,
+          "due": 1790010173272,
+          "last_review": 1789750973272
+        },
+        "recent": [
+          {
+            "q": "[\"higher\",0,[[\"Add\",[\"Power\",\"x\",3],[\"Multiply\",3,[\"Power\",\"x\",2]]]]]",
+            "template": 0,
+            "correct": false
+          },
+          {
+            "q": "[\"higher\",1,[[\"Multiply\",6,[\"Sin\",\"x\"]]]]",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "[\"higher\",0,[[\"Add\",[\"Power\",\"x\",5],[\"Multiply\",3,[\"Power\",\"x\",2]]]]]",
+            "template": 0,
+            "correct": false
+          },
+          {
+            "q": "[\"higher\",1,[[\"Multiply\",2,[\"Sin\",\"x\"]]]]",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "[\"higher\",0,[[\"Add\",[\"Power\",\"x\",5],[\"Multiply\",7,[\"Power\",\"x\",2]]]]]",
+            "template": 0,
+            "correct": true
+          }
+        ],
+        "needsRemediation": false,
+        "failureStreak": 0,
+        "lastFailureAt": 225,
+        "otherSinceFailure": 0,
+        "extraPracticeGiven": false,
+        "lastSeen": 229
+      },
+      "parametric": {
+        "card": {
+          "stability": 0.32936546,
+          "difficulty": 9.57850426,
+          "elapsed_days": 1,
+          "scheduled_days": 0,
+          "reps": 4,
+          "lapses": 0,
+          "learning_steps": 1,
+          "state": 1,
+          "due": 1789751513272,
+          "last_review": 1789750913272
+        },
+        "recent": [
+          {
+            "q": "[\"parametric\",0,[[\"Add\",[\"Multiply\",3,\"t\"],6],[\"Sin\",\"t\"]]]",
+            "template": 0,
+            "correct": false
+          },
+          {
+            "q": "[\"parametric\",1,[[\"Power\",\"t\",2],[\"Power\",\"t\",3]]]",
+            "template": 1,
+            "correct": false
+          },
+          {
+            "q": "[\"parametric\",0,[[\"Add\",[\"Multiply\",9,\"t\"],9],[\"Sin\",\"t\"]]]",
+            "template": 0,
+            "correct": false
+          },
+          {
+            "q": "[\"parametric\",1,[[\"Power\",\"t\",2],[\"Power\",\"t\",3]]]|audit-23-3",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "[\"parametric\",0,[[\"Add\",[\"Multiply\",3,\"t\"],8],[\"Sin\",\"t\"]]]",
+            "template": 0,
+            "correct": true
+          }
+        ],
+        "needsRemediation": false,
+        "failureStreak": 0,
+        "lastFailureAt": 235,
+        "otherSinceFailure": 0,
+        "extraPracticeGiven": false,
+        "lastSeen": 239
+      },
+      "vector": {
+        "card": {
+          "stability": 7.31530068,
+          "difficulty": 2.11121424,
+          "elapsed_days": 1,
+          "scheduled_days": 7,
+          "reps": 2,
+          "lapses": 0,
+          "learning_steps": 0,
+          "state": 2,
+          "due": 1790269193272,
+          "last_review": 1789664393272
+        },
+        "recent": [
+          {
+            "q": "[\"vector\",0,[[\"Power\",\"t\",2],[\"Sin\",[\"Multiply\",6,\"t\"]]]]",
+            "template": 0,
+            "correct": true
+          },
+          {
+            "q": "[\"vector\",1,[[\"Exp\",[\"Multiply\",2,\"t\"]],[\"Cos\",\"t\"]]]",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "[\"vector\",0,[[\"Power\",\"t\",2],[\"Sin\",[\"Multiply\",9,\"t\"]]]]",
+            "template": 0,
+            "correct": true
+          },
+          {
+            "q": "[\"vector\",1,[[\"Exp\",[\"Multiply\",5,\"t\"]],[\"Cos\",\"t\"]]]",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "[\"vector\",0,[[\"Power\",\"t\",4],[\"Sin\",[\"Multiply\",4,\"t\"]]]]",
+            "template": 0,
+            "correct": true
+          }
+        ],
+        "needsRemediation": false,
+        "failureStreak": 0,
+        "lastFailureAt": 0,
+        "otherSinceFailure": 0,
+        "extraPracticeGiven": false,
+        "lastSeen": 249
+      },
+      "polar": {
+        "card": {
+          "stability": 1.88678762,
+          "difficulty": 6.40211507,
+          "elapsed_days": 1,
+          "scheduled_days": 0,
+          "reps": 2,
+          "lapses": 0,
+          "learning_steps": 1,
+          "state": 1,
+          "due": 1789751393272,
+          "last_review": 1789750793272
+        },
+        "recent": [
+          {
+            "q": "[\"polar\",0,[[\"Multiply\",8,[\"Sin\",\"theta\"]]]]",
+            "template": 0,
+            "correct": false
+          },
+          {
+            "q": "[\"polar\",1,[[\"Add\",7,[\"Cos\",\"theta\"]]]]",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "[\"polar\",0,[[\"Multiply\",7,[\"Sin\",\"theta\"]]]]",
+            "template": 0,
+            "correct": true
+          },
+          {
+            "q": "[\"polar\",1,[[\"Add\",9,[\"Cos\",\"theta\"]]]]",
+            "template": 1,
+            "correct": true
+          },
+          {
+            "q": "[\"polar\",0,[[\"Multiply\",9,[\"Sin\",\"theta\"]]]]",
+            "template": 0,
+            "correct": true
+          }
+        ],
+        "needsRemediation": false,
+        "failureStreak": 0,
+        "lastFailureAt": 251,
+        "otherSinceFailure": 0,
+        "extraPracticeGiven": false,
+        "lastSeen": 259
+      }
+    },
+    "pendingDiagnostics": [
+      "power",
+      "constant",
+      "root",
+      "sum",
+      "sin",
+      "exp",
+      "chain",
+      "product",
+      "quotient",
+      "higher",
+      "parametric"
+    ],
+    "recentQuestionSignatures": [],
+    "sequence": 260,
+    "updatedAt": 1789750793289
+  },
+  "session": {
+    "config": {
+      "schemaVersion": 1,
+      "revision": "2026-09-19-1",
+      "initialUnlockedLevel": 1,
+      "disabledFamilies": [],
+      "sessionLength": 12
+    },
+    "completed": 3,
+    "independent": 2,
+    "assisted": 1,
+    "skipped": 0,
+    "finished": false,
+    "current": {
+      "question": {
+        "id": "implicit:0:fixture",
+        "seed": "fixture",
+        "generatorVersion": "1.1.0",
+        "template": 0,
+        "family": "implicit",
+        "level": 5,
+        "primarySkill": "implicit",
+        "supportingSkills": [
+          "chain",
+          "quotient"
+        ],
+        "title": "Differentiate implicitly",
+        "prompt": "x^{2}+y^{2}-25=0",
+        "source": [
+          [
+            "Add",
+            [
+              "Power",
+              "x",
+              2
+            ],
+            [
+              "Power",
+              "y",
+              2
+            ],
+            -25
+          ]
+        ],
+        "answers": [
+          [
+            "Negate",
+            [
+              "Divide",
+              [
+                "Multiply",
+                2,
+                "x"
+              ],
+              [
+                "Multiply",
+                2,
+                "y"
+              ]
+            ]
+          ]
+        ],
+        "labels": [
+          "dy/dx"
+        ],
+        "domain": {
+          "variable": "x",
+          "intervals": [
+            [
+              0.25,
+              2.8
+            ],
+            [
+              3.4,
+              6
+            ]
+          ],
+          "curve": {
+            "type": "circle",
+            "parameter": 5
+          },
+          "guards": []
+        },
+        "domainText": "Compare on the given curve, where y ≠ 0.",
+        "hints": [
+          "Differentiate F(x,y)=0 with respect to x; every derivative of y introduces dy/dx.",
+          "Identify the parts below, then apply the rule to each part."
+        ],
+        "hintMath": "x\\text{ is the differentiation variable.}\\quad x^{2}+y^{2}-25",
+        "steps": [
+          {
+            "text": "Differentiate both sides, remembering that y depends on x.",
+            "math": "2x+2y\\frac{dy}{dx}=0"
+          },
+          {
+            "text": "Isolate the requested derivative.",
+            "math": "\\frac{dy}{dx}=-\\left(\\frac{2\\cdot x}{2\\cdot y}\\right)"
+          }
+        ],
+        "signature": "[\"implicit\",0,[[\"Add\",[\"Power\",\"x\",2],[\"Power\",\"y\",2],-25]]]"
+      },
+      "draft": [
+        ""
+      ],
+      "hintsUsed": 0,
+      "recorded": false,
+      "closed": false,
+      "reason": "New skill"
+    }
+  }
+}
