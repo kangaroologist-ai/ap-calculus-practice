@@ -1,44 +1,73 @@
-import type { Expr, Question, Domain, Skill } from "./types";
+import type { Expr, Question, Domain, Role, Skill } from "./types";
 import { derivative as d, latex as L, random, complexity } from "./math";
 import { SKILLS, skillById } from "./catalog";
 import { ddx } from "./notation";
-import { TEMPLATES, makeCtx, type Built, type Template } from "./templates";
+import {
+  TEMPLATES,
+  makeCtx,
+  open,
+  type Built,
+  type Template,
+} from "./templates";
 import { inferSkills } from "./skill-inference";
 export const GENERATOR_VERSION = "1.2.0";
+export interface QuestionOptions {
+  role?: Role;
+  key?: string;
+  // Which skills the student may combine now; closed templates are skipped.
+  ok?: (skill: string) => boolean;
+}
+// A number picks a template by index (scripts and golden fixtures); options
+// pick at random among the matching open templates.
 export function generateQuestion(
   id: string,
   seed: string,
-  templateOverride?: number,
+  opts: number | QuestionOptions = {},
 ): Question {
   for (let attempt = 0; attempt < 20; attempt++) {
-    const q = instantiate(
-      id,
-      attempt ? `${seed}:${attempt}` : seed,
-      templateOverride,
-    );
+    const q = instantiate(id, attempt ? `${seed}:${attempt}` : seed, opts);
     if (
       q.source.every((e) => complexity(e) <= 40) &&
       q.answers.every((e) => complexity(e) <= 180)
     )
       return q;
   }
-  return instantiate(id, "verified-fallback", templateOverride ?? 0);
+  const plain = typeof opts === "object" && !opts.role && !opts.key && !opts.ok;
+  return instantiate(id, "verified-fallback", plain ? 0 : opts);
 }
-function instantiate(id: string, seed: string, override?: number): Question {
+function instantiate(
+  id: string,
+  seed: string,
+  opts: number | QuestionOptions,
+): Question {
   const skill = skillById(id),
     list = TEMPLATES[id],
-    r = random(seed),
-    v = override ?? Math.floor(r() * list.length),
-    a = 2 + Math.floor(r() * 8),
+    r = random(seed);
+  let v: number;
+  if (typeof opts === "number") v = opts;
+  else {
+    const candidates = list.flatMap((t, i) =>
+      (!opts.role || t.role === opts.role) &&
+      (!opts.key || t.key === opts.key) &&
+      (!opts.ok || open(t, opts.ok))
+        ? [i]
+        : [],
+    );
+    if (!candidates.length)
+      throw Error(`No open ${opts.role ?? ""} template for ${id}.`);
+    v = candidates[Math.floor(r() * candidates.length)];
+  }
+  const a = 2 + Math.floor(r() * 8),
     b = 1 + Math.floor(r() * 9),
     n = 2 + Math.floor(r() * 4);
   const template = list[v];
+  const ok = typeof opts === "number" ? undefined : opts.ok;
   return finalize(
     skill,
     template,
     v,
     seed,
-    template.build(makeCtx(r, a, b, n)),
+    template.build(makeCtx(r, a, b, n, template.pools, ok)),
   );
 }
 function finalize(
@@ -96,6 +125,7 @@ function finalize(
     generatorVersion: GENERATOR_VERSION,
     template: v,
     templateKey: template.key,
+    role: template.role,
     meta: template.meta,
     family: skill.id,
     level: skill.level,

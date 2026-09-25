@@ -1,4 +1,4 @@
-import type { Curve, Domain, Expr, QuestionMeta } from "./types";
+import type { Curve, Domain, Expr, QuestionMeta, Role } from "./types";
 import {
   add as A,
   mul as M,
@@ -11,7 +11,7 @@ import {
   evaluator,
 } from "./math";
 import { dydx } from "./notation";
-export type { QuestionMeta };
+export type { QuestionMeta, Role };
 export interface Ctx {
   r: () => number;
   a: number;
@@ -20,6 +20,9 @@ export interface Ctx {
   smooth(): string;
   innerPower(): Expr;
   pick<T>(xs: readonly T[]): T;
+  // A skill id drawn from the template's named pool, restricted to skills the
+  // student may combine right now (see `open`).
+  pool(name: string): string;
 }
 export interface Built {
   e?: Expr;
@@ -46,11 +49,26 @@ export interface Built {
 }
 export interface Template {
   key: string;
+  role: Role;
   meta?: QuestionMeta;
+  // Skills a question from this template always combines.
   requires?: string[];
+  // Interchangeable skills, e.g. { h: ["sin", "cos", "exp"] }; each pool needs
+  // at least one usable member before the template opens.
+  pools?: Record<string, readonly string[]>;
   build(c: Ctx): Built;
 }
-export function makeCtx(r: () => number, a: number, b: number, n: number): Ctx {
+export const open = (t: Template, ok: (skill: string) => boolean) =>
+  (t.requires ?? []).every(ok) &&
+  Object.values(t.pools ?? {}).every((pool) => pool.some(ok));
+export function makeCtx(
+  r: () => number,
+  a: number,
+  b: number,
+  n: number,
+  pools: Template["pools"] = {},
+  ok: (skill: string) => boolean = () => true,
+): Ctx {
   return {
     r,
     a,
@@ -59,6 +77,11 @@ export function makeCtx(r: () => number, a: number, b: number, n: number): Ctx {
     smooth: () => ["Sin", "Cos", "Exp"][Math.floor(r() * 3)],
     innerPower: () => A(P("x", 2 + Math.floor(r() * 3)), b),
     pick: <T>(xs: readonly T[]): T => xs[Math.floor(r() * xs.length)],
+    pool: (name) => {
+      const usable = (pools[name] ?? []).filter(ok);
+      if (!usable.length) throw Error(`Template pool ${name} has no usable skill.`);
+      return usable[Math.floor(r() * usable.length)];
+    },
   };
 }
 // ax+b, shared by every template that shows a chain-preview linear inner
@@ -209,7 +232,7 @@ function trigTemplates(id: string): readonly Template[] {
   const op = id[0].toUpperCase() + id.slice(1);
   return [
     {
-      key: `${id}.basic`,
+      key: `${id}.basic`, role: "basic",
       // SPEC-G1: a local 2..13 draw (instead of the shared ctx.a, whose
       // 2..9 range only ever produced 8 distinct questions).
       build: (c) => {
@@ -217,7 +240,7 @@ function trigTemplates(id: string): readonly Template[] {
         return { e: M(av, F(op, "x")) };
       },
     },
-    { key: `${id}.linear`, build: (c) => ({ e: F(op, lin(c)) }) },
+    { key: `${id}.linear`, role: "basic", build: (c) => ({ e: F(op, lin(c)) }) },
   ];
 }
 function arcTemplates(id: string, op: string): readonly Template[] {
@@ -227,14 +250,14 @@ function arcTemplates(id: string, op: string): readonly Template[] {
   ];
   return [
     {
-      key: `${id}.basic`,
+      key: `${id}.basic`, role: "basic",
       build: (c) => {
         const av = 2 + Math.floor(c.r() * 12);
         return { e: M(av, F(op, "x")), intervals };
       },
     },
     {
-      key: `${id}.scaled`,
+      key: `${id}.scaled`, role: "basic",
       build: (c) => {
         const av = 2 + Math.floor(c.r() * 12);
         return { e: F(op, Q("x", av)), intervals };
@@ -245,7 +268,7 @@ function arcTemplates(id: string, op: string): readonly Template[] {
 export const TEMPLATES: Record<string, readonly Template[]> = {
   constant: [
     {
-      key: "constant.value",
+      key: "constant.value", role: "basic",
       // SPEC-G1: one of {a, ln a, sqrt a, e^a} instead of always a bare
       // number, so the source (and its displayed prompt) actually varies.
       build: (c) => {
@@ -255,11 +278,11 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
         };
       },
     },
-    { key: "constant.frac", build: ({ a, b, n }) => ({ e: A(a, Q(b, n)) }) },
+    { key: "constant.frac", role: "basic", build: ({ a, b, n }) => ({ e: A(a, Q(b, n)) }) },
   ],
   power: [
     {
-      key: "power.xn",
+      key: "power.xn", role: "basic",
       // SPEC-G1: a local 2..12 draw; the shared ctx.n (2..5) stays untouched
       // because chain.power, product.xn, and vector.power_sin still use it.
       build: (c) => {
@@ -267,11 +290,11 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
         return { e: P("x", nn) };
       },
     },
-    { key: "power.neg", build: ({ a, n }) => ({ e: M(a, P("x", -n)) }) },
+    { key: "power.neg", role: "basic", build: ({ a, n }) => ({ e: M(a, P("x", -n)) }) },
   ],
   sum: [
     {
-      key: "sum.poly2",
+      key: "sum.poly2", role: "basic",
       // SPEC-G6: n now draws locally from 3..6, so xⁿ and bx² can never
       // collapse into the same power and hide a like-terms case.
       build: (c) => {
@@ -280,13 +303,13 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
       },
     },
     {
-      key: "sum.scaled",
+      key: "sum.scaled", role: "basic",
       build: ({ a, b, n }) => ({ e: A(M(a, P("x", n)), M(-b, "x"), n) }),
     },
   ],
   root: [
     {
-      key: "root.sqrt",
+      key: "root.sqrt", role: "basic",
       // SPEC-G5: the displayed source is a genuine radical (a real Sqrt
       // node), and the answer is derived from the rewritten a*x^(1/2), with
       // an explicit rewrite step ahead of the usual power-rule derivation.
@@ -312,7 +335,7 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
       },
     },
     {
-      key: "root.frac_power",
+      key: "root.frac_power", role: "basic",
       meta: { oddRoot: true },
       // SPEC-G1: p/q now ranges over six rational exponents (not just the
       // fixed cube root), keeping the Multiply(a, Power(x, Divide(p,q)))
@@ -337,16 +360,16 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
     },
   ],
   exp: [
-    { key: "exp.natural", build: (c) => ({ e: F("Exp", lin(c)) }) },
+    { key: "exp.natural", role: "basic", build: (c) => ({ e: F("Exp", lin(c)) }) },
     {
-      key: "exp.base",
+      key: "exp.base", role: "basic",
       // SPEC-G1: an independent leading coefficient b*a^x.
       build: ({ a, b }) => ({ e: M(b, P(a, "x")) }),
     },
   ],
   log: [
     {
-      key: "log.natural",
+      key: "log.natural", role: "basic",
       build: (c) => ({
         e: F("Ln", lin(c)),
         intervals: [
@@ -356,7 +379,7 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
       }),
     },
     {
-      key: "log.base",
+      key: "log.base", role: "basic",
       // SPEC-G1: an independent leading coefficient b*ln(x)/ln(a).
       build: ({ a, b }) => ({
         e: Q(M(b, F("Ln", "x")), F("Ln", a)),
@@ -378,11 +401,11 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
   atan: arcTemplates("atan", "Arctan"),
   product: [
     {
-      key: "product.xn",
+      key: "product.xn", role: "basic",
       build: ({ n, smooth }) => ({ e: M(P("x", n), F(smooth(), "x")) }),
     },
     {
-      key: "product.quad",
+      key: "product.quad", role: "basic",
       build: ({ a, smooth }) => ({
         e: M(A(P("x", 2), a), F(smooth(), "x")),
       }),
@@ -390,7 +413,7 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
   ],
   quotient: [
     {
-      key: "quotient.poly",
+      key: "quotient.poly", role: "basic",
       // SPEC-G6: the denominator now draws its own constant c, instead of
       // reusing the numerator's b (which could hide an unintended relation
       // between numerator and denominator).
@@ -400,36 +423,36 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
       },
     },
     {
-      key: "quotient.smooth",
+      key: "quotient.smooth", role: "basic",
       build: ({ a, smooth }) => ({ e: Q(F(smooth(), "x"), A(P("x", 2), a)) }),
     },
   ],
   chain: [
-    { key: "chain.power", build: (c) => ({ e: P(lin(c), c.n) }) },
+    { key: "chain.power", role: "basic", build: (c) => ({ e: P(lin(c), c.n) }) },
     {
-      key: "chain.smooth_inner",
+      key: "chain.smooth_inner", role: "basic",
       build: ({ smooth, innerPower }) => ({ e: F(smooth(), innerPower()) }),
     },
   ],
   nested: [
     {
-      key: "nested.sin_linear",
+      key: "nested.sin_linear", role: "basic",
       build: (c) => ({ e: F(c.smooth(), F("Sin", lin(c))) }),
     },
     {
-      key: "nested.linear_sq",
+      key: "nested.linear_sq", role: "basic",
       build: (c) => ({ e: F(c.smooth(), P(lin(c), 2)) }),
     },
   ],
   mixed: [
     {
-      key: "mixed.quad_smooth",
+      key: "mixed.quad_smooth", role: "basic",
       build: ({ a, b, smooth }) => ({
         e: M(A(P("x", 2), b), F(smooth(), M(a, "x"))),
       }),
     },
     {
-      key: "mixed.smooth_over_quad",
+      key: "mixed.smooth_over_quad", role: "basic",
       // SPEC-G6: the denominator now draws its own constant c instead of
       // reusing the numerator's b.
       build: (c) => {
@@ -440,7 +463,7 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
   ],
   implicit: [
     {
-      key: "implicit.ellipse",
+      key: "implicit.ellipse", role: "basic",
       // Differentiating y^2 always introduces a chain-rule factor of dy/dx,
       // even though that composition never shows up in the source constraint.
       requires: ["chain"],
@@ -463,7 +486,7 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
       },
     },
     {
-      key: "implicit.hyperbola",
+      key: "implicit.hyperbola", role: "basic",
       requires: ["chain"],
       // SPEC-G4: a general hyperbola q*y^2 - p*x^2 = c on the generic graph
       // curve (y is always defined and nonzero for every real x).
@@ -485,11 +508,11 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
   ],
   inverse: [
     {
-      key: "inverse.linear",
+      key: "inverse.linear", role: "basic",
       build: ({ a, b }) => inverseBuilt(A(M(a, "x"), b), b),
     },
     {
-      key: "inverse.cubic",
+      key: "inverse.cubic", role: "basic",
       // The source previously depended only on a (b was only the evaluation
       // point), so its signature only ever took 8 distinct values across any
       // number of seeds -- below SPEC-G1's 10-fingerprint floor. b already
@@ -500,12 +523,12 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
   ],
   higher: [
     {
-      key: "higher.poly2",
+      key: "higher.poly2", role: "basic",
       meta: { derivativeOrder: 2 },
       build: ({ b, n }) => higherBuilt(A(P("x", n + 1), M(b, P("x", 2))), 2),
     },
     {
-      key: "higher.trig3",
+      key: "higher.trig3", role: "basic",
       meta: { derivativeOrder: 3 },
       // SPEC-G1: g ranges over {sin, cos} and the inner argument is scaled
       // by k in 1..3, instead of always the fixed a*sin(x).
@@ -518,7 +541,7 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
   ],
   parametric: [
     {
-      key: "parametric.linear",
+      key: "parametric.linear", role: "basic",
       meta: { derivativeOrder: 1 },
       // The slope (dy/dt)/(dx/dt) is a quotient of derivatives; that division
       // never appears in the x(t)/y(t) source expressions themselves.
@@ -526,7 +549,7 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
       build: ({ a, b }) => parametricBuilt(A(M(a, "t"), b), F("Sin", "t"), 1),
     },
     {
-      key: "parametric.poly",
+      key: "parametric.poly", role: "basic",
       meta: { derivativeOrder: 2 },
       requires: ["quotient"],
       // SPEC-G1: x = a*t^2, y = t^k for k in 3..5, instead of the single
@@ -539,11 +562,11 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
   ],
   vector: [
     {
-      key: "vector.power_sin",
+      key: "vector.power_sin", role: "basic",
       build: ({ a, n }) => vectorBuilt([P("t", n), F("Sin", M(a, "t"))]),
     },
     {
-      key: "vector.exp_cos",
+      key: "vector.exp_cos", role: "basic",
       // SPEC-G1: an independent leading coefficient b on the cosine component.
       build: ({ a, b }) =>
         vectorBuilt([F("Exp", M(a, "t")), M(b, F("Cos", "t"))]),
@@ -551,7 +574,7 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
   ],
   polar: [
     {
-      key: "polar.sin_limacon",
+      key: "polar.sin_limacon", role: "basic",
       // Converting to Cartesian (x=r cos theta, y=r sin theta) always brings
       // in product, quotient, sin, and cos, none of which need appear in the
       // bare radius expression r(theta).
@@ -561,7 +584,7 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
       build: ({ a, b }) => polarBuilt(A(a, M(b, F("Sin", "theta")))),
     },
     {
-      key: "polar.cos",
+      key: "polar.cos", role: "basic",
       requires: ["product", "quotient", "sin", "cos"],
       // SPEC-G1: an independent leading coefficient b on the cosine term.
       build: ({ a, b }) => polarBuilt(A(a, M(b, F("Cos", "theta")))),

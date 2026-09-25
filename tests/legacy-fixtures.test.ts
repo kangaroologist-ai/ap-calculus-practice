@@ -7,7 +7,6 @@ import {
 } from '../src/transfer';
 import { validateLocalState } from '../src/storage';
 import type { AppState } from '../src/progress';
-import { generateQuestion } from '../src/questions';
 
 // These fixtures freeze old formats and the current Phase 2 migration inputs
 // (see scripts/capture-fixtures.ts). Keep every later migration able to read them.
@@ -90,9 +89,8 @@ describe('frozen fixtures stay readable by the current code', () => {
     expect(result.migrated).toBe(false);
     expect(result.state).toEqual(state);
     expectQ2Fingerprints(state.progress);
-    expect(state.session?.current?.question).toEqual(
-      generateQuestion('implicit', 'fixture', 0),
-    );
+    // A saved question is frozen data: later generators may change, it may not.
+    expect(state.session?.current?.question.templateKey).toBe('implicit.ellipse');
     expect(state.session?.current?.question.domain.curve?.type).toBe('graph');
   });
 

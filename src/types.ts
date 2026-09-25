@@ -11,6 +11,7 @@ export interface Skill {
 // derivative, template 1 = odd root, ...); readers should prefer these
 // explicit fields and fall back to the old index-based meaning only for
 // questions saved by generator <= 1.1.0, which lack `meta`.
+export type Role = "basic" | "mix";
 export interface QuestionMeta {
   derivativeOrder?: number;
   oddRoot?: boolean;
@@ -43,6 +44,8 @@ export interface Question {
   generatorVersion: string;
   template: number;
   templateKey: string;
+  // Absent on questions saved before Phase 2; treat those as "basic".
+  role?: Role;
   meta?: QuestionMeta;
   family: string;
   level: number;
