@@ -88,6 +88,12 @@ npm run test:e2e
 
 - 线上真实键入后立即Enter暴露MathLive输入通知滞后：提交现在同步读取可见Mathfield值。三引擎专门回归均通过，不依赖手工触发input事件。
 
+## 2026-09-25 U3/U4 样式与安全区
+
+- 浅色与深色主题使用同一组 CSS tokens；`tests/contrast.test.ts` 计算指定文字/背景组合的 WCAG 对比度。字号使用 rem tokens，Caption 不低于 12px。
+- 页头、页脚和手机键盘展开时的固定操作栏加入安全区内边距。iPhone Safari 横屏刘海区域及 Android Chrome 的真机布局仍需实机验证。
+- 当前沙箱禁止监听 `127.0.0.1:5174`（Vite 返回 `listen EPERM`），本轮无法采集 Playwright 截图或运行浏览器检查；由 reviewer 在可启动本地服务器的环境用独立临时配置运行 `tests/visual-tokens.spec.ts`，并检查 `artifacts/ux-refresh/` 中的明暗主题截图。基线可从本分支 U3/U4 修改前的 `8a76f18` 采集。
+
 ## Compact progress and scan-to-resume — 2026-09-19
 
 - DSP2 uses a frozen field-order/profile, signature dictionary and zlib level 9. FSRS numbers and timestamps remain exact; DSP1 import remains supported.
