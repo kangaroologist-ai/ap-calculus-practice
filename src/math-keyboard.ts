@@ -19,18 +19,31 @@ const key = (id: string, width: 1 | 2 = 1): Partial<VirtualKeyboardKeycap> => {
   const item = MATH_KEYS.find(item => item.id === id)!;
   return {...('latex' in item ? {latex:item.latex} : {label:item.label}), command:item.command, width, class:`practice-key-${id} ${item.physical.length > 2 ? 'small' : ''}`, tooltip:`Type ${item.physical}`, variants:[]};
 };
-export const mathKeyboardLayouts: VirtualKeyboardLayout[] = [
-  { label:'Derivatives',rows:[
-    ['x','t','theta','7','8','9','plus','minus'].map(id=>key(id)),
+const derivativeLayout = { label:'Derivatives',rows:[
+    ['x','7','8','9','plus','minus','open','close'].map(id=>key(id)),
     ['fraction','power','sqrt','4','5','6','multiply'].map(id=>key(id)).concat([{...key('fraction'),label:'/',latex:''}]),
-    ['sin','cos','tan','1','2','3','open','close'].map(id=>key(id)),
+    ['sin','cos','tan','sec','csc','1','2','3'].map(id=>key(id)),
     [key('ln'),key('exponential'),'[hide-keyboard]',key('0'),key('decimal'),'[left]','[right]','[backspace]'],
-  ]},
-  {label:'Functions',rows:[
+  ]} satisfies VirtualKeyboardLayout;
+const functionLayout = {label:'Functions',rows:[
     ['x','y','t','theta'].map(id=>key(id,2)),
     ['sin','cos','tan','ln'].map(id=>key(id,2)),
     ['sec','csc','cot','log'].map(id=>key(id,2)),
     ['arcsin','arccos','arctan','cbrt'].map(id=>key(id,2)),
     [key('pi'),'[left]','[right]','[backspace]','[hide-keyboard]'],
-  ]},
-];
+  ]} satisfies VirtualKeyboardLayout;
+export const mathKeyboardLayouts: VirtualKeyboardLayout[] = [derivativeLayout, functionLayout];
+export function layoutsFor(vars: string[]): VirtualKeyboardLayout[] {
+  const row1 = [...vars, '7', '8', '9', 'plus', 'minus'].slice(0, 8);
+  const pad = ['open', 'close', 'pi'].slice(0, 8 - row1.length);
+  return [
+    {
+      ...derivativeLayout,
+      rows: [
+        [...row1, ...pad].map((id) => key(id)),
+        ...derivativeLayout.rows.slice(1),
+      ],
+    },
+    functionLayout,
+  ];
+}

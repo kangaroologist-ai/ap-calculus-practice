@@ -4,7 +4,7 @@ import { mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { createEmptyCard, fsrs, Rating, State } from 'ts-fsrs';
-import { freshProgress, PARAMETERS, storeCard } from '../src/progress';
+import { freshProgress, PARAMETERS, stateFor, storeCard } from '../src/progress';
 import type { AppState, Progress, SkillState } from '../src/progress';
 import { latex } from '../src/math';
 import type { Config } from '../src/types';
@@ -159,7 +159,7 @@ async function openApp(
   await page.goto('/practice-config.json');
   await seedCurrentState(page, config, progress);
   await page.goto('/');
-  await expect(page.getByRole('button', { name: /Start practicing/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Start practicing|Continue practicing/ })).toBeVisible();
 }
 
 async function setMathfield(field: ReturnType<Page['locator']>, value: string): Promise<void> {
@@ -200,6 +200,27 @@ async function scrollDialogToBottom(page: Page): Promise<void> {
 
 const test = base;
 
+test('formula aria labels use speakable text', async ({ page }) => {
+  await openApp(page, configFor());
+  const formulas = page.locator('.formula[aria-label]');
+  await expect(formulas.first()).toBeVisible();
+  const labels = await formulas.evaluateAll((items) =>
+    items.map((item) => item.getAttribute('aria-label') ?? ''),
+  );
+  expect(labels.length).toBeGreaterThan(0);
+  expect(labels.every((label) => !label.includes('\\'))).toBe(true);
+  await expect(page.locator('.formula[role="math"]')).toHaveCount(labels.length);
+});
+
+test('welcome resumes practice and names the next skill when progress exists', async ({ page }) => {
+  const config = configFor();
+  const progress = freshProgress(config);
+  stateFor(progress, 'constant', Date.now());
+  await openApp(page, config, undefined, progress);
+  await expect(page.getByRole('button', { name: /Continue practicing/ })).toBeVisible();
+  await expect(page.getByText('Level 1 · Constants', { exact: true })).toBeVisible();
+});
+
 test.describe('Derivative Studio browser flows', () => {
   test('constant first question: zero, blur, hint, export/import, restore, and damaged code', async ({ page }) => {
     const config = onlySkill('constant', 1);
@@ -211,7 +232,7 @@ test.describe('Derivative Studio browser flows', () => {
     await expect(page.locator('.welcome-equation .ML__mathit', { hasText: /^d$/ })).toHaveCount(0);
     await expect(page.locator('.welcome-equation')).toContainText('d');
 
-    await page.getByRole('button', { name: /Start practicing/ }).click();
+    await page.getByRole('button', { name: /Start practicing|Continue practicing/ }).click();
     await expect.poll(async () => (await readStoredState(page)).session?.current?.question.primarySkill).toBe('constant');
     const field = page.locator('math-field').first();
     await expect(field).toHaveAttribute('aria-label', "f'(x)");
@@ -248,7 +269,7 @@ test.describe('Derivative Studio browser flows', () => {
     await page.locator('#reset').click();
     await expect(page.locator('#confirm-reset')).toBeVisible();
     await page.locator('#confirm-reset').click();
-    await expect(page.getByRole('button', { name: /Start practicing/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Start practicing|Continue practicing/ })).toBeVisible();
 
     // Reset created a local backup. Restore swaps the full prior app state
     // back in, including the submitted question and its feedback.
@@ -262,7 +283,7 @@ test.describe('Derivative Studio browser flows', () => {
     await page.locator('#reset').click();
     await expect(page.locator('#confirm-reset')).toBeVisible();
     await page.locator('#confirm-reset').click();
-    await expect(page.getByRole('button', { name: /Start practicing/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Start practicing|Continue practicing/ })).toBeVisible();
 
     await page.getByRole('button', { name: 'Move progress' }).click();
     await page.getByRole('button', { name: 'Import progress' }).click();
@@ -276,14 +297,14 @@ test.describe('Derivative Studio browser flows', () => {
 
     // Closing the preview is a true cancellation: fresh welcome state remains.
     await page.locator('#close-modal').click();
-    await expect(page.getByRole('button', { name: /Start practicing/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Start practicing|Continue practicing/ })).toBeVisible();
 
     await page.getByRole('button', { name: 'Move progress' }).click();
     await page.getByRole('button', { name: 'Import progress' }).click();
     await page.locator('#import-code').fill(code);
     await page.getByRole('button', { name: 'Review import' }).click();
     await page.getByRole('button', { name: 'Replace with this progress' }).click();
-    await expect(page.getByRole('button', { name: /Start practicing/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Start practicing|Continue practicing/ })).toBeVisible();
     await screenshot(page, 'constant-07-import-replaced');
 
     await page.getByRole('button', { name: 'Move progress' }).click();
@@ -319,7 +340,7 @@ test('valid import preview is cleared before a damaged code is reviewed', async 
 test('immediate MathLive draft survives reset and restore', async ({ page }) => {
   const config = onlySkill('constant', 1);
   await openApp(page, config);
-  await page.getByRole('button', { name: /Start practicing/ }).click();
+  await page.getByRole('button', { name: /Start practicing|Continue practicing/ }).click();
   const field = page.locator('math-field').first();
   await setMathfield(field, '7');
 
@@ -327,7 +348,7 @@ test('immediate MathLive draft survives reset and restore', async ({ page }) => 
   // draft before replacing the live state, then restore must recover it.
   await page.locator('#reset').click();
   await page.locator('#confirm-reset').click();
-  await expect(page.getByRole('button', { name: /Start practicing/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Start practicing|Continue practicing/ })).toBeVisible();
   await page.locator('#restore').click();
   await page.locator('#confirm-restore').click();
   await expect(page.locator('math-field').first()).toHaveJSProperty('value', '7');
@@ -345,7 +366,7 @@ const levelCases = [
 for (const item of levelCases) {
   test(`level ${item.level} ${item.label} accepts its answer fields`, async ({ page }) => {
     await openApp(page, onlySkill(item.skill, item.level));
-    await page.getByRole('button', { name: /Start practicing/ }).click();
+    await page.getByRole('button', { name: /Start practicing|Continue practicing/ }).click();
     await expect.poll(async () => (await readStoredState(page)).session?.current?.question.primarySkill).toBe(item.skill);
     await expect(page.locator('#streak')).toContainText('in a row');
     await expect(page.locator('.session-track')).toHaveCount(0);
@@ -370,7 +391,7 @@ for (const item of levelCases) {
 
 test('mobile vector layout has no horizontal clipping', async ({ page }) => {
   await openApp(page, onlySkill('vector', 6), { width: 390, height: 844 });
-  await page.getByRole('button', { name: /Start practicing/ }).click();
+  await page.getByRole('button', { name: /Start practicing|Continue practicing/ }).click();
   await expect.poll(async () => (await readStoredState(page)).session?.current?.question.primarySkill).toBe('vector');
   await setMathfield(page.locator('math-field').nth(0), 't');
   await setMathfield(page.locator('math-field').nth(1), 'cos(t)');
@@ -444,7 +465,7 @@ test('cross-context transfer preserves FSRS fields and imports a generated QR im
     const qrBuffer = Buffer.from(qrDataUrl.split(',')[1], 'base64');
     await source.locator('#close-modal').click();
 
-    await source.getByRole('button', { name: /Start practicing/ }).click();
+    await source.getByRole('button', { name: /Start practicing|Continue practicing/ }).click();
     await setMathfield(source.locator('math-field').first(), '0');
     await source.locator('.question-body h2').click();
     await source.getByRole('button', { name: 'Check answer' }).click();
@@ -463,7 +484,7 @@ test('cross-context transfer preserves FSRS fields and imports a generated QR im
     await target.getByRole('button', { name: 'Replace with this progress' }).click();
     await expect(target.locator('#dialog')).toHaveCount(0);
     await expect.poll(async () => (await readStoredProgress(target)).sequence).toBe(sourceProgress.sequence);
-    await expect(target.getByRole('button', { name: /Start practicing/ })).toBeVisible();
+    await expect(target.getByRole('button', { name: /Start practicing|Continue practicing/ })).toBeVisible();
     const targetProgress = await readStoredProgress(target);
     expect(targetProgress.skills.constant.card).toEqual(sourceProgress.skills.constant.card);
     expect(targetProgress.skills.constant.recent).toEqual(sourceProgress.skills.constant.recent);
@@ -501,9 +522,9 @@ test('delayed start config keeps global actions disabled until session starts', 
   await page.goto('/practice-config.json');
   await seedCurrentState(page, config);
   await page.goto('/');
-  await expect(page.getByRole('button', { name: /Start practicing/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Start practicing|Continue practicing/ })).toBeVisible();
 
-  await page.getByRole('button', { name: /Start practicing/ }).click();
+  await page.getByRole('button', { name: /Start practicing|Continue practicing/ }).click();
   await expect(page.locator('#start')).toBeDisabled();
   await expect(page.locator('#transfer')).toBeDisabled();
   await expect(page.locator('#restore')).toBeDisabled();
@@ -565,7 +586,7 @@ test('Level 2 remediation round trip preserves FSRS and due across contexts', as
   try {
     await desktop.clock.install({ time: fixedNow });
     await openApp(desktop, config, undefined, seeded);
-    await desktop.getByRole('button', { name: /Start practicing/ }).click();
+    await desktop.getByRole('button', { name: /Start practicing|Continue practicing/ }).click();
     await expect.poll(async () => (await readStoredState(desktop)).session?.current?.question.primarySkill).toBe('constant');
     await setMathfield(desktop.locator('math-field').first(), '0');
     await desktop.locator('.question-body h2').click();
@@ -611,7 +632,7 @@ test('Level 2 remediation round trip preserves FSRS and due across contexts', as
     // screen as proof that the transaction has committed.
     await expect(mobile.locator('#dialog')).toHaveCount(0);
     await expect.poll(async () => (await readStoredProgress(mobile)).sequence).toBe(relearning.sequence);
-    await expect(mobile.getByRole('button', { name: /Start practicing/ })).toBeVisible();
+    await expect(mobile.getByRole('button', { name: /Start practicing|Continue practicing/ })).toBeVisible();
     const imported = await readStoredProgress(mobile);
     const { exportedAt: _exportTime, ...portableRelearning } = makePortableProgress(relearning);
     expect(imported).toEqual(portableRelearning);
@@ -622,7 +643,7 @@ test('Level 2 remediation round trip preserves FSRS and due across contexts', as
     await mobile.clock.fastForward(advanceBy);
     const advancedNow = await mobile.evaluate(() => Date.now());
     expect(advancedNow).toBeGreaterThan(relearningSkill.card.due);
-    await mobile.getByRole('button', { name: /Start practicing/ }).click();
+    await mobile.getByRole('button', { name: /Start practicing|Continue practicing/ }).click();
     await expect.poll(async () => (await readStoredState(mobile)).session?.current?.question.primarySkill).toBe('log');
     await mobile.locator('#next').click();
     await expect.poll(async () => (await readStoredState(mobile)).session?.current?.question.primarySkill).toBe('log');
@@ -672,7 +693,7 @@ test('Level 2 remediation round trip preserves FSRS and due across contexts', as
     await desktop.getByRole('button', { name: 'Replace with this progress' }).click();
     await expect(desktop.locator('#dialog')).toHaveCount(0);
     await expect.poll(async () => (await readStoredProgress(desktop)).sequence).toBe(recovered.sequence);
-    await expect(desktop.getByRole('button', { name: /Start practicing/ })).toBeVisible();
+    await expect(desktop.getByRole('button', { name: /Start practicing|Continue practicing/ })).toBeVisible();
     const returned = await readStoredProgress(desktop);
     const { exportedAt: _returnTime, ...portableRecovered } = makePortableProgress(recovered);
     expect(returned).toEqual(portableRecovered);
@@ -717,7 +738,7 @@ test('mobile visual representatives: 360, 390 keyboard, 430, landscape, and 200%
     await page.goto('/practice-config.json');
     await seedCurrentState(page, config);
     await page.goto('/');
-    await page.getByRole('button', { name: /Start practicing/ }).click();
+    await page.getByRole('button', { name: /Start practicing|Continue practicing/ }).click();
     await setMathfield(page.locator('math-field').first(), 't');
     await setMathfield(page.locator('math-field').nth(1), 'cos(t)');
     await page.locator('.question-body h2').click();
@@ -762,7 +783,7 @@ test('mobile visual representatives: 360, 390 keyboard, 430, landscape, and 200%
 test('mobile keyboard keeps submit above keys, hides, and grades', async ({ page, browserName }) => {
   test.skip(browserName !== 'chromium', 'Mobile keyboard geometry is verified once in Chromium.');
   await openApp(page, onlySkill('constant', 1), { width: 390, height: 844 });
-  await page.getByRole('button', { name: /Start practicing/ }).click();
+  await page.getByRole('button', { name: /Start practicing|Continue practicing/ }).click();
   await setMathfield(page.locator('math-field').first(), '0');
   await page.locator('.question-body h2').click();
   await page.evaluate(() => window.mathVirtualKeyboard.hide());
@@ -795,34 +816,33 @@ test('mobile keyboard keeps submit above keys, hides, and grades', async ({ page
 test('Functions math keyboard exposes y and inverse-trig insertion', async ({ page, browserName }) => {
   test.skip(browserName !== 'chromium', 'MathLive keyboard insertion is verified in the Chromium representative.');
   await openApp(page, onlySkill('implicit', 5), { width: 390, height: 844 });
-  await page.getByRole('button', { name: /Start practicing/ }).click();
+  await page.getByRole('button', { name: /Start practicing|Continue practicing/ }).click();
   const field = page.locator('math-field').first();
   await field.focus();
   await page.getByRole('button', { name: 'Math keyboard' }).click();
   await expect(page.locator('.ML__keyboard')).toBeVisible();
+  await expect(
+    page.locator('.ML__keyboard .MLK__keycap[aria-label="Type y"]:visible'),
+  ).toBeVisible();
 
   const toolbarText = await page.locator('.MLK__toolbar').allTextContents();
   expect(toolbarText.join(' ')).toContain('Derivatives');
   expect(toolbarText.join(' ')).toContain('Functions');
-  const functionKeys = await page.locator('.ML__keyboard .MLK__keycap').evaluateAll((keys) =>
+  const derivativeKeys = await page.locator('.ML__keyboard .MLK__keycap:visible').evaluateAll((keys) =>
     keys.map((key) => key.getAttribute('aria-label')?.replace(/^Type /, '')).filter(Boolean),
   );
-  expect(functionKeys).toEqual(expect.arrayContaining([
-    'y',
-    'arcsin',
-    'arccos',
-    'arctan',
-    'sec',
-    'csc',
-    'cot',
-  ]));
+  expect(derivativeKeys).toEqual(expect.arrayContaining(['x', 'y', 'sec', 'csc']));
   const keyText = await page.locator('.ML__keyboard .MLK__keycap').allTextContents();
   expect(keyText.some((label) => /√|∛|root|sqrt/i.test(label))).toBe(true);
 
   await page.locator('.MLK__toolbar .layer-switch').filter({ hasText: 'Functions' }).click();
-  await page.locator('.ML__keyboard .MLK__keycap[aria-label="Type y"]').click();
+  const functionKeys = await page.locator('.ML__keyboard .MLK__keycap:visible').evaluateAll((keys) =>
+    keys.map((key) => key.getAttribute('aria-label')?.replace(/^Type /, '')).filter(Boolean),
+  );
+  expect(functionKeys).toEqual(expect.arrayContaining(['arcsin', 'arccos', 'arctan', 'cot']));
+  await page.locator('.ML__keyboard .MLK__keycap[aria-label="Type y"]:visible').click();
   await expect(field).toHaveJSProperty('value', 'y');
-  await page.locator('.ML__keyboard .MLK__keycap[aria-label="Type arcsin"]').click();
+  await page.locator('.ML__keyboard .MLK__keycap[aria-label="Type arcsin"]:visible').click();
   const inserted = await field.evaluate((element) => (element as HTMLElement & { value: string }).value);
   expect(inserted).toContain('arcsin');
   expect(inserted).toContain('y');

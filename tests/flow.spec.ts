@@ -67,7 +67,7 @@ async function openApp(
   await page.goto('/practice-config.json');
   await seedCurrentState(page, config, progress);
   await page.goto('/');
-  await expect(page.getByRole('button', { name: /Start practicing/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Start practicing|Continue practicing/ })).toBeVisible();
 }
 
 async function setMathfield(field: ReturnType<Page['locator']>, value: string): Promise<void> {
@@ -130,7 +130,7 @@ test.describe('session transition flows', () => {
     // Keep this direct-key flow on the real clock so the app's debounced draft
     // save can settle before the navigation action.
     await openApp(page, config);
-    await page.getByRole('button', { name: /Start practicing/ }).click();
+    await page.getByRole('button', { name: /Start practicing|Continue practicing/ }).click();
     await expect.poll(() => currentPrimarySkill(page)).toBe('constant');
     await expect(page.locator('#streak')).toContainText('0 in a row');
     await expect(page.locator('#today-count')).toContainText('practiced today');
@@ -168,7 +168,7 @@ test.describe('session transition flows', () => {
 
   test('immediate Enter grades the visible value before a delayed input event', async ({page}) => {
     await openApp(page, flowConfig());
-    await page.getByRole('button', {name:/Start practicing/}).click();
+    await page.getByRole('button', {name:/Start practicing|Continue practicing/}).click();
     const field = page.locator('math-field').first();
     await expect(field).toBeFocused();
     // Reproduce MathLive's visible-value update preceding draft notification.
@@ -182,7 +182,7 @@ test.describe('session transition flows', () => {
     const config = flowConfig();
     await page.clock.install({ time: FIXED_NOW });
     await openApp(page, config);
-    await page.getByRole('button', { name: /Start practicing/ }).click();
+    await page.getByRole('button', { name: /Start practicing|Continue practicing/ }).click();
     await expect.poll(() => currentPrimarySkill(page)).toBe('constant');
 
     await setMathfield(page.locator('math-field').first(), await currentAnswer(page));
@@ -206,7 +206,7 @@ test.describe('session transition flows', () => {
     const config = flowConfig();
     await page.clock.install({ time: FIXED_NOW });
     await openApp(page, config);
-    await page.getByRole('button', { name: /Start practicing/ }).click();
+    await page.getByRole('button', { name: /Start practicing|Continue practicing/ }).click();
     await expect.poll(() => currentPrimarySkill(page)).toBe('constant');
 
     const field = page.locator('math-field').first();
@@ -246,7 +246,7 @@ test.describe('session transition flows', () => {
       progress.streak = item.before;
       progress.practiceDays = { [localPracticeDay(FIXED_NOW)]: item.before };
       await openApp(page, config, undefined, progress);
-      await page.getByRole('button', { name: /Start practicing/ }).click();
+      await page.getByRole('button', { name: /Start practicing|Continue practicing/ }).click();
       await expect.poll(() => currentPrimarySkill(page)).toBe('constant');
       await setMathfield(page.locator('math-field').first(), await currentAnswer(page));
       await page.getByRole('button', { name: 'Check answer' }).click();
@@ -269,7 +269,7 @@ test.describe('session transition flows', () => {
     const progress = freshProgress(config, FIXED_NOW);
     progress.streak = 9;
     await openApp(page, config, undefined, progress);
-    await page.getByRole('button', {name:/Start practicing/}).click();
+    await page.getByRole('button', {name:/Start practicing|Continue practicing/}).click();
     await setMathfield(page.locator('math-field').first(), await currentAnswer(page));
     await page.getByRole('button', {name:'Check answer'}).click();
     await expect(page.locator('#streak')).toContainText('10 in a row');
@@ -281,7 +281,7 @@ test.describe('session transition flows', () => {
     const config = flowConfig();
     await page.clock.install({ time: FIXED_NOW });
     await openApp(page, config);
-    await page.getByRole('button', { name: /Start practicing/ }).click();
+    await page.getByRole('button', { name: /Start practicing|Continue practicing/ }).click();
     await setMathfield(page.locator('math-field').first(), await currentAnswer(page));
     await page.getByRole('button', { name: 'Check answer' }).click();
     await expect(page.locator('#feedback')).toContainText('Correct');
@@ -304,7 +304,7 @@ test.describe('session transition flows', () => {
     test(`${interruption} cancels the countdown without restarting it`, async ({ page }) => {
       await page.clock.install({time: FIXED_NOW});
       await openApp(page, flowConfig());
-      await page.getByRole('button', {name:/Start practicing/}).click();
+      await page.getByRole('button', {name:/Start practicing|Continue practicing/}).click();
       const field = page.locator('math-field').first();
       await setMathfield(field, await currentAnswer(page));
       await page.getByRole('button', {name:'Check answer'}).click();
@@ -330,7 +330,7 @@ test.describe('session transition flows', () => {
     const config = flowConfig();
     await page.clock.install({ time: FIXED_NOW });
     await openApp(page, config, { width: 390, height: 844 });
-    await page.getByRole('button', { name: /Start practicing/ }).click();
+    await page.getByRole('button', { name: /Start practicing|Continue practicing/ }).click();
     await expect.poll(() => currentPrimarySkill(page)).toBe('constant');
 
     const firstField = page.locator('math-field').first();

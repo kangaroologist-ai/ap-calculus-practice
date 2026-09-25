@@ -16,9 +16,9 @@ for (const width of [390, 1280]) {
     await expect(foundation.getByText('Power rule', {exact:true})).toBeVisible();
     const locked = page.locator('.path-level[data-level="2"]');
     await locked.locator('summary').click();
-    await expect(locked.getByText('sin derivatives', {exact:true})).toBeVisible();
+    await expect(locked.getByText('Sine', {exact:true})).toBeVisible();
     await locked.locator('summary').click();
-    await page.getByRole('button', {name:/Start practicing/}).click();
+    await page.getByRole('button', {name:/Start practicing|Continue practicing/}).click();
     await expect(page.locator('math-field').first()).toBeVisible();
     await expect(foundation).toHaveAttribute('open','');
     await foundation.scrollIntoViewIfNeeded();

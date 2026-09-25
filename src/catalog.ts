@@ -7,6 +7,17 @@ const s = (
   rule: string,
   prerequisites: string[] = [],
 ): Skill => ({ id, label, level, rule, prerequisites });
+const functionLabels: Record<string, string> = {
+  sin: "Sine",
+  cos: "Cosine",
+  tan: "Tangent",
+  cot: "Cotangent",
+  sec: "Secant",
+  csc: "Cosecant",
+  asin: "Arcsine",
+  acos: "Arccosine",
+  atan: "Arctangent",
+};
 export const SKILLS: Skill[] = [
   s("constant", "Constants", 1, "The derivative of a constant is zero."),
   s(
@@ -46,7 +57,7 @@ export const SKILLS: Skill[] = [
   ...["sin", "cos", "tan", "cot", "sec", "csc"].map((id) =>
     s(
       id,
-      `${id} derivatives`,
+      functionLabels[id],
       2,
       "Use the basic trigonometric derivative and include any inner derivative.",
       ["power"],
@@ -55,7 +66,7 @@ export const SKILLS: Skill[] = [
   ...["asin", "acos", "atan"].map((id) =>
     s(
       id,
-      `${id.replace("a", "arc")} derivatives`,
+      functionLabels[id],
       2,
       "Use the inverse-trigonometric derivative, with its real-domain restriction.",
       ["root"],

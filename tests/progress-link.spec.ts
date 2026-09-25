@@ -25,7 +25,7 @@ test('camera link restores progress on a fresh device and starts practice',async
 });
 
 test('camera link asks before replacing existing practice and resumes after confirmation',async({page})=>{
-  await page.goto('/');await page.getByRole('button',{name:'Start practicing',exact:false}).click();
+  await page.goto('/');await page.getByRole('button',{name:/Start practicing|Continue practicing/}).click();
   await expect(page.locator('math-field')).toBeVisible();
   await page.goto(link().path);
   await expect(page.locator('#import-preview')).toContainText('7 in a row');
@@ -37,7 +37,7 @@ test('camera link asks before replacing existing practice and resumes after conf
 });
 
 test('damaged camera link does not overwrite existing progress',async({page})=>{
-  await page.goto('/');await page.getByRole('button',{name:'Start practicing',exact:false}).click();
+  await page.goto('/');await page.getByRole('button',{name:/Start practicing|Continue practicing/}).click();
   await expect(page.locator('math-field')).toBeVisible();
   await page.goto('/#progress=DSP2.00000000.AAAA');
   await expect(page.locator('#dialog')).toContainText('damaged');

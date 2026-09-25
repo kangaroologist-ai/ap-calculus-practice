@@ -1,10 +1,15 @@
-import { mathKeyboardLayouts } from "./math-keyboard";
+import { layoutsFor } from "./math-keyboard";
 import { celebrateFullScreen, stopCelebration } from "./celebration";
-import { MathfieldElement, convertLatexToMarkup } from "mathlive";
+import {
+  MathfieldElement,
+  convertLatexToMarkup,
+  convertLatexToSpeakableText,
+} from "mathlive";
 import QRCode from "qrcode";
 import jsQR from "jsqr";
 import { SKILLS, validateConfig } from "./catalog";
-import type { Config, Verdict } from "./types";
+import type { Config, Question, Verdict } from "./types";
+import { incorrectFeedbackText } from "./feedback";
 import {
   freshProgress,
   chooseNext,
@@ -149,7 +154,7 @@ const esc = (s: unknown) =>
       ]!,
   );
 const math = (s: string) =>
-  `<div class="formula-wrap"><div class="formula" tabindex="0" aria-label="${esc(s)}">${convertLatexToMarkup(s)}</div><span class="formula-scroll" hidden>Scroll to see the full formula →</span></div>`;
+  `<div class="formula-wrap"><div class="formula" tabindex="0" role="math" aria-label="${esc(convertLatexToSpeakableText(s))}">${convertLatexToMarkup(s)}</div><span class="formula-scroll" hidden>Scroll to see the full formula →</span></div>`;
 function refreshFormulaCues() {
   document.querySelectorAll<HTMLElement>(".formula").forEach((el) => {
     const cue = el.nextElementSibling as HTMLElement | null;
@@ -244,7 +249,19 @@ function levelView(level: number, expanded = false) {
     }).join("") || '<p class="fine">No enabled skills in this level.</p>'}</div></details>`;
 }
 function welcome() {
-  return `<div class="card-top"><span class="tag">ADAPTIVE PRACTICE</span><span class="muted">At your own pace</span></div><div class="welcome"><div class="welcome-equation">${math(`${ddx()}\\left[\\sin(x^2)\\right]`)}</div><h2>Differentiation</h2><p>Practice the rules. Review what needs work.</p>${button("start", 'Start practicing <span aria-hidden="true">→</span>', "button primary large")}<p class="fine">Your work is saved automatically in this browser.</p></div>`;
+  const hasProgress = Object.keys(state.progress.skills).length > 0;
+  const nextSkill = hasProgress
+    ? SKILLS.find(
+        (skill) =>
+          skill.level <= state.progress.unlockedLevel &&
+          !config.disabledFamilies.includes(skill.id) &&
+          !isReady(state.progress.skills[skill.id]),
+      )
+    : undefined;
+  const nextSkillLine = nextSkill
+    ? `<p class="fine">Level ${nextSkill.level} · ${esc(nextSkill.label)}</p>`
+    : "";
+  return `<div class="card-top"><span class="tag">ADAPTIVE PRACTICE</span><span class="muted">At your own pace</span></div><div class="welcome"><div class="welcome-equation">${math(`${ddx()}\\left[\\sin(x^2)\\right]`)}</div><h2>Differentiation</h2><p>Practice the rules. Review what needs work.</p>${button("start", `${hasProgress ? "Continue practicing" : "Start practicing"} <span aria-hidden="true">→</span>`, "button primary large")}${nextSkillLine}<p class="fine">Your work is saved automatically in this browser.</p></div>`;
 }
 function summary() {
   const s = state.session!;
@@ -279,16 +296,16 @@ function questionView() {
   const s = state.session!,
     c = s.current!,
     q = c.question;
-  return `<div class="card-top practice-status" aria-label="Practice activity"><span class="streak" id="streak" aria-live="polite"><strong>${state.progress.streak ?? 0}</strong> in a row</span><span id="today-count" class="muted">${todayCount(state.progress)} practiced today</span></div><div class="question-body"><h2>${esc(q.title)}</h2>${math(q.prompt)}${q.domainText.startsWith("Use radians.") ? "" : `<p class="domain">${esc(q.domainText)}</p>`}<div id="answer-fields">${q.labels.map((label, i) => `<label class="answer-label" for="answer-${i}"><span class="answer-equation">${answerLabel(label, i)}</span><math-field id="answer-${i}" aria-label="${esc(label)}"></math-field></label>`).join("")}</div><div class="input-caption"><span>Equivalent forms are welcome.</span>${button("keyboard", "⌨ Math keyboard", "text-button")}</div><div id="feedback" class="feedback" aria-live="polite" ${c.verdict ? "" : "hidden"}>${c.verdict ? feedback(c.verdict) : ""}</div><div id="auto-next" class="auto-next" hidden><span>Next in 3s</span><div><i></i></div></div><div class="actions">${button("submit", "Check answer", "button primary")}${button("hint", c.hintsUsed >= 3 ? "Solution shown" : c.hintsUsed === 2 ? "Show solution" : c.hintsUsed === 1 ? "Show next hint" : "Need a hint?", "button subtle")}${button("next", c.verdict?.status === "correct" || c.hintsUsed >= 3 ? "Next question →" : "Skip", "text-button next")}</div><div id="hints">${hintContent()}</div>${state.progress.skills[q.primarySkill]?.failureStreak >= 3 ? '<p class="notice">Let’s rebuild the idea. Review the rule, then try the prerequisite checks in your queue.</p>' : ""}</div>`;
+  return `<div class="card-top practice-status" aria-label="Practice activity"><span class="streak" id="streak" aria-live="polite"><strong>${state.progress.streak ?? 0}</strong> in a row</span><span id="today-count" class="muted">${todayCount(state.progress)} practiced today</span></div><div class="question-body"><h2>${esc(q.title)}</h2>${math(q.prompt)}${q.domainText.startsWith("Use radians.") ? "" : `<p class="domain">${esc(q.domainText)}</p>`}<div id="answer-fields">${q.labels.map((label, i) => `<label class="answer-label" for="answer-${i}"><span class="answer-equation">${answerLabel(label, i)}</span><math-field id="answer-${i}" aria-label="${esc(label)}"></math-field></label>`).join("")}</div><div class="input-caption"><span>Equivalent forms are welcome.</span>${button("keyboard", "⌨ Math keyboard", "text-button")}</div><div id="feedback" class="feedback${c.verdict ? ` ${c.verdict.status}` : ""}" aria-live="polite" ${c.verdict ? "" : "hidden"}>${c.verdict ? feedback(c.verdict, q) : ""}</div><div id="auto-next" class="auto-next" hidden><span>Next in 3s</span><div><i></i></div></div><div class="actions">${button("submit", "Check answer", "button primary")}${button("hint", c.hintsUsed >= 3 ? "Solution shown" : c.hintsUsed === 2 ? "Show solution" : c.hintsUsed === 1 ? "Show next hint" : "Need a hint?", "button subtle")}${button("next", c.verdict?.status === "correct" || c.hintsUsed >= 3 ? "Next question →" : "Skip", "text-button next")}</div><div id="hints">${hintContent()}</div>${state.progress.skills[q.primarySkill]?.failureStreak >= 3 ? '<p class="notice">Let’s rebuild the idea. Review the rule, then try the prerequisite checks in your queue.</p>' : ""}</div>`;
 }
-function feedback(v: Verdict) {
+function feedback(v: Verdict, q: Question) {
   switch (v.status) {
     case "correct":
       return "<strong>✓ Correct.</strong>";
     case "incorrect":
       return v.feedbackCode === "domain"
         ? "<strong>Check the domain.</strong> Your expression is undefined at a point where the derivative exists."
-        : "<strong>Not quite.</strong> Check the rule and inner derivative.";
+        : `<strong>Not quite.</strong> ${incorrectFeedbackText(q)}`;
     default:
       return esc(v.message);
   }
@@ -326,7 +343,10 @@ function mountInputs() {
         window.mathVirtualKeyboard.show();
     });
   });
-  window.mathVirtualKeyboard.layouts = mathKeyboardLayouts;
+  const vars = c.question.domain.curve
+    ? ["x", "y"]
+    : [c.question.domain.variable];
+  window.mathVirtualKeyboard.layouts = layoutsFor(vars);
   on("keyboard", () => {
     if (window.mathVirtualKeyboard.visible) window.mathVirtualKeyboard.hide();
     else {
@@ -432,7 +452,7 @@ async function submit() {
     const f = document.getElementById("feedback")!;
     f.hidden = false;
     f.className = `feedback ${v.status}`;
-    f.innerHTML = feedback(v);
+    f.innerHTML = feedback(v, c.question);
     const n = document.getElementById("next");
     if (n && v.status === "correct") n.textContent = "Next question →";
   } finally {

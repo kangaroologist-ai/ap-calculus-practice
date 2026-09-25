@@ -51,7 +51,7 @@ for (const width of [390, 1280]) {
         }
 
         await page.screenshot({ path: `${output}/after-${width}-${scheme}-welcome.png` });
-        await page.getByRole("button", { name: /Start practicing/ }).click();
+        await page.getByRole("button", { name: /Start practicing|Continue practicing/ }).click();
         await page.locator("math-field").first().waitFor({ state: "visible" });
         await page.screenshot({ path: `${output}/after-${width}-${scheme}-question.png` });
       },
@@ -69,7 +69,7 @@ for (const scheme of ["light", "dark"] as const) {
       await page.goto("/");
       await expectReadableText(page);
 
-      await page.getByRole("button", { name: /Start practicing/ }).click();
+      await page.getByRole("button", { name: /Start practicing|Continue practicing/ }).click();
       await page.locator("math-field").first().waitFor({ state: "visible" });
       await expectReadableText(page);
 
