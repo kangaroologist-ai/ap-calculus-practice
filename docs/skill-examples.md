@@ -1586,7 +1586,7 @@ x^{2}+y^{2}-49=0
 **Answer.**
 
 \[
-dy/dx=-\left(\frac{2\cdot x}{2\cdot y}\right)
+\frac{\mathrm{d}y}{\mathrm{d}x}=-\left(\frac{2\cdot x}{2\cdot y}\right)
 \]
 
 **Production metadata.**
@@ -1620,7 +1620,7 @@ y^{2}-\left(x^{2}\right)-9=0
 **Answer.**
 
 \[
-dy/dx=-\left(\frac{-\left(2\cdot x\right)}{2\cdot y}\right)
+\frac{\mathrm{d}y}{\mathrm{d}x}=-\left(\frac{-\left(2\cdot x\right)}{2\cdot y}\right)
 \]
 
 **Production metadata.**
@@ -1814,7 +1814,7 @@ x(t)=6\cdot t+7,\quad y(t)=\sin\left(t\right)
 **Answer.**
 
 \[
-dy/dx=\frac{\cos\left(t\right)}{6}
+\frac{\mathrm{d}y}{\mathrm{d}x}=\frac{\cos\left(t\right)}{6}
 \]
 
 **Production metadata.**
@@ -1826,7 +1826,7 @@ dy/dx=\frac{\cos\left(t\right)}{6}
 - Differentiation variable: `t`
 - Generator domain text: Give your answer in t, where dx/dt ≠ 0.
 - Validation intervals sampled by the app: [-2.5, -0.2], [0.2, 2.5]
-- Guard used by the app: \frac{dx}{dt}\ne 0
+- Guard used by the app: \frac{\mathrm{d}x}{\mathrm{d}t}\ne 0
 
 **Verified.** The answer was recomputed from the source expression using the production differentiation rules; this item passed the structural check.
 
@@ -1848,7 +1848,7 @@ x(t)=t^{2},\quad y(t)=t^{3}
 **Answer.**
 
 \[
-d²y/dx²=\frac{\frac{3\cdot 2\cdot t\cdot 2\cdot t-\left(3\cdot t^{2}\cdot 2\right)}{\left(2\cdot t\right)^{2}}}{2\cdot t}
+\frac{\mathrm{d}^{2}y}{\mathrm{d}x^{2}}=\frac{\frac{3\cdot 2\cdot t\cdot 2\cdot t-\left(3\cdot t^{2}\cdot 2\right)}{\left(2\cdot t\right)^{2}}}{2\cdot t}
 \]
 
 **Production metadata.**
@@ -1860,7 +1860,7 @@ d²y/dx²=\frac{\frac{3\cdot 2\cdot t\cdot 2\cdot t-\left(3\cdot t^{2}\cdot 2\ri
 - Differentiation variable: `t`
 - Generator domain text: Give your answer in t, where dx/dt ≠ 0.
 - Validation intervals sampled by the app: [-2.5, -0.2], [0.2, 2.5]
-- Guard used by the app: \frac{dx}{dt}\ne 0
+- Guard used by the app: \frac{\mathrm{d}x}{\mathrm{d}t}\ne 0
 
 **Verified.** The answer was recomputed from the source expression using the production differentiation rules; this item passed the structural check.
 
@@ -1966,7 +1966,7 @@ r(\theta)=7\cdot \sin\left(\theta\right)
 **Answer.**
 
 \[
-dy/dx=\frac{7\cdot \cos\left(\theta\right)\cdot \sin\left(\theta\right)+7\cdot \sin\left(\theta\right)\cdot \cos\left(\theta\right)}{7\cdot \cos\left(\theta\right)\cdot \cos\left(\theta\right)+7\cdot \sin\left(\theta\right)\cdot \left(-\left(\sin\left(\theta\right)\right)\right)}
+\frac{\mathrm{d}y}{\mathrm{d}x}=\frac{7\cdot \cos\left(\theta\right)\cdot \sin\left(\theta\right)+7\cdot \sin\left(\theta\right)\cdot \cos\left(\theta\right)}{7\cdot \cos\left(\theta\right)\cdot \cos\left(\theta\right)+7\cdot \sin\left(\theta\right)\cdot \left(-\left(\sin\left(\theta\right)\right)\right)}
 \]
 
 **Production metadata.**
@@ -1978,7 +1978,7 @@ dy/dx=\frac{7\cdot \cos\left(\theta\right)\cdot \sin\left(\theta\right)+7\cdot \
 - Differentiation variable: `theta`
 - Generator domain text: Give your answer in θ, where dx/dθ ≠ 0.
 - Validation intervals sampled by the app: [-2.5, -0.2], [0.2, 2.5]
-- Guard used by the app: \frac{dx}{d\theta}\ne 0
+- Guard used by the app: \frac{\mathrm{d}x}{\mathrm{d}\theta}\ne 0
 
 **Verified.** The answer was recomputed from the source expression using the production differentiation rules; this item passed the structural check.
 
@@ -2000,7 +2000,7 @@ r(\theta)=4+\cos\left(\theta\right)
 **Answer.**
 
 \[
-dy/dx=\frac{\left(-\left(\sin\left(\theta\right)\right)\right)\cdot \sin\left(\theta\right)+\left(4+\cos\left(\theta\right)\right)\cdot \cos\left(\theta\right)}{\left(-\left(\sin\left(\theta\right)\right)\right)\cdot \cos\left(\theta\right)+\left(4+\cos\left(\theta\right)\right)\cdot \left(-\left(\sin\left(\theta\right)\right)\right)}
+\frac{\mathrm{d}y}{\mathrm{d}x}=\frac{\left(-\left(\sin\left(\theta\right)\right)\right)\cdot \sin\left(\theta\right)+\left(4+\cos\left(\theta\right)\right)\cdot \cos\left(\theta\right)}{\left(-\left(\sin\left(\theta\right)\right)\right)\cdot \cos\left(\theta\right)+\left(4+\cos\left(\theta\right)\right)\cdot \left(-\left(\sin\left(\theta\right)\right)\right)}
 \]
 
 **Production metadata.**
@@ -2012,7 +2012,7 @@ dy/dx=\frac{\left(-\left(\sin\left(\theta\right)\right)\right)\cdot \sin\left(\t
 - Differentiation variable: `theta`
 - Generator domain text: Give your answer in θ, where dx/dθ ≠ 0.
 - Validation intervals sampled by the app: [-2.5, -0.2], [0.2, 2.5]
-- Guard used by the app: \frac{dx}{d\theta}\ne 0
+- Guard used by the app: \frac{\mathrm{d}x}{\mathrm{d}\theta}\ne 0
 
 **Verified.** The answer was recomputed from the source expression using the production differentiation rules; this item passed the structural check.
 

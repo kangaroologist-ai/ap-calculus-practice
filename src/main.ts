@@ -33,6 +33,7 @@ import {
   type PortableProgress,
 } from "./transfer";
 import { Grader } from "./grader-client";
+import { ddx, dydx } from "./notation";
 import "./style.css";
 MathfieldElement.fontsDirectory = "/fonts";
 MathfieldElement.soundsDirectory = null;
@@ -241,7 +242,7 @@ function levelView(level: number, expanded = false) {
     }).join("") || '<p class="fine">No enabled skills in this level.</p>'}</div></details>`;
 }
 function welcome() {
-  return `<div class="card-top"><span class="tag">ADAPTIVE PRACTICE</span><span class="muted">At your own pace</span></div><div class="welcome"><div class="welcome-equation">${math("\\frac{d}{dx}\\left[\\sin(x^2)\\right]")}</div><h2>Differentiation</h2><p>Practice the rules. Review what needs work.</p>${button("start", 'Start practicing <span aria-hidden="true">→</span>', "button primary large")}<p class="fine">Your work is saved automatically in this browser.</p></div>`;
+  return `<div class="card-top"><span class="tag">ADAPTIVE PRACTICE</span><span class="muted">At your own pace</span></div><div class="welcome"><div class="welcome-equation">${math(`${ddx()}\\left[\\sin(x^2)\\right]`)}</div><h2>Differentiation</h2><p>Practice the rules. Review what needs work.</p>${button("start", 'Start practicing <span aria-hidden="true">→</span>', "button primary large")}<p class="fine">Your work is saved automatically in this browser.</p></div>`;
 }
 function summary() {
   const s = state.session!;
@@ -249,8 +250,8 @@ function summary() {
 }
 function answerLabel(label: string, index: number): string {
   let tex = label;
-  if (label === "dy/dx") tex = "\\frac{dy}{dx}";
-  else if (label === "d²y/dx²") tex = "\\frac{d^2y}{dx^2}";
+  if (label === "dy/dx") tex = dydx();
+  else if (label === "d²y/dx²") tex = dydx(2);
   else if (label.includes("component")) tex = `r_{${index + 1}}'(t)`;
   else tex = tex.replace("f⁻¹", "f^{-1}");
   return convertLatexToMarkup(`${tex}=`);

@@ -206,6 +206,11 @@ test.describe('Derivative Studio browser flows', () => {
     await openApp(page, config);
     await screenshot(page, 'constant-01-welcome');
 
+    // SPEC-U1: the welcome equation's differential d is upright (\mathrm{d}),
+    // so it must never sit inside MathLive's italic math-variable glyph class.
+    await expect(page.locator('.welcome-equation .ML__mathit', { hasText: /^d$/ })).toHaveCount(0);
+    await expect(page.locator('.welcome-equation')).toContainText('d');
+
     await page.getByRole('button', { name: /Start practicing/ }).click();
     await expect.poll(async () => (await readStoredState(page)).session?.current?.question.primarySkill).toBe('constant');
     const field = page.locator('math-field').first();

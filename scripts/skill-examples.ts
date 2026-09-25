@@ -16,6 +16,7 @@ import {
   pow as P,
 } from "../src/math";
 import type { Expr, Question, Skill } from "../src/types";
+import { dydx } from "../src/notation";
 
 /**
  * This script intentionally uses the production generator. The generated
@@ -247,13 +248,14 @@ function answerLatex(q: Question): string {
   if (q.family === "vector") return `\\langle ${q.answers.map(L).join(",\\; ")} \\rangle`;
   return q.answers.map((answer, i) => {
     const label = q.labels[i] ?? q.labels[0] ?? "answer";
-    return `${label}=${L(answer)}`;
+    const tex = label === "dy/dx" ? dydx() : label === "d²y/dx²" ? dydx(2) : label;
+    return `${tex}=${L(answer)}`;
   }).join("\\quad");
 }
 
 function guardLatex(q: Question): string {
-  if (q.family === "parametric") return "\\frac{dx}{dt}\\ne 0";
-  if (q.family === "polar") return "\\frac{dx}{d\\theta}\\ne 0";
+  if (q.family === "parametric") return `${dydx(1, "x", "t")}\\ne 0`;
+  if (q.family === "polar") return `${dydx(1, "x", "theta")}\\ne 0`;
   return q.domain.guards.length
     ? q.domain.guards.map((guard) => `\\frac{1}{${L(guard)}}`).join(",\\; ")
     : "none";

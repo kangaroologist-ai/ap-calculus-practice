@@ -13,6 +13,7 @@ import {
   evaluator,
 } from "./math";
 import { skillById } from "./catalog";
+import { ddx, dydx } from "./notation";
 export const GENERATOR_VERSION = "1.1.0";
 export function generateQuestion(
   id: string,
@@ -152,11 +153,11 @@ function instantiate(id: string, seed: string, override?: number): Question {
       steps = [
         {
           text: "Differentiate both sides, remembering that y depends on x.",
-          math: v ? "2y\\frac{dy}{dx}-2x=0" : "2x+2y\\frac{dy}{dx}=0",
+          math: v ? `2y${dydx()}-2x=0` : `2x+2y${dydx()}=0`,
         },
         {
           text: "Isolate the requested derivative.",
-          math: `\\frac{dy}{dx}=${L(answers[0])}`,
+          math: `${dydx()}=${L(answers[0])}`,
         },
       ];
       break;
@@ -212,13 +213,13 @@ function instantiate(id: string, seed: string, override?: number): Question {
       steps = [
         {
           text: "Divide the derivatives with respect to t.",
-          math: `\\frac{dy}{dx}=${L(slope)}`,
+          math: `${dydx()}=${L(slope)}`,
         },
         ...(v
           ? [
               {
                 text: "Differentiate the slope in t, then divide by dx/dt again.",
-                math: `\\frac{d^2y}{dx^2}=${L(answers[0])}`,
+                math: `${dydx(2)}=${L(answers[0])}`,
               },
             ]
           : []),
@@ -259,7 +260,7 @@ function instantiate(id: string, seed: string, override?: number): Question {
         },
         {
           text: "Divide their derivatives with respect to θ.",
-          math: `\\frac{dy}{dx}=${L(answers[0])}`,
+          math: `${dydx()}=${L(answers[0])}`,
         },
       ];
       domainText = "Give your answer in θ, where dx/dθ ≠ 0.";
@@ -309,8 +310,8 @@ function instantiate(id: string, seed: string, override?: number): Question {
 }
 export function ruleFormula(id: string): string {
   const rules: Record<string, string> = {
-    constant: "\\frac{d}{dx}c=0",
-    power: "\\frac{d}{dx}x^n=nx^{n-1}",
+    constant: `${ddx()}c=0`,
+    power: `${ddx()}x^n=nx^{n-1}`,
     sum: "(au+bv)'=au'+bv'",
     root: "\\sqrt{x}=x^{1/2}",
     product: "(uv)'=u'v+uv'",
@@ -384,7 +385,7 @@ function derivationSteps(
     };
     steps.push({
       text: rule[node[0]] ?? "Differentiate this inner function.",
-      math: `\\frac{d}{d${variable}}\\left[${L(node)}\\right]=${L(d(node, variable))}`,
+      math: `${ddx(variable)}\\left[${L(node)}\\right]=${L(d(node, variable))}`,
     });
   }
   visit(e, true);
