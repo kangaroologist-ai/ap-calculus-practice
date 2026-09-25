@@ -1,4 +1,4 @@
-import type { Domain, Expr, QuestionMeta } from "./types";
+import type { Curve, Domain, Expr, QuestionMeta } from "./types";
 import {
   add as A,
   mul as M,
@@ -34,6 +34,15 @@ export interface Built {
   curve?: Domain["curve"];
   guards?: Expr[];
   steps?: { text: string; math: string }[];
+  // SPEC-G5: steps shown before the standard rule-reminder/derivation/apply
+  // sequence below, e.g. rewriting a radical as a fractional power before the
+  // power rule takes over. Only used when `steps` itself is left empty.
+  prefixSteps?: { text: string; math: string }[];
+  // Overrides the expression finalize()'s default per-node derivation
+  // commentary walks, for when it should differ from the displayed
+  // `source`/`e` (e.g. root.sqrt shows a radical but derives from its
+  // rewritten x^(1/2) form). Defaults to `source[0]`.
+  derivationBasis?: Expr;
 }
 export interface Template {
   key: string;
@@ -141,16 +150,20 @@ function vectorBuilt(source: Expr[]): Built {
     })),
   };
 }
+// Generic implicit-curve builder (SPEC-G4). `curve` drives sampling for both
+// the grader and the SymPy oracle; the "differentiate both sides" step is
+// derived from the actual constraint's own partial derivatives (via d()),
+// never a hardcoded formula, so it stays correct for any p/q/c coefficients.
 function implicitBuilt(
-  curveType: "circle" | "hyperbola",
-  param: number,
+  curve: Curve,
   sourceExpr: Expr,
   intervals: [number, number][],
-  stepMath: string,
 ): Built {
-  const answer = N(Q(d(sourceExpr, "x"), d(sourceExpr, "y")));
+  const fx = d(sourceExpr, "x"),
+    fy = d(sourceExpr, "y");
+  const answer = N(Q(fx, fy));
   return {
-    curve: { type: curveType, parameter: param },
+    curve,
     source: [sourceExpr],
     answers: [answer],
     prompt: `${L(sourceExpr)}=0`,
@@ -161,7 +174,7 @@ function implicitBuilt(
     steps: [
       {
         text: "Differentiate both sides, remembering that y depends on x.",
-        math: stepMath,
+        math: `${L(fx)}+${L(fy)}${dydx()}=0`,
       },
       {
         text: "Isolate the requested derivative.",
@@ -195,7 +208,15 @@ function inverseBuilt(e: Expr, point: number): Built {
 function trigTemplates(id: string): readonly Template[] {
   const op = id[0].toUpperCase() + id.slice(1);
   return [
-    { key: `${id}.basic`, build: ({ a }) => ({ e: M(a, F(op, "x")) }) },
+    {
+      key: `${id}.basic`,
+      // SPEC-G1: a local 2..13 draw (instead of the shared ctx.a, whose
+      // 2..9 range only ever produced 8 distinct questions).
+      build: (c) => {
+        const av = 2 + Math.floor(c.r() * 12);
+        return { e: M(av, F(op, "x")) };
+      },
+    },
     { key: `${id}.linear`, build: (c) => ({ e: F(op, lin(c)) }) },
   ];
 }
@@ -207,27 +228,56 @@ function arcTemplates(id: string, op: string): readonly Template[] {
   return [
     {
       key: `${id}.basic`,
-      build: ({ a }) => ({ e: M(a, F(op, "x")), intervals }),
+      build: (c) => {
+        const av = 2 + Math.floor(c.r() * 12);
+        return { e: M(av, F(op, "x")), intervals };
+      },
     },
     {
       key: `${id}.scaled`,
-      build: ({ a }) => ({ e: F(op, Q("x", a)), intervals }),
+      build: (c) => {
+        const av = 2 + Math.floor(c.r() * 12);
+        return { e: F(op, Q("x", av)), intervals };
+      },
     },
   ];
 }
 export const TEMPLATES: Record<string, readonly Template[]> = {
   constant: [
-    { key: "constant.plain", build: ({ a }) => ({ e: a }) },
+    {
+      key: "constant.value",
+      // SPEC-G1: one of {a, ln a, sqrt a, e^a} instead of always a bare
+      // number, so the source (and its displayed prompt) actually varies.
+      build: (c) => {
+        const av = 2 + Math.floor(c.r() * 12);
+        return {
+          e: c.pick<Expr>([av, F("Ln", av), F("Sqrt", av), F("Exp", av)]),
+        };
+      },
+    },
     { key: "constant.frac", build: ({ a, b, n }) => ({ e: A(a, Q(b, n)) }) },
   ],
   power: [
-    { key: "power.xn", build: ({ n }) => ({ e: P("x", n) }) },
+    {
+      key: "power.xn",
+      // SPEC-G1: a local 2..12 draw; the shared ctx.n (2..5) stays untouched
+      // because chain.power, product.xn, and vector.power_sin still use it.
+      build: (c) => {
+        const nn = 2 + Math.floor(c.r() * 11);
+        return { e: P("x", nn) };
+      },
+    },
     { key: "power.neg", build: ({ a, n }) => ({ e: M(a, P("x", -n)) }) },
   ],
   sum: [
     {
       key: "sum.poly2",
-      build: ({ a, b, n }) => ({ e: A(P("x", n), M(b, P("x", 2)), a) }),
+      // SPEC-G6: n now draws locally from 3..6, so xⁿ and bx² can never
+      // collapse into the same power and hide a like-terms case.
+      build: (c) => {
+        const nn = 3 + Math.floor(c.r() * 4);
+        return { e: A(P("x", nn), M(c.b, P("x", 2)), c.a) };
+      },
     },
     {
       key: "sum.scaled",
@@ -237,29 +287,62 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
   root: [
     {
       key: "root.sqrt",
-      build: ({ a }) => ({
-        e: M(a, P("x", Q(1, 2))),
-        intervals: [
-          [0.1, 1],
-          [1, 5],
-        ],
-      }),
+      // SPEC-G5: the displayed source is a genuine radical (a real Sqrt
+      // node), and the answer is derived from the rewritten a*x^(1/2), with
+      // an explicit rewrite step ahead of the usual power-rule derivation.
+      build: (c) => {
+        const av = 2 + Math.floor(c.r() * 16);
+        const displayed = M(av, F("Sqrt", "x"));
+        const rewritten = M(av, P("x", Q(1, 2)));
+        return {
+          e: displayed,
+          answers: [d(rewritten)],
+          derivationBasis: rewritten,
+          prefixSteps: [
+            {
+              text: "Rewrite the radical as a fractional power before differentiating.",
+              math: `${L(displayed)}=${L(rewritten)}`,
+            },
+          ],
+          intervals: [
+            [0.1, 1],
+            [1, 5],
+          ],
+        };
+      },
     },
     {
-      key: "root.cube",
+      key: "root.frac_power",
       meta: { oddRoot: true },
-      build: ({ a }) => ({
-        e: M(a, P("x", Q(1, 3))),
-        intervals: [
-          [-5, -0.1],
-          [0.1, 5],
-        ],
-      }),
+      // SPEC-G1: p/q now ranges over six rational exponents (not just the
+      // fixed cube root), keeping the Multiply(a, Power(x, Divide(p,q)))
+      // source shape check_math.py's odd-root real-branch check relies on.
+      build: ({ a, pick }) => {
+        const [p, q] = pick([
+          [1, 3],
+          [2, 3],
+          [4, 3],
+          [5, 3],
+          [1, 5],
+          [2, 5],
+        ] as const);
+        return {
+          e: M(a, P("x", Q(p, q))),
+          intervals: [
+            [-5, -0.1],
+            [0.1, 5],
+          ],
+        };
+      },
     },
   ],
   exp: [
     { key: "exp.natural", build: (c) => ({ e: F("Exp", lin(c)) }) },
-    { key: "exp.base", build: ({ a }) => ({ e: P(a, "x") }) },
+    {
+      key: "exp.base",
+      // SPEC-G1: an independent leading coefficient b*a^x.
+      build: ({ a, b }) => ({ e: M(b, P(a, "x")) }),
+    },
   ],
   log: [
     {
@@ -274,8 +357,9 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
     },
     {
       key: "log.base",
-      build: ({ a }) => ({
-        e: Q(F("Ln", "x"), F("Ln", a)),
+      // SPEC-G1: an independent leading coefficient b*ln(x)/ln(a).
+      build: ({ a, b }) => ({
+        e: Q(M(b, F("Ln", "x")), F("Ln", a)),
         intervals: [
           [0.1, 1],
           [1, 5],
@@ -307,7 +391,13 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
   quotient: [
     {
       key: "quotient.poly",
-      build: (c) => ({ e: Q(A(P("x", 2), c.b), lin(c)) }),
+      // SPEC-G6: the denominator now draws its own constant c, instead of
+      // reusing the numerator's b (which could hide an unintended relation
+      // between numerator and denominator).
+      build: (c) => {
+        const cc = 1 + Math.floor(c.r() * 9);
+        return { e: Q(A(P("x", 2), c.b), A(M(c.a, "x"), cc)) };
+      },
     },
     {
       key: "quotient.smooth",
@@ -340,41 +430,57 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
     },
     {
       key: "mixed.smooth_over_quad",
-      build: (c) => ({ e: Q(F(c.smooth(), lin(c)), A(P("x", 2), c.b)) }),
+      // SPEC-G6: the denominator now draws its own constant c instead of
+      // reusing the numerator's b.
+      build: (c) => {
+        const cc = 1 + Math.floor(c.r() * 9);
+        return { e: Q(F(c.smooth(), lin(c)), A(P("x", 2), cc)) };
+      },
     },
   ],
   implicit: [
     {
-      key: "implicit.circle",
+      key: "implicit.ellipse",
       // Differentiating y^2 always introduces a chain-rule factor of dy/dx,
       // even though that composition never shows up in the source constraint.
       requires: ["chain"],
-      build: ({ a }) =>
-        implicitBuilt(
-          "circle",
-          a,
-          A(P("x", 2), P("y", 2), -a * a),
+      // SPEC-G4: a general ellipse p*x^2 + q*y^2 = c (p != q in general, so
+      // the answer is no longer always -x/y) on the generic graph curve.
+      build: (c) => {
+        const p = c.pick([1, 2, 3, 4, 5]),
+          q = c.pick([1, 2, 3, 4, 5]),
+          cc = p * q * c.pick([4, 9, 16]);
+        const y = F("Sqrt", Q(A(cc, N(M(p, P("x", 2)))), q)),
+          xm = Math.sqrt(cc / p);
+        return implicitBuilt(
+          { type: "graph", free: "x", branches: [y, N(y)] },
+          A(M(p, P("x", 2)), M(q, P("y", 2)), -cc),
           [
-            [0.25, 2.8],
-            [3.4, 6.0],
+            [-0.85 * xm, -0.1 * xm],
+            [0.1 * xm, 0.85 * xm],
           ],
-          `2x+2y${dydx()}=0`,
-        ),
+        );
+      },
     },
     {
       key: "implicit.hyperbola",
       requires: ["chain"],
-      build: ({ a }) =>
-        implicitBuilt(
-          "hyperbola",
-          a,
-          A(P("y", 2), N(P("x", 2)), -a),
+      // SPEC-G4: a general hyperbola q*y^2 - p*x^2 = c on the generic graph
+      // curve (y is always defined and nonzero for every real x).
+      build: (c) => {
+        const p = c.pick([1, 2, 3, 4, 5]),
+          q = c.pick([1, 2, 3, 4, 5]),
+          cc = p * q * c.pick([4, 9, 16]);
+        const y = F("Sqrt", Q(A(cc, M(p, P("x", 2))), q));
+        return implicitBuilt(
+          { type: "graph", free: "x", branches: [y, N(y)] },
+          A(M(q, P("y", 2)), N(M(p, P("x", 2))), -cc),
           [
             [-2, -0.2],
             [0.2, 2],
           ],
-          `2y${dydx()}-2x=0`,
-        ),
+        );
+      },
     },
   ],
   inverse: [
@@ -384,7 +490,12 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
     },
     {
       key: "inverse.cubic",
-      build: ({ a, b }) => inverseBuilt(A(P("x", 3), M(a, "x")), b),
+      // The source previously depended only on a (b was only the evaluation
+      // point), so its signature only ever took 8 distinct values across any
+      // number of seeds -- below SPEC-G1's 10-fingerprint floor. b already
+      // varies per seed and drops out of the derivative, so folding it into
+      // the source as well costs nothing mathematically.
+      build: ({ a, b }) => inverseBuilt(A(P("x", 3), M(a, "x"), b), b),
     },
   ],
   higher: [
@@ -394,9 +505,15 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
       build: ({ b, n }) => higherBuilt(A(P("x", n + 1), M(b, P("x", 2))), 2),
     },
     {
-      key: "higher.sin3",
+      key: "higher.trig3",
       meta: { derivativeOrder: 3 },
-      build: ({ a }) => higherBuilt(M(a, F("Sin", "x")), 3),
+      // SPEC-G1: g ranges over {sin, cos} and the inner argument is scaled
+      // by k in 1..3, instead of always the fixed a*sin(x).
+      build: (c) => {
+        const g = c.pick(["Sin", "Cos"] as const);
+        const k = 1 + Math.floor(c.r() * 3);
+        return higherBuilt(M(c.a, F(g, M(k, "x"))), 3);
+      },
     },
   ],
   parametric: [
@@ -412,7 +529,12 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
       key: "parametric.poly",
       meta: { derivativeOrder: 2 },
       requires: ["quotient"],
-      build: () => parametricBuilt(P("t", 2), P("t", 3), 2),
+      // SPEC-G1: x = a*t^2, y = t^k for k in 3..5, instead of the single
+      // fixed pair x=t^2, y=t^3.
+      build: (c) => {
+        const k = 3 + Math.floor(c.r() * 3);
+        return parametricBuilt(M(c.a, P("t", 2)), P("t", k), 2);
+      },
     },
   ],
   vector: [
@@ -422,22 +544,27 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
     },
     {
       key: "vector.exp_cos",
-      build: ({ a }) => vectorBuilt([F("Exp", M(a, "t")), F("Cos", "t")]),
+      // SPEC-G1: an independent leading coefficient b on the cosine component.
+      build: ({ a, b }) =>
+        vectorBuilt([F("Exp", M(a, "t")), M(b, F("Cos", "t"))]),
     },
   ],
   polar: [
     {
-      key: "polar.sin",
+      key: "polar.sin_limacon",
       // Converting to Cartesian (x=r cos theta, y=r sin theta) always brings
       // in product, quotient, sin, and cos, none of which need appear in the
       // bare radius expression r(theta).
       requires: ["product", "quotient", "sin", "cos"],
-      build: ({ a }) => polarBuilt(M(a, F("Sin", "theta"))),
+      // SPEC-G1/G4: a limaçon a+b*sin(theta) instead of the bare rose
+      // r=a*sin(theta), whose slope was always tan(2*theta) regardless of a.
+      build: ({ a, b }) => polarBuilt(A(a, M(b, F("Sin", "theta")))),
     },
     {
       key: "polar.cos",
       requires: ["product", "quotient", "sin", "cos"],
-      build: ({ a }) => polarBuilt(A(a, F("Cos", "theta"))),
+      // SPEC-G1: an independent leading coefficient b on the cosine term.
+      build: ({ a, b }) => polarBuilt(A(a, M(b, F("Cos", "theta")))),
     },
   ],
 };

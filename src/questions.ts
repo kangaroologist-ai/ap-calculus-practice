@@ -4,7 +4,7 @@ import { SKILLS, skillById } from "./catalog";
 import { ddx } from "./notation";
 import { TEMPLATES, makeCtx, type Built, type Template } from "./templates";
 import { inferSkills } from "./skill-inference";
-export const GENERATOR_VERSION = "1.1.0";
+export const GENERATOR_VERSION = "1.2.0";
 export function generateQuestion(
   id: string,
   seed: string,
@@ -49,12 +49,11 @@ function finalize(
   built: Built,
 ): Question {
   const variable: Domain["variable"] = built.variable ?? "x";
-  let source = built.source ?? [];
-  let answers = built.answers ?? [];
-  if (!source.length) {
-    source = [built.e ?? 0];
-    answers = [d(built.e ?? 0)];
-  }
+  // Source and answers can each be given independently (root.sqrt shows a
+  // radical `e` but derives its answer from a rewritten fractional power), so
+  // filling in one must never silently discard an explicitly given other.
+  const source = built.source ?? [built.e ?? 0];
+  const answers = built.answers ?? source.map((e) => d(e, variable));
   const prompt = built.prompt ?? `f(x)=${L(source[0])}`;
   const labels = built.labels ?? ["f'(x)"];
   const title = built.title ?? "Find the derivative";
@@ -69,8 +68,9 @@ function finalize(
     built.steps && built.steps.length
       ? built.steps
       : [
+          ...(built.prefixSteps ?? []),
           { text: skill.rule, math: ruleFormula(skill.id) },
-          ...derivationSteps(source[0], variable),
+          ...derivationSteps(built.derivationBasis ?? source[0], variable),
           {
             text: "Apply the rule to this function. Equivalent unsimplified answers are accepted.",
             math: `${labels[0]}=${L(answers[0])}`,

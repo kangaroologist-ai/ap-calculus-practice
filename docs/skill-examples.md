@@ -3,7 +3,7 @@
 Two real generated examples for every differentiation skill in `src/catalog.ts`.
 The student-facing prompts are in English; each skill has a Chinese type note for teacher review.
 
-Generated from `generateQuestion` version `1.1.0` on 2026-09-19; 26 skills × 2 templates = 52 questions.
+Generated from `generateQuestion` version `1.2.0` on 2026-09-19; 26 skills × 2 templates = 52 questions.
 
 > The answers preserve the production generator's expression tree, so an unsimplified form may appear. Equivalent expressions are accepted by the app's grader.
 
@@ -50,12 +50,12 @@ Every question below was generated with a fixed seed and an explicit template ov
 
 **Rule / definition:** The derivative of a constant is zero.
 
-#### 1. Template 0
+#### 1. Template 0 (`constant.value`)
 
 **Student question (English).** Differentiate the function shown below.
 
 \[
-f(x)=7
+f(x)=\ln\left(9\right)
 \]
 
 **Definition / validity conditions.** Work over the real domain of the displayed function and at points where the requested derivative exists.
@@ -74,7 +74,8 @@ f'(x)=0
 - Generator ID: `constant:0:skill-examples-2026-09-19:constant:template-0`
 - Seed: `skill-examples-2026-09-19:constant:template-0`
 - Template: 0 (the generator's first structure)
-- Generator version: `1.1.0`
+- Template key: `constant.value`
+- Generator version: `1.2.0`
 - Differentiation variable: `x`
 - Generator domain text: Use radians. Give an expression valid wherever the derivative exists.
 - Validation intervals sampled by the app: [-2.5, -0.2], [0.2, 2.5]
@@ -84,7 +85,7 @@ f'(x)=0
 
 </details>
 
-#### 2. Template 1
+#### 2. Template 1 (`constant.frac`)
 
 **Student question (English).** Differentiate the function shown below.
 
@@ -108,7 +109,8 @@ f'(x)=0
 - Generator ID: `constant:1:skill-examples-2026-09-19:constant:template-1`
 - Seed: `skill-examples-2026-09-19:constant:template-1`
 - Template: 1 (the generator's second structure)
-- Generator version: `1.1.0`
+- Template key: `constant.frac`
+- Generator version: `1.2.0`
 - Differentiation variable: `x`
 - Generator domain text: Use radians. Give an expression valid wherever the derivative exists.
 - Validation intervals sampled by the app: [-2.5, -0.2], [0.2, 2.5]
@@ -126,7 +128,7 @@ f'(x)=0
 
 **Rule / definition:** Multiply by the exponent, then subtract one from the exponent.
 
-#### 3. Template 0
+#### 3. Template 0 (`power.xn`)
 
 **Student question (English).** Differentiate the function shown below.
 
@@ -150,7 +152,8 @@ f'(x)=4\cdot x^{3}
 - Generator ID: `power:0:skill-examples-2026-09-19:power:template-0`
 - Seed: `skill-examples-2026-09-19:power:template-0`
 - Template: 0 (the generator's first structure)
-- Generator version: `1.1.0`
+- Template key: `power.xn`
+- Generator version: `1.2.0`
 - Differentiation variable: `x`
 - Generator domain text: Use radians. Give an expression valid wherever the derivative exists.
 - Validation intervals sampled by the app: [-2.5, -0.2], [0.2, 2.5]
@@ -160,7 +163,7 @@ f'(x)=4\cdot x^{3}
 
 </details>
 
-#### 4. Template 1
+#### 4. Template 1 (`power.neg`)
 
 **Student question (English).** Differentiate the function shown below.
 
@@ -184,7 +187,8 @@ f'(x)=2\cdot \left(-5\right)\cdot x^{-6}
 - Generator ID: `power:1:skill-examples-2026-09-19:power:template-1`
 - Seed: `skill-examples-2026-09-19:power:template-1`
 - Template: 1 (the generator's second structure)
-- Generator version: `1.1.0`
+- Template key: `power.neg`
+- Generator version: `1.2.0`
 - Differentiation variable: `x`
 - Generator domain text: Use radians. Give an expression valid wherever the derivative exists.
 - Validation intervals sampled by the app: [-2.5, -0.2], [0.2, 2.5]
@@ -202,12 +206,12 @@ f'(x)=2\cdot \left(-5\right)\cdot x^{-6}
 
 **Rule / definition:** Differentiate each term separately and keep constant coefficients.
 
-#### 5. Template 0
+#### 5. Template 0 (`sum.poly2`)
 
 **Student question (English).** Differentiate the function shown below.
 
 \[
-f(x)=x^{2}+4\cdot x^{2}+3
+f(x)=x^{6}+4\cdot x^{2}+3
 \]
 
 **Definition / validity conditions.** Work over the real domain of the displayed function and at points where the requested derivative exists.
@@ -218,7 +222,7 @@ f(x)=x^{2}+4\cdot x^{2}+3
 **Answer.**
 
 \[
-f'(x)=2\cdot x+4\cdot 2\cdot x
+f'(x)=6\cdot x^{5}+4\cdot 2\cdot x
 \]
 
 **Production metadata.**
@@ -226,7 +230,8 @@ f'(x)=2\cdot x+4\cdot 2\cdot x
 - Generator ID: `sum:0:skill-examples-2026-09-19:sum:template-0`
 - Seed: `skill-examples-2026-09-19:sum:template-0`
 - Template: 0 (the generator's first structure)
-- Generator version: `1.1.0`
+- Template key: `sum.poly2`
+- Generator version: `1.2.0`
 - Differentiation variable: `x`
 - Generator domain text: Use radians. Give an expression valid wherever the derivative exists.
 - Validation intervals sampled by the app: [-2.5, -0.2], [0.2, 2.5]
@@ -236,7 +241,7 @@ f'(x)=2\cdot x+4\cdot 2\cdot x
 
 </details>
 
-#### 6. Template 1
+#### 6. Template 1 (`sum.scaled`)
 
 **Student question (English).** Differentiate the function shown below.
 
@@ -260,7 +265,8 @@ f'(x)=4\cdot 3\cdot x^{2}-7
 - Generator ID: `sum:1:skill-examples-2026-09-19:sum:template-1`
 - Seed: `skill-examples-2026-09-19:sum:template-1`
 - Template: 1 (the generator's second structure)
-- Generator version: `1.1.0`
+- Template key: `sum.scaled`
+- Generator version: `1.2.0`
 - Differentiation variable: `x`
 - Generator domain text: Use radians. Give an expression valid wherever the derivative exists.
 - Validation intervals sampled by the app: [-2.5, -0.2], [0.2, 2.5]
@@ -278,12 +284,12 @@ f'(x)=4\cdot 3\cdot x^{2}-7
 
 **Rule / definition:** Rewrite a root as a fractional power, then apply the power rule.
 
-#### 7. Template 0
+#### 7. Template 0 (`root.sqrt`)
 
 **Student question (English).** Differentiate the function shown below.
 
 \[
-f(x)=5\cdot x^{\frac{1}{2}}
+f(x)=10\cdot \sqrt{x}
 \]
 
 **Definition / validity conditions.** For the square-root template, use x > 0 for the derivative (the function itself is real for x ≥ 0).
@@ -294,7 +300,7 @@ f(x)=5\cdot x^{\frac{1}{2}}
 **Answer.**
 
 \[
-f'(x)=5\cdot \frac{1}{2}\cdot x^{\frac{-1}{2}}
+f'(x)=10\cdot \frac{1}{2}\cdot x^{\frac{-1}{2}}
 \]
 
 **Production metadata.**
@@ -302,7 +308,8 @@ f'(x)=5\cdot \frac{1}{2}\cdot x^{\frac{-1}{2}}
 - Generator ID: `root:0:skill-examples-2026-09-19:root:template-0`
 - Seed: `skill-examples-2026-09-19:root:template-0`
 - Template: 0 (the generator's first structure)
-- Generator version: `1.1.0`
+- Template key: `root.sqrt`
+- Generator version: `1.2.0`
 - Differentiation variable: `x`
 - Generator domain text: Use radians. Give an expression valid wherever the derivative exists.
 - Validation intervals sampled by the app: [0.1, 1], [1, 5]
@@ -312,15 +319,15 @@ f'(x)=5\cdot \frac{1}{2}\cdot x^{\frac{-1}{2}}
 
 </details>
 
-#### 8. Template 1
+#### 8. Template 1 (`root.frac_power`)
 
 **Student question (English).** Differentiate the function shown below.
 
 \[
-f(x)=7\cdot x^{\frac{1}{3}}
+f(x)=7\cdot x^{\frac{5}{3}}
 \]
 
-**Definition / validity conditions.** For the cube-root template, the real function is defined for every x, but its derivative is undefined at x = 0. Thus x ≠ 0.
+**Definition / validity conditions.** For the odd-root template (an odd-denominator rational exponent, e.g. cube or fifth root), the real function is defined for every x, but its derivative is undefined at x = 0. Thus x ≠ 0.
 
 <details>
 <summary>Answer and generator verification</summary>
@@ -328,7 +335,7 @@ f(x)=7\cdot x^{\frac{1}{3}}
 **Answer.**
 
 \[
-f'(x)=7\cdot \frac{1}{3}\cdot x^{\frac{-2}{3}}
+f'(x)=7\cdot \frac{5}{3}\cdot x^{\frac{2}{3}}
 \]
 
 **Production metadata.**
@@ -336,7 +343,8 @@ f'(x)=7\cdot \frac{1}{3}\cdot x^{\frac{-2}{3}}
 - Generator ID: `root:1:skill-examples-2026-09-19:root:template-1`
 - Seed: `skill-examples-2026-09-19:root:template-1`
 - Template: 1 (the generator's second structure)
-- Generator version: `1.1.0`
+- Template key: `root.frac_power`
+- Generator version: `1.2.0`
 - Differentiation variable: `x`
 - Generator domain text: Use radians. Give an expression valid wherever the derivative exists.
 - Validation intervals sampled by the app: [-5, -0.1], [0.1, 5]
@@ -354,7 +362,7 @@ f'(x)=7\cdot \frac{1}{3}\cdot x^{\frac{-2}{3}}
 
 **Rule / definition:** For e to a function, multiply by the inner derivative; for another base, also multiply by its natural logarithm.
 
-#### 9. Template 0
+#### 9. Template 0 (`exp.natural`)
 
 **Student question (English).** Differentiate the function shown below.
 
@@ -378,7 +386,8 @@ f'(x)=e^{3\cdot x+9}\cdot 3
 - Generator ID: `exp:0:skill-examples-2026-09-19:exp:template-0`
 - Seed: `skill-examples-2026-09-19:exp:template-0`
 - Template: 0 (the generator's first structure)
-- Generator version: `1.1.0`
+- Template key: `exp.natural`
+- Generator version: `1.2.0`
 - Differentiation variable: `x`
 - Generator domain text: Use radians. Give an expression valid wherever the derivative exists.
 - Validation intervals sampled by the app: [-2.5, -0.2], [0.2, 2.5]
@@ -388,12 +397,12 @@ f'(x)=e^{3\cdot x+9}\cdot 3
 
 </details>
 
-#### 10. Template 1
+#### 10. Template 1 (`exp.base`)
 
 **Student question (English).** Differentiate the function shown below.
 
 \[
-f(x)=5^{x}
+f(x)=2\cdot 5^{x}
 \]
 
 **Definition / validity conditions.** The displayed exponential is real and differentiable for every real x. Angles, when present, are measured in radians.
@@ -404,7 +413,7 @@ f(x)=5^{x}
 **Answer.**
 
 \[
-f'(x)=5^{x}\cdot \ln\left(5\right)
+f'(x)=2\cdot 5^{x}\cdot \ln\left(5\right)
 \]
 
 **Production metadata.**
@@ -412,7 +421,8 @@ f'(x)=5^{x}\cdot \ln\left(5\right)
 - Generator ID: `exp:1:skill-examples-2026-09-19:exp:template-1`
 - Seed: `skill-examples-2026-09-19:exp:template-1`
 - Template: 1 (the generator's second structure)
-- Generator version: `1.1.0`
+- Template key: `exp.base`
+- Generator version: `1.2.0`
 - Differentiation variable: `x`
 - Generator domain text: Use radians. Give an expression valid wherever the derivative exists.
 - Validation intervals sampled by the app: [-2.5, -0.2], [0.2, 2.5]
@@ -430,7 +440,7 @@ f'(x)=5^{x}\cdot \ln\left(5\right)
 
 **Rule / definition:** The derivative of ln(u) is u′/u; a different base adds a logarithm in the denominator.
 
-#### 11. Template 0
+#### 11. Template 0 (`log.natural`)
 
 **Student question (English).** Differentiate the function shown below.
 
@@ -454,7 +464,8 @@ f'(x)=\frac{8}{8\cdot x+2}
 - Generator ID: `log:0:skill-examples-2026-09-19:log:template-0`
 - Seed: `skill-examples-2026-09-19:log:template-0`
 - Template: 0 (the generator's first structure)
-- Generator version: `1.1.0`
+- Template key: `log.natural`
+- Generator version: `1.2.0`
 - Differentiation variable: `x`
 - Generator domain text: Use radians. Give an expression valid wherever the derivative exists.
 - Validation intervals sampled by the app: [0.1, 1], [1, 5]
@@ -464,12 +475,12 @@ f'(x)=\frac{8}{8\cdot x+2}
 
 </details>
 
-#### 12. Template 1
+#### 12. Template 1 (`log.base`)
 
 **Student question (English).** Differentiate the function shown below.
 
 \[
-f(x)=\frac{\ln\left(x\right)}{\ln\left(9\right)}
+f(x)=\frac{7\cdot \ln\left(x\right)}{\ln\left(9\right)}
 \]
 
 **Definition / validity conditions.** The logarithm requires a positive argument; here the displayed argument must be > 0. The base is valid because it is positive and not 1.
@@ -480,7 +491,7 @@ f(x)=\frac{\ln\left(x\right)}{\ln\left(9\right)}
 **Answer.**
 
 \[
-f'(x)=\frac{\frac{1}{x}\cdot \ln\left(9\right)}{\left(\ln\left(9\right)\right)^{2}}
+f'(x)=\frac{7\cdot \frac{1}{x}\cdot \ln\left(9\right)}{\left(\ln\left(9\right)\right)^{2}}
 \]
 
 **Production metadata.**
@@ -488,7 +499,8 @@ f'(x)=\frac{\frac{1}{x}\cdot \ln\left(9\right)}{\left(\ln\left(9\right)\right)^{
 - Generator ID: `log:1:skill-examples-2026-09-19:log:template-1`
 - Seed: `skill-examples-2026-09-19:log:template-1`
 - Template: 1 (the generator's second structure)
-- Generator version: `1.1.0`
+- Template key: `log.base`
+- Generator version: `1.2.0`
 - Differentiation variable: `x`
 - Generator domain text: Use radians. Give an expression valid wherever the derivative exists.
 - Validation intervals sampled by the app: [0.1, 1], [1, 5]
@@ -506,12 +518,12 @@ f'(x)=\frac{\frac{1}{x}\cdot \ln\left(9\right)}{\left(\ln\left(9\right)\right)^{
 
 **Rule / definition:** Use the basic trigonometric derivative and include any inner derivative.
 
-#### 13. Template 0
+#### 13. Template 0 (`sin.basic`)
 
 **Student question (English).** Differentiate the function shown below.
 
 \[
-f(x)=4\cdot \sin\left(x\right)
+f(x)=10\cdot \sin\left(x\right)
 \]
 
 **Definition / validity conditions.** Sine and cosine are real and differentiable for every real input; use radians.
@@ -522,7 +534,7 @@ f(x)=4\cdot \sin\left(x\right)
 **Answer.**
 
 \[
-f'(x)=4\cdot \cos\left(x\right)
+f'(x)=10\cdot \cos\left(x\right)
 \]
 
 **Production metadata.**
@@ -530,7 +542,8 @@ f'(x)=4\cdot \cos\left(x\right)
 - Generator ID: `sin:0:skill-examples-2026-09-19:sin:template-0`
 - Seed: `skill-examples-2026-09-19:sin:template-0`
 - Template: 0 (the generator's first structure)
-- Generator version: `1.1.0`
+- Template key: `sin.basic`
+- Generator version: `1.2.0`
 - Differentiation variable: `x`
 - Generator domain text: Use radians. Give an expression valid wherever the derivative exists.
 - Validation intervals sampled by the app: [-2.5, -0.2], [0.2, 2.5]
@@ -540,7 +553,7 @@ f'(x)=4\cdot \cos\left(x\right)
 
 </details>
 
-#### 14. Template 1
+#### 14. Template 1 (`sin.linear`)
 
 **Student question (English).** Differentiate the function shown below.
 
@@ -564,7 +577,8 @@ f'(x)=\cos\left(8\cdot x+4\right)\cdot 8
 - Generator ID: `sin:1:skill-examples-2026-09-19:sin:template-1`
 - Seed: `skill-examples-2026-09-19:sin:template-1`
 - Template: 1 (the generator's second structure)
-- Generator version: `1.1.0`
+- Template key: `sin.linear`
+- Generator version: `1.2.0`
 - Differentiation variable: `x`
 - Generator domain text: Use radians. Give an expression valid wherever the derivative exists.
 - Validation intervals sampled by the app: [-2.5, -0.2], [0.2, 2.5]
@@ -582,12 +596,12 @@ f'(x)=\cos\left(8\cdot x+4\right)\cdot 8
 
 **Rule / definition:** Use the basic trigonometric derivative and include any inner derivative.
 
-#### 15. Template 0
+#### 15. Template 0 (`cos.basic`)
 
 **Student question (English).** Differentiate the function shown below.
 
 \[
-f(x)=9\cdot \cos\left(x\right)
+f(x)=3\cdot \cos\left(x\right)
 \]
 
 **Definition / validity conditions.** Sine and cosine are real and differentiable for every real input; use radians.
@@ -598,7 +612,7 @@ f(x)=9\cdot \cos\left(x\right)
 **Answer.**
 
 \[
-f'(x)=9\cdot \left(-\left(\sin\left(x\right)\right)\right)
+f'(x)=3\cdot \left(-\left(\sin\left(x\right)\right)\right)
 \]
 
 **Production metadata.**
@@ -606,7 +620,8 @@ f'(x)=9\cdot \left(-\left(\sin\left(x\right)\right)\right)
 - Generator ID: `cos:0:skill-examples-2026-09-19:cos:template-0`
 - Seed: `skill-examples-2026-09-19:cos:template-0`
 - Template: 0 (the generator's first structure)
-- Generator version: `1.1.0`
+- Template key: `cos.basic`
+- Generator version: `1.2.0`
 - Differentiation variable: `x`
 - Generator domain text: Use radians. Give an expression valid wherever the derivative exists.
 - Validation intervals sampled by the app: [-2.5, -0.2], [0.2, 2.5]
@@ -616,7 +631,7 @@ f'(x)=9\cdot \left(-\left(\sin\left(x\right)\right)\right)
 
 </details>
 
-#### 16. Template 1
+#### 16. Template 1 (`cos.linear`)
 
 **Student question (English).** Differentiate the function shown below.
 
@@ -640,7 +655,8 @@ f'(x)=-\left(\sin\left(8\cdot x+9\right)\cdot 8\right)
 - Generator ID: `cos:1:skill-examples-2026-09-19:cos:template-1`
 - Seed: `skill-examples-2026-09-19:cos:template-1`
 - Template: 1 (the generator's second structure)
-- Generator version: `1.1.0`
+- Template key: `cos.linear`
+- Generator version: `1.2.0`
 - Differentiation variable: `x`
 - Generator domain text: Use radians. Give an expression valid wherever the derivative exists.
 - Validation intervals sampled by the app: [-2.5, -0.2], [0.2, 2.5]
@@ -658,12 +674,12 @@ f'(x)=-\left(\sin\left(8\cdot x+9\right)\cdot 8\right)
 
 **Rule / definition:** Use the basic trigonometric derivative and include any inner derivative.
 
-#### 17. Template 0
+#### 17. Template 0 (`tan.basic`)
 
 **Student question (English).** Differentiate the function shown below.
 
 \[
-f(x)=8\cdot \tan\left(x\right)
+f(x)=5\cdot \tan\left(x\right)
 \]
 
 **Definition / validity conditions.** The derivative is valid where cos(u) ≠ 0, so the displayed tangent/secant expression is defined. Use radians.
@@ -674,7 +690,7 @@ f(x)=8\cdot \tan\left(x\right)
 **Answer.**
 
 \[
-f'(x)=8\cdot \left(\sec\left(x\right)\right)^{2}
+f'(x)=5\cdot \left(\sec\left(x\right)\right)^{2}
 \]
 
 **Production metadata.**
@@ -682,7 +698,8 @@ f'(x)=8\cdot \left(\sec\left(x\right)\right)^{2}
 - Generator ID: `tan:0:skill-examples-2026-09-19:tan:template-0`
 - Seed: `skill-examples-2026-09-19:tan:template-0`
 - Template: 0 (the generator's first structure)
-- Generator version: `1.1.0`
+- Template key: `tan.basic`
+- Generator version: `1.2.0`
 - Differentiation variable: `x`
 - Generator domain text: Use radians. Give an expression valid wherever the derivative exists.
 - Validation intervals sampled by the app: [-2.5, -0.2], [0.2, 2.5]
@@ -692,7 +709,7 @@ f'(x)=8\cdot \left(\sec\left(x\right)\right)^{2}
 
 </details>
 
-#### 18. Template 1
+#### 18. Template 1 (`tan.linear`)
 
 **Student question (English).** Differentiate the function shown below.
 
@@ -716,7 +733,8 @@ f'(x)=\left(\sec\left(4\cdot x+5\right)\right)^{2}\cdot 4
 - Generator ID: `tan:1:skill-examples-2026-09-19:tan:template-1`
 - Seed: `skill-examples-2026-09-19:tan:template-1`
 - Template: 1 (the generator's second structure)
-- Generator version: `1.1.0`
+- Template key: `tan.linear`
+- Generator version: `1.2.0`
 - Differentiation variable: `x`
 - Generator domain text: Use radians. Give an expression valid wherever the derivative exists.
 - Validation intervals sampled by the app: [-2.5, -0.2], [0.2, 2.5]
@@ -734,12 +752,12 @@ f'(x)=\left(\sec\left(4\cdot x+5\right)\right)^{2}\cdot 4
 
 **Rule / definition:** Use the basic trigonometric derivative and include any inner derivative.
 
-#### 19. Template 0
+#### 19. Template 0 (`cot.basic`)
 
 **Student question (English).** Differentiate the function shown below.
 
 \[
-f(x)=6\cdot \cot\left(x\right)
+f(x)=4\cdot \cot\left(x\right)
 \]
 
 **Definition / validity conditions.** The derivative is valid where sin(u) ≠ 0, so the displayed cotangent/cosecant expression is defined. Use radians.
@@ -750,7 +768,7 @@ f(x)=6\cdot \cot\left(x\right)
 **Answer.**
 
 \[
-f'(x)=6\cdot \left(-\left(\left(\csc\left(x\right)\right)^{2}\right)\right)
+f'(x)=4\cdot \left(-\left(\left(\csc\left(x\right)\right)^{2}\right)\right)
 \]
 
 **Production metadata.**
@@ -758,7 +776,8 @@ f'(x)=6\cdot \left(-\left(\left(\csc\left(x\right)\right)^{2}\right)\right)
 - Generator ID: `cot:0:skill-examples-2026-09-19:cot:template-0`
 - Seed: `skill-examples-2026-09-19:cot:template-0`
 - Template: 0 (the generator's first structure)
-- Generator version: `1.1.0`
+- Template key: `cot.basic`
+- Generator version: `1.2.0`
 - Differentiation variable: `x`
 - Generator domain text: Use radians. Give an expression valid wherever the derivative exists.
 - Validation intervals sampled by the app: [-2.5, -0.2], [0.2, 2.5]
@@ -768,7 +787,7 @@ f'(x)=6\cdot \left(-\left(\left(\csc\left(x\right)\right)^{2}\right)\right)
 
 </details>
 
-#### 20. Template 1
+#### 20. Template 1 (`cot.linear`)
 
 **Student question (English).** Differentiate the function shown below.
 
@@ -792,7 +811,8 @@ f'(x)=-\left(\left(\csc\left(9\cdot x+7\right)\right)^{2}\cdot 9\right)
 - Generator ID: `cot:1:skill-examples-2026-09-19:cot:template-1`
 - Seed: `skill-examples-2026-09-19:cot:template-1`
 - Template: 1 (the generator's second structure)
-- Generator version: `1.1.0`
+- Template key: `cot.linear`
+- Generator version: `1.2.0`
 - Differentiation variable: `x`
 - Generator domain text: Use radians. Give an expression valid wherever the derivative exists.
 - Validation intervals sampled by the app: [-2.5, -0.2], [0.2, 2.5]
@@ -810,12 +830,12 @@ f'(x)=-\left(\left(\csc\left(9\cdot x+7\right)\right)^{2}\cdot 9\right)
 
 **Rule / definition:** Use the basic trigonometric derivative and include any inner derivative.
 
-#### 21. Template 0
+#### 21. Template 0 (`sec.basic`)
 
 **Student question (English).** Differentiate the function shown below.
 
 \[
-f(x)=7\cdot \sec\left(x\right)
+f(x)=10\cdot \sec\left(x\right)
 \]
 
 **Definition / validity conditions.** The derivative is valid where cos(u) ≠ 0, so the displayed tangent/secant expression is defined. Use radians.
@@ -826,7 +846,7 @@ f(x)=7\cdot \sec\left(x\right)
 **Answer.**
 
 \[
-f'(x)=7\cdot \sec\left(x\right)\cdot \tan\left(x\right)
+f'(x)=10\cdot \sec\left(x\right)\cdot \tan\left(x\right)
 \]
 
 **Production metadata.**
@@ -834,7 +854,8 @@ f'(x)=7\cdot \sec\left(x\right)\cdot \tan\left(x\right)
 - Generator ID: `sec:0:skill-examples-2026-09-19:sec:template-0`
 - Seed: `skill-examples-2026-09-19:sec:template-0`
 - Template: 0 (the generator's first structure)
-- Generator version: `1.1.0`
+- Template key: `sec.basic`
+- Generator version: `1.2.0`
 - Differentiation variable: `x`
 - Generator domain text: Use radians. Give an expression valid wherever the derivative exists.
 - Validation intervals sampled by the app: [-2.5, -0.2], [0.2, 2.5]
@@ -844,7 +865,7 @@ f'(x)=7\cdot \sec\left(x\right)\cdot \tan\left(x\right)
 
 </details>
 
-#### 22. Template 1
+#### 22. Template 1 (`sec.linear`)
 
 **Student question (English).** Differentiate the function shown below.
 
@@ -868,7 +889,8 @@ f'(x)=\sec\left(6\cdot x+3\right)\cdot \tan\left(6\cdot x+3\right)\cdot 6
 - Generator ID: `sec:1:skill-examples-2026-09-19:sec:template-1`
 - Seed: `skill-examples-2026-09-19:sec:template-1`
 - Template: 1 (the generator's second structure)
-- Generator version: `1.1.0`
+- Template key: `sec.linear`
+- Generator version: `1.2.0`
 - Differentiation variable: `x`
 - Generator domain text: Use radians. Give an expression valid wherever the derivative exists.
 - Validation intervals sampled by the app: [-2.5, -0.2], [0.2, 2.5]
@@ -886,12 +908,12 @@ f'(x)=\sec\left(6\cdot x+3\right)\cdot \tan\left(6\cdot x+3\right)\cdot 6
 
 **Rule / definition:** Use the basic trigonometric derivative and include any inner derivative.
 
-#### 23. Template 0
+#### 23. Template 0 (`csc.basic`)
 
 **Student question (English).** Differentiate the function shown below.
 
 \[
-f(x)=3\cdot \csc\left(x\right)
+f(x)=7\cdot \csc\left(x\right)
 \]
 
 **Definition / validity conditions.** The derivative is valid where sin(u) ≠ 0, so the displayed cotangent/cosecant expression is defined. Use radians.
@@ -902,7 +924,7 @@ f(x)=3\cdot \csc\left(x\right)
 **Answer.**
 
 \[
-f'(x)=3\cdot \left(-\left(\csc\left(x\right)\cdot \cot\left(x\right)\right)\right)
+f'(x)=7\cdot \left(-\left(\csc\left(x\right)\cdot \cot\left(x\right)\right)\right)
 \]
 
 **Production metadata.**
@@ -910,7 +932,8 @@ f'(x)=3\cdot \left(-\left(\csc\left(x\right)\cdot \cot\left(x\right)\right)\righ
 - Generator ID: `csc:0:skill-examples-2026-09-19:csc:template-0`
 - Seed: `skill-examples-2026-09-19:csc:template-0`
 - Template: 0 (the generator's first structure)
-- Generator version: `1.1.0`
+- Template key: `csc.basic`
+- Generator version: `1.2.0`
 - Differentiation variable: `x`
 - Generator domain text: Use radians. Give an expression valid wherever the derivative exists.
 - Validation intervals sampled by the app: [-2.5, -0.2], [0.2, 2.5]
@@ -920,7 +943,7 @@ f'(x)=3\cdot \left(-\left(\csc\left(x\right)\cdot \cot\left(x\right)\right)\righ
 
 </details>
 
-#### 24. Template 1
+#### 24. Template 1 (`csc.linear`)
 
 **Student question (English).** Differentiate the function shown below.
 
@@ -944,7 +967,8 @@ f'(x)=-\left(\csc\left(8\cdot x+6\right)\cdot \cot\left(8\cdot x+6\right)\cdot 8
 - Generator ID: `csc:1:skill-examples-2026-09-19:csc:template-1`
 - Seed: `skill-examples-2026-09-19:csc:template-1`
 - Template: 1 (the generator's second structure)
-- Generator version: `1.1.0`
+- Template key: `csc.linear`
+- Generator version: `1.2.0`
 - Differentiation variable: `x`
 - Generator domain text: Use radians. Give an expression valid wherever the derivative exists.
 - Validation intervals sampled by the app: [-2.5, -0.2], [0.2, 2.5]
@@ -962,12 +986,12 @@ f'(x)=-\left(\csc\left(8\cdot x+6\right)\cdot \cot\left(8\cdot x+6\right)\cdot 8
 
 **Rule / definition:** Use the inverse-trigonometric derivative, with its real-domain restriction.
 
-#### 25. Template 0
+#### 25. Template 0 (`asin.basic`)
 
 **Student question (English).** Differentiate the function shown below.
 
 \[
-f(x)=2\cdot \arcsin\left(x\right)
+f(x)=6\cdot \arcsin\left(x\right)
 \]
 
 **Definition / validity conditions.** For a real derivative, the inner argument must satisfy |u| < 1; the endpoints ±1 are function-domain endpoints where the derivative formula is undefined.
@@ -978,7 +1002,7 @@ f(x)=2\cdot \arcsin\left(x\right)
 **Answer.**
 
 \[
-f'(x)=2\cdot \frac{1}{\sqrt{1-\left(x^{2}\right)}}
+f'(x)=6\cdot \frac{1}{\sqrt{1-\left(x^{2}\right)}}
 \]
 
 **Production metadata.**
@@ -986,7 +1010,8 @@ f'(x)=2\cdot \frac{1}{\sqrt{1-\left(x^{2}\right)}}
 - Generator ID: `asin:0:skill-examples-2026-09-19:asin:template-0`
 - Seed: `skill-examples-2026-09-19:asin:template-0`
 - Template: 0 (the generator's first structure)
-- Generator version: `1.1.0`
+- Template key: `asin.basic`
+- Generator version: `1.2.0`
 - Differentiation variable: `x`
 - Generator domain text: Use radians. Give an expression valid wherever the derivative exists.
 - Validation intervals sampled by the app: [-0.8, -0.05], [0.05, 0.8]
@@ -996,12 +1021,12 @@ f'(x)=2\cdot \frac{1}{\sqrt{1-\left(x^{2}\right)}}
 
 </details>
 
-#### 26. Template 1
+#### 26. Template 1 (`asin.scaled`)
 
 **Student question (English).** Differentiate the function shown below.
 
 \[
-f(x)=\arcsin\left(\frac{x}{6}\right)
+f(x)=\arcsin\left(\frac{x}{11}\right)
 \]
 
 **Definition / validity conditions.** For a real derivative, the inner argument must satisfy |u| < 1; the endpoints ±1 are function-domain endpoints where the derivative formula is undefined.
@@ -1012,7 +1037,7 @@ f(x)=\arcsin\left(\frac{x}{6}\right)
 **Answer.**
 
 \[
-f'(x)=\frac{\frac{6}{6^{2}}}{\sqrt{1-\left(\left(\frac{x}{6}\right)^{2}\right)}}
+f'(x)=\frac{\frac{11}{11^{2}}}{\sqrt{1-\left(\left(\frac{x}{11}\right)^{2}\right)}}
 \]
 
 **Production metadata.**
@@ -1020,7 +1045,8 @@ f'(x)=\frac{\frac{6}{6^{2}}}{\sqrt{1-\left(\left(\frac{x}{6}\right)^{2}\right)}}
 - Generator ID: `asin:1:skill-examples-2026-09-19:asin:template-1`
 - Seed: `skill-examples-2026-09-19:asin:template-1`
 - Template: 1 (the generator's second structure)
-- Generator version: `1.1.0`
+- Template key: `asin.scaled`
+- Generator version: `1.2.0`
 - Differentiation variable: `x`
 - Generator domain text: Use radians. Give an expression valid wherever the derivative exists.
 - Validation intervals sampled by the app: [-0.8, -0.05], [0.05, 0.8]
@@ -1038,12 +1064,12 @@ f'(x)=\frac{\frac{6}{6^{2}}}{\sqrt{1-\left(\left(\frac{x}{6}\right)^{2}\right)}}
 
 **Rule / definition:** Use the inverse-trigonometric derivative, with its real-domain restriction.
 
-#### 27. Template 0
+#### 27. Template 0 (`acos.basic`)
 
 **Student question (English).** Differentiate the function shown below.
 
 \[
-f(x)=7\cdot \arccos\left(x\right)
+f(x)=4\cdot \arccos\left(x\right)
 \]
 
 **Definition / validity conditions.** For a real derivative, the inner argument must satisfy |u| < 1; the endpoints ±1 are function-domain endpoints where the derivative formula is undefined.
@@ -1054,7 +1080,7 @@ f(x)=7\cdot \arccos\left(x\right)
 **Answer.**
 
 \[
-f'(x)=7\cdot \left(-\left(\frac{1}{\sqrt{1-\left(x^{2}\right)}}\right)\right)
+f'(x)=4\cdot \left(-\left(\frac{1}{\sqrt{1-\left(x^{2}\right)}}\right)\right)
 \]
 
 **Production metadata.**
@@ -1062,7 +1088,8 @@ f'(x)=7\cdot \left(-\left(\frac{1}{\sqrt{1-\left(x^{2}\right)}}\right)\right)
 - Generator ID: `acos:0:skill-examples-2026-09-19:acos:template-0`
 - Seed: `skill-examples-2026-09-19:acos:template-0`
 - Template: 0 (the generator's first structure)
-- Generator version: `1.1.0`
+- Template key: `acos.basic`
+- Generator version: `1.2.0`
 - Differentiation variable: `x`
 - Generator domain text: Use radians. Give an expression valid wherever the derivative exists.
 - Validation intervals sampled by the app: [-0.8, -0.05], [0.05, 0.8]
@@ -1072,12 +1099,12 @@ f'(x)=7\cdot \left(-\left(\frac{1}{\sqrt{1-\left(x^{2}\right)}}\right)\right)
 
 </details>
 
-#### 28. Template 1
+#### 28. Template 1 (`acos.scaled`)
 
 **Student question (English).** Differentiate the function shown below.
 
 \[
-f(x)=\arccos\left(\frac{x}{5}\right)
+f(x)=\arccos\left(\frac{x}{7}\right)
 \]
 
 **Definition / validity conditions.** For a real derivative, the inner argument must satisfy |u| < 1; the endpoints ±1 are function-domain endpoints where the derivative formula is undefined.
@@ -1088,7 +1115,7 @@ f(x)=\arccos\left(\frac{x}{5}\right)
 **Answer.**
 
 \[
-f'(x)=-\left(\frac{\frac{5}{5^{2}}}{\sqrt{1-\left(\left(\frac{x}{5}\right)^{2}\right)}}\right)
+f'(x)=-\left(\frac{\frac{7}{7^{2}}}{\sqrt{1-\left(\left(\frac{x}{7}\right)^{2}\right)}}\right)
 \]
 
 **Production metadata.**
@@ -1096,7 +1123,8 @@ f'(x)=-\left(\frac{\frac{5}{5^{2}}}{\sqrt{1-\left(\left(\frac{x}{5}\right)^{2}\r
 - Generator ID: `acos:1:skill-examples-2026-09-19:acos:template-1`
 - Seed: `skill-examples-2026-09-19:acos:template-1`
 - Template: 1 (the generator's second structure)
-- Generator version: `1.1.0`
+- Template key: `acos.scaled`
+- Generator version: `1.2.0`
 - Differentiation variable: `x`
 - Generator domain text: Use radians. Give an expression valid wherever the derivative exists.
 - Validation intervals sampled by the app: [-0.8, -0.05], [0.05, 0.8]
@@ -1114,12 +1142,12 @@ f'(x)=-\left(\frac{\frac{5}{5^{2}}}{\sqrt{1-\left(\left(\frac{x}{5}\right)^{2}\r
 
 **Rule / definition:** Use the inverse-trigonometric derivative, with its real-domain restriction.
 
-#### 29. Template 0
+#### 29. Template 0 (`atan.basic`)
 
 **Student question (English).** Differentiate the function shown below.
 
 \[
-f(x)=4\cdot \arctan\left(x\right)
+f(x)=10\cdot \arctan\left(x\right)
 \]
 
 **Definition / validity conditions.** The inverse tangent is real and differentiable for every real input.
@@ -1130,7 +1158,7 @@ f(x)=4\cdot \arctan\left(x\right)
 **Answer.**
 
 \[
-f'(x)=4\cdot \frac{1}{1+x^{2}}
+f'(x)=10\cdot \frac{1}{1+x^{2}}
 \]
 
 **Production metadata.**
@@ -1138,7 +1166,8 @@ f'(x)=4\cdot \frac{1}{1+x^{2}}
 - Generator ID: `atan:0:skill-examples-2026-09-19:atan:template-0`
 - Seed: `skill-examples-2026-09-19:atan:template-0`
 - Template: 0 (the generator's first structure)
-- Generator version: `1.1.0`
+- Template key: `atan.basic`
+- Generator version: `1.2.0`
 - Differentiation variable: `x`
 - Generator domain text: Use radians. Give an expression valid wherever the derivative exists.
 - Validation intervals sampled by the app: [-0.8, -0.05], [0.05, 0.8]
@@ -1148,12 +1177,12 @@ f'(x)=4\cdot \frac{1}{1+x^{2}}
 
 </details>
 
-#### 30. Template 1
+#### 30. Template 1 (`atan.scaled`)
 
 **Student question (English).** Differentiate the function shown below.
 
 \[
-f(x)=\arctan\left(\frac{x}{7}\right)
+f(x)=\arctan\left(\frac{x}{11}\right)
 \]
 
 **Definition / validity conditions.** The inverse tangent is real and differentiable for every real input.
@@ -1164,7 +1193,7 @@ f(x)=\arctan\left(\frac{x}{7}\right)
 **Answer.**
 
 \[
-f'(x)=\frac{\frac{7}{7^{2}}}{1+\left(\frac{x}{7}\right)^{2}}
+f'(x)=\frac{\frac{11}{11^{2}}}{1+\left(\frac{x}{11}\right)^{2}}
 \]
 
 **Production metadata.**
@@ -1172,7 +1201,8 @@ f'(x)=\frac{\frac{7}{7^{2}}}{1+\left(\frac{x}{7}\right)^{2}}
 - Generator ID: `atan:1:skill-examples-2026-09-19:atan:template-1`
 - Seed: `skill-examples-2026-09-19:atan:template-1`
 - Template: 1 (the generator's second structure)
-- Generator version: `1.1.0`
+- Template key: `atan.scaled`
+- Generator version: `1.2.0`
 - Differentiation variable: `x`
 - Generator domain text: Use radians. Give an expression valid wherever the derivative exists.
 - Validation intervals sampled by the app: [-0.8, -0.05], [0.05, 0.8]
@@ -1190,7 +1220,7 @@ f'(x)=\frac{\frac{7}{7^{2}}}{1+\left(\frac{x}{7}\right)^{2}}
 
 **Rule / definition:** Differentiate the first factor times the second, plus the first times the derivative of the second.
 
-#### 31. Template 0
+#### 31. Template 0 (`product.xn`)
 
 **Student question (English).** Differentiate the function shown below.
 
@@ -1214,7 +1244,8 @@ f'(x)=3\cdot x^{2}\cdot e^{x}+x^{3}\cdot e^{x}
 - Generator ID: `product:0:skill-examples-2026-09-19:product:template-0`
 - Seed: `skill-examples-2026-09-19:product:template-0`
 - Template: 0 (the generator's first structure)
-- Generator version: `1.1.0`
+- Template key: `product.xn`
+- Generator version: `1.2.0`
 - Differentiation variable: `x`
 - Generator domain text: Use radians. Give an expression valid wherever the derivative exists.
 - Validation intervals sampled by the app: [-2.5, -0.2], [0.2, 2.5]
@@ -1224,7 +1255,7 @@ f'(x)=3\cdot x^{2}\cdot e^{x}+x^{3}\cdot e^{x}
 
 </details>
 
-#### 32. Template 1
+#### 32. Template 1 (`product.quad`)
 
 **Student question (English).** Differentiate the function shown below.
 
@@ -1248,7 +1279,8 @@ f'(x)=2\cdot x\cdot \cos\left(x\right)+\left(x^{2}+7\right)\cdot \left(-\left(\s
 - Generator ID: `product:1:skill-examples-2026-09-19:product:template-1`
 - Seed: `skill-examples-2026-09-19:product:template-1`
 - Template: 1 (the generator's second structure)
-- Generator version: `1.1.0`
+- Template key: `product.quad`
+- Generator version: `1.2.0`
 - Differentiation variable: `x`
 - Generator domain text: Use radians. Give an expression valid wherever the derivative exists.
 - Validation intervals sampled by the app: [-2.5, -0.2], [0.2, 2.5]
@@ -1266,12 +1298,12 @@ f'(x)=2\cdot x\cdot \cos\left(x\right)+\left(x^{2}+7\right)\cdot \left(-\left(\s
 
 **Rule / definition:** Use (u′v − uv′)/v². Keep the order in the numerator.
 
-#### 33. Template 0
+#### 33. Template 0 (`quotient.poly`)
 
 **Student question (English).** Differentiate the function shown below.
 
 \[
-f(x)=\frac{x^{2}+3}{7\cdot x+3}
+f(x)=\frac{x^{2}+3}{7\cdot x+5}
 \]
 
 **Definition / validity conditions.** The denominator of the displayed quotient must be nonzero; the derivative is valid wherever both numerator and denominator are differentiable.
@@ -1282,7 +1314,7 @@ f(x)=\frac{x^{2}+3}{7\cdot x+3}
 **Answer.**
 
 \[
-f'(x)=\frac{2\cdot x\cdot \left(7\cdot x+3\right)-\left(\left(x^{2}+3\right)\cdot 7\right)}{\left(7\cdot x+3\right)^{2}}
+f'(x)=\frac{2\cdot x\cdot \left(7\cdot x+5\right)-\left(\left(x^{2}+3\right)\cdot 7\right)}{\left(7\cdot x+5\right)^{2}}
 \]
 
 **Production metadata.**
@@ -1290,7 +1322,8 @@ f'(x)=\frac{2\cdot x\cdot \left(7\cdot x+3\right)-\left(\left(x^{2}+3\right)\cdo
 - Generator ID: `quotient:0:skill-examples-2026-09-19:quotient:template-0`
 - Seed: `skill-examples-2026-09-19:quotient:template-0`
 - Template: 0 (the generator's first structure)
-- Generator version: `1.1.0`
+- Template key: `quotient.poly`
+- Generator version: `1.2.0`
 - Differentiation variable: `x`
 - Generator domain text: Use radians. Give an expression valid wherever the derivative exists.
 - Validation intervals sampled by the app: [-2.5, -0.2], [0.2, 2.5]
@@ -1300,7 +1333,7 @@ f'(x)=\frac{2\cdot x\cdot \left(7\cdot x+3\right)-\left(\left(x^{2}+3\right)\cdo
 
 </details>
 
-#### 34. Template 1
+#### 34. Template 1 (`quotient.smooth`)
 
 **Student question (English).** Differentiate the function shown below.
 
@@ -1324,7 +1357,8 @@ f'(x)=\frac{e^{x}\cdot \left(x^{2}+3\right)-\left(e^{x}\cdot 2\cdot x\right)}{\l
 - Generator ID: `quotient:1:skill-examples-2026-09-19:quotient:template-1`
 - Seed: `skill-examples-2026-09-19:quotient:template-1`
 - Template: 1 (the generator's second structure)
-- Generator version: `1.1.0`
+- Template key: `quotient.smooth`
+- Generator version: `1.2.0`
 - Differentiation variable: `x`
 - Generator domain text: Use radians. Give an expression valid wherever the derivative exists.
 - Validation intervals sampled by the app: [-2.5, -0.2], [0.2, 2.5]
@@ -1342,7 +1376,7 @@ f'(x)=\frac{e^{x}\cdot \left(x^{2}+3\right)-\left(e^{x}\cdot 2\cdot x\right)}{\l
 
 **Rule / definition:** Differentiate the outer function at the inner function, then multiply by the inner derivative.
 
-#### 35. Template 0
+#### 35. Template 0 (`chain.power`)
 
 **Student question (English).** Differentiate the function shown below.
 
@@ -1366,7 +1400,8 @@ f'(x)=2\cdot \left(2\cdot x+9\right)\cdot 2
 - Generator ID: `chain:0:skill-examples-2026-09-19:chain:template-0`
 - Seed: `skill-examples-2026-09-19:chain:template-0`
 - Template: 0 (the generator's first structure)
-- Generator version: `1.1.0`
+- Template key: `chain.power`
+- Generator version: `1.2.0`
 - Differentiation variable: `x`
 - Generator domain text: Use radians. Give an expression valid wherever the derivative exists.
 - Validation intervals sampled by the app: [-2.5, -0.2], [0.2, 2.5]
@@ -1376,7 +1411,7 @@ f'(x)=2\cdot \left(2\cdot x+9\right)\cdot 2
 
 </details>
 
-#### 36. Template 1
+#### 36. Template 1 (`chain.smooth_inner`)
 
 **Student question (English).** Differentiate the function shown below.
 
@@ -1400,7 +1435,8 @@ f'(x)=e^{x^{3}+4}\cdot 3\cdot x^{2}
 - Generator ID: `chain:1:skill-examples-2026-09-19:chain:template-1`
 - Seed: `skill-examples-2026-09-19:chain:template-1`
 - Template: 1 (the generator's second structure)
-- Generator version: `1.1.0`
+- Template key: `chain.smooth_inner`
+- Generator version: `1.2.0`
 - Differentiation variable: `x`
 - Generator domain text: Use radians. Give an expression valid wherever the derivative exists.
 - Validation intervals sampled by the app: [-2.5, -0.2], [0.2, 2.5]
@@ -1418,7 +1454,7 @@ f'(x)=e^{x^{3}+4}\cdot 3\cdot x^{2}
 
 **Rule / definition:** Work from the outside in, multiplying by the derivative of every inner layer.
 
-#### 37. Template 0
+#### 37. Template 0 (`nested.sin_linear`)
 
 **Student question (English).** Differentiate the function shown below.
 
@@ -1442,7 +1478,8 @@ f'(x)=\cos\left(\sin\left(2\cdot x+9\right)\right)\cdot \cos\left(2\cdot x+9\rig
 - Generator ID: `nested:0:skill-examples-2026-09-19:nested:template-0`
 - Seed: `skill-examples-2026-09-19:nested:template-0`
 - Template: 0 (the generator's first structure)
-- Generator version: `1.1.0`
+- Template key: `nested.sin_linear`
+- Generator version: `1.2.0`
 - Differentiation variable: `x`
 - Generator domain text: Use radians. Give an expression valid wherever the derivative exists.
 - Validation intervals sampled by the app: [-2.5, -0.2], [0.2, 2.5]
@@ -1452,7 +1489,7 @@ f'(x)=\cos\left(\sin\left(2\cdot x+9\right)\right)\cdot \cos\left(2\cdot x+9\rig
 
 </details>
 
-#### 38. Template 1
+#### 38. Template 1 (`nested.linear_sq`)
 
 **Student question (English).** Differentiate the function shown below.
 
@@ -1476,7 +1513,8 @@ f'(x)=e^{\left(5\cdot x+2\right)^{2}}\cdot 2\cdot \left(5\cdot x+2\right)\cdot 5
 - Generator ID: `nested:1:skill-examples-2026-09-19:nested:template-1`
 - Seed: `skill-examples-2026-09-19:nested:template-1`
 - Template: 1 (the generator's second structure)
-- Generator version: `1.1.0`
+- Template key: `nested.linear_sq`
+- Generator version: `1.2.0`
 - Differentiation variable: `x`
 - Generator domain text: Use radians. Give an expression valid wherever the derivative exists.
 - Validation intervals sampled by the app: [-2.5, -0.2], [0.2, 2.5]
@@ -1494,7 +1532,7 @@ f'(x)=e^{\left(5\cdot x+2\right)^{2}}\cdot 2\cdot \left(5\cdot x+2\right)\cdot 5
 
 **Rule / definition:** Identify the outermost operation first, then apply the rules within each factor.
 
-#### 39. Template 0
+#### 39. Template 0 (`mixed.quad_smooth`)
 
 **Student question (English).** Differentiate the function shown below.
 
@@ -1518,7 +1556,8 @@ f'(x)=2\cdot x\cdot e^{5\cdot x}+\left(x^{2}+3\right)\cdot e^{5\cdot x}\cdot 5
 - Generator ID: `mixed:0:skill-examples-2026-09-19:mixed:template-0`
 - Seed: `skill-examples-2026-09-19:mixed:template-0`
 - Template: 0 (the generator's first structure)
-- Generator version: `1.1.0`
+- Template key: `mixed.quad_smooth`
+- Generator version: `1.2.0`
 - Differentiation variable: `x`
 - Generator domain text: Use radians. Give an expression valid wherever the derivative exists.
 - Validation intervals sampled by the app: [-2.5, -0.2], [0.2, 2.5]
@@ -1528,12 +1567,12 @@ f'(x)=2\cdot x\cdot e^{5\cdot x}+\left(x^{2}+3\right)\cdot e^{5\cdot x}\cdot 5
 
 </details>
 
-#### 40. Template 1
+#### 40. Template 1 (`mixed.smooth_over_quad`)
 
 **Student question (English).** Differentiate the function shown below.
 
 \[
-f(x)=\frac{e^{2\cdot x+4}}{x^{2}+4}
+f(x)=\frac{\cos\left(2\cdot x+4\right)}{x^{2}+9}
 \]
 
 **Definition / validity conditions.** Work over the real domain of the displayed function and at points where the requested derivative exists.
@@ -1544,7 +1583,7 @@ f(x)=\frac{e^{2\cdot x+4}}{x^{2}+4}
 **Answer.**
 
 \[
-f'(x)=\frac{e^{2\cdot x+4}\cdot 2\cdot \left(x^{2}+4\right)-\left(e^{2\cdot x+4}\cdot 2\cdot x\right)}{\left(x^{2}+4\right)^{2}}
+f'(x)=\frac{\left(-\left(\sin\left(2\cdot x+4\right)\cdot 2\right)\right)\cdot \left(x^{2}+9\right)-\left(\cos\left(2\cdot x+4\right)\cdot 2\cdot x\right)}{\left(x^{2}+9\right)^{2}}
 \]
 
 **Production metadata.**
@@ -1552,7 +1591,8 @@ f'(x)=\frac{e^{2\cdot x+4}\cdot 2\cdot \left(x^{2}+4\right)-\left(e^{2\cdot x+4}
 - Generator ID: `mixed:1:skill-examples-2026-09-19:mixed:template-1`
 - Seed: `skill-examples-2026-09-19:mixed:template-1`
 - Template: 1 (the generator's second structure)
-- Generator version: `1.1.0`
+- Template key: `mixed.smooth_over_quad`
+- Generator version: `1.2.0`
 - Differentiation variable: `x`
 - Generator domain text: Use radians. Give an expression valid wherever the derivative exists.
 - Validation intervals sampled by the app: [-2.5, -0.2], [0.2, 2.5]
@@ -1570,12 +1610,12 @@ f'(x)=\frac{e^{2\cdot x+4}\cdot 2\cdot \left(x^{2}+4\right)-\left(e^{2\cdot x+4}
 
 **Rule / definition:** Differentiate F(x,y)=0 with respect to x; every derivative of y introduces dy/dx.
 
-#### 41. Template 0
+#### 41. Template 0 (`implicit.ellipse`)
 
 **Student question (English).** For the curve shown below, find dy/dx by implicit differentiation.
 
 \[
-x^{2}+y^{2}-49=0
+3\cdot x^{2}+y^{2}-27=0
 \]
 
 **Definition / validity conditions.** Stay on the displayed curve and use the generator condition y ≠ 0, so the implicit derivative can be isolated.
@@ -1586,7 +1626,7 @@ x^{2}+y^{2}-49=0
 **Answer.**
 
 \[
-\frac{\mathrm{d}y}{\mathrm{d}x}=-\left(\frac{2\cdot x}{2\cdot y}\right)
+\frac{\mathrm{d}y}{\mathrm{d}x}=-\left(\frac{3\cdot 2\cdot x}{2\cdot y}\right)
 \]
 
 **Production metadata.**
@@ -1594,22 +1634,23 @@ x^{2}+y^{2}-49=0
 - Generator ID: `implicit:0:skill-examples-2026-09-19:implicit:template-0`
 - Seed: `skill-examples-2026-09-19:implicit:template-0`
 - Template: 0 (the generator's first structure)
-- Generator version: `1.1.0`
+- Template key: `implicit.ellipse`
+- Generator version: `1.2.0`
 - Differentiation variable: `x`
 - Generator domain text: Compare on the given curve, where y ≠ 0.
-- Validation intervals sampled by the app: [0.25, 2.8], [3.4, 6]
+- Validation intervals sampled by the app: [-2.55, -0.30000000000000004], [0.30000000000000004, 2.55]
 - Guard used by the app: none
 
 **Verified.** The answer was recomputed from the source expression using the production differentiation rules; this item passed the structural check.
 
 </details>
 
-#### 42. Template 1
+#### 42. Template 1 (`implicit.hyperbola`)
 
 **Student question (English).** For the curve shown below, find dy/dx by implicit differentiation.
 
 \[
-y^{2}-\left(x^{2}\right)-9=0
+5\cdot y^{2}-\left(5\cdot x^{2}\right)-400=0
 \]
 
 **Definition / validity conditions.** Stay on the displayed curve and use the generator condition y ≠ 0, so the implicit derivative can be isolated.
@@ -1620,7 +1661,7 @@ y^{2}-\left(x^{2}\right)-9=0
 **Answer.**
 
 \[
-\frac{\mathrm{d}y}{\mathrm{d}x}=-\left(\frac{-\left(2\cdot x\right)}{2\cdot y}\right)
+\frac{\mathrm{d}y}{\mathrm{d}x}=-\left(\frac{-\left(5\cdot 2\cdot x\right)}{5\cdot 2\cdot y}\right)
 \]
 
 **Production metadata.**
@@ -1628,7 +1669,8 @@ y^{2}-\left(x^{2}\right)-9=0
 - Generator ID: `implicit:1:skill-examples-2026-09-19:implicit:template-1`
 - Seed: `skill-examples-2026-09-19:implicit:template-1`
 - Template: 1 (the generator's second structure)
-- Generator version: `1.1.0`
+- Template key: `implicit.hyperbola`
+- Generator version: `1.2.0`
 - Differentiation variable: `x`
 - Generator domain text: Compare on the given curve, where y ≠ 0.
 - Validation intervals sampled by the app: [-2, -0.2], [0.2, 2]
@@ -1646,7 +1688,7 @@ y^{2}-\left(x^{2}\right)-9=0
 
 **Rule / definition:** Use (f⁻¹)′(a)=1/f′(b), where f(b)=a and f′(b) is nonzero.
 
-#### 43. Template 0
+#### 43. Template 0 (`inverse.linear`)
 
 **Student question (English).** Use the inverse-function derivative theorem to find the requested value.
 
@@ -1670,7 +1712,8 @@ f(x)=9\cdot x+6,\quad f(6)=60.\quad (f^{-1})'(60)=?
 - Generator ID: `inverse:0:skill-examples-2026-09-19:inverse:template-0`
 - Seed: `skill-examples-2026-09-19:inverse:template-0`
 - Template: 0 (the generator's first structure)
-- Generator version: `1.1.0`
+- Template key: `inverse.linear`
+- Generator version: `1.2.0`
 - Differentiation variable: `x`
 - Generator domain text: Use radians. Give an expression valid wherever the derivative exists.
 - Validation intervals sampled by the app: [-2.5, -0.2], [0.2, 2.5]
@@ -1680,12 +1723,12 @@ f(x)=9\cdot x+6,\quad f(6)=60.\quad (f^{-1})'(60)=?
 
 </details>
 
-#### 44. Template 1
+#### 44. Template 1 (`inverse.cubic`)
 
 **Student question (English).** Use the inverse-function derivative theorem to find the requested value.
 
 \[
-f(x)=x^{3}+8\cdot x,\quad f(3)=51.\quad (f^{-1})'(51)=?
+f(x)=x^{3}+8\cdot x+3,\quad f(3)=54.\quad (f^{-1})'(54)=?
 \]
 
 **Definition / validity conditions.** Use the corresponding input b shown in f(b)=a. The inverse-function theorem requires f′(b) ≠ 0 and a local inverse at that point.
@@ -1696,7 +1739,7 @@ f(x)=x^{3}+8\cdot x,\quad f(3)=51.\quad (f^{-1})'(51)=?
 **Answer.**
 
 \[
-(f⁻¹)'(51)=\frac{1}{35}
+(f⁻¹)'(54)=\frac{1}{35}
 \]
 
 **Production metadata.**
@@ -1704,7 +1747,8 @@ f(x)=x^{3}+8\cdot x,\quad f(3)=51.\quad (f^{-1})'(51)=?
 - Generator ID: `inverse:1:skill-examples-2026-09-19:inverse:template-1`
 - Seed: `skill-examples-2026-09-19:inverse:template-1`
 - Template: 1 (the generator's second structure)
-- Generator version: `1.1.0`
+- Template key: `inverse.cubic`
+- Generator version: `1.2.0`
 - Differentiation variable: `x`
 - Generator domain text: Use radians. Give an expression valid wherever the derivative exists.
 - Validation intervals sampled by the app: [-2.5, -0.2], [0.2, 2.5]
@@ -1722,7 +1766,7 @@ f(x)=x^{3}+8\cdot x,\quad f(3)=51.\quad (f^{-1})'(51)=?
 
 **Rule / definition:** Differentiate successively; keep track of which derivative is requested.
 
-#### 45. Template 0
+#### 45. Template 0 (`higher.poly2`)
 
 **Student question (English).** For the function shown below, find the second derivative.
 
@@ -1746,7 +1790,8 @@ f''(x)=5\cdot 4\cdot x^{3}+4\cdot 2
 - Generator ID: `higher:0:skill-examples-2026-09-19:higher:template-0`
 - Seed: `skill-examples-2026-09-19:higher:template-0`
 - Template: 0 (the generator's first structure)
-- Generator version: `1.1.0`
+- Template key: `higher.poly2`
+- Generator version: `1.2.0`
 - Differentiation variable: `x`
 - Generator domain text: Use radians. Give an expression valid wherever the derivative exists.
 - Validation intervals sampled by the app: [-2.5, -0.2], [0.2, 2.5]
@@ -1756,12 +1801,12 @@ f''(x)=5\cdot 4\cdot x^{3}+4\cdot 2
 
 </details>
 
-#### 46. Template 1
+#### 46. Template 1 (`higher.trig3`)
 
 **Student question (English).** For the function shown below, find the third derivative.
 
 \[
-f(x)=6\cdot \sin\left(x\right)
+f(x)=6\cdot \sin\left(3\cdot x\right)
 \]
 
 **Definition / validity conditions.** Work over the real domain of the displayed function and at points where the requested derivative exists.
@@ -1772,7 +1817,7 @@ f(x)=6\cdot \sin\left(x\right)
 **Answer.**
 
 \[
-f'''(x)=6\cdot \left(-\left(\cos\left(x\right)\right)\right)
+f'''(x)=6\cdot \left(-\left(\cos\left(3\cdot x\right)\cdot 3\cdot 3\right)\right)\cdot 3
 \]
 
 **Production metadata.**
@@ -1780,7 +1825,8 @@ f'''(x)=6\cdot \left(-\left(\cos\left(x\right)\right)\right)
 - Generator ID: `higher:1:skill-examples-2026-09-19:higher:template-1`
 - Seed: `skill-examples-2026-09-19:higher:template-1`
 - Template: 1 (the generator's second structure)
-- Generator version: `1.1.0`
+- Template key: `higher.trig3`
+- Generator version: `1.2.0`
 - Differentiation variable: `x`
 - Generator domain text: Use radians. Give an expression valid wherever the derivative exists.
 - Validation intervals sampled by the app: [-2.5, -0.2], [0.2, 2.5]
@@ -1798,7 +1844,7 @@ f'''(x)=6\cdot \left(-\left(\cos\left(x\right)\right)\right)
 
 **Rule / definition:** Use dy/dx=(dy/dt)/(dx/dt). For the second derivative, differentiate the slope in t and divide by dx/dt again.
 
-#### 47. Template 0
+#### 47. Template 0 (`parametric.linear`)
 
 **Student question (English).** For the parametric equations below, find dy/dx in terms of t.
 
@@ -1822,7 +1868,8 @@ x(t)=6\cdot t+7,\quad y(t)=\sin\left(t\right)
 - Generator ID: `parametric:0:skill-examples-2026-09-19:parametric:template-0`
 - Seed: `skill-examples-2026-09-19:parametric:template-0`
 - Template: 0 (the generator's first structure)
-- Generator version: `1.1.0`
+- Template key: `parametric.linear`
+- Generator version: `1.2.0`
 - Differentiation variable: `t`
 - Generator domain text: Give your answer in t, where dx/dt ≠ 0.
 - Validation intervals sampled by the app: [-2.5, -0.2], [0.2, 2.5]
@@ -1832,12 +1879,12 @@ x(t)=6\cdot t+7,\quad y(t)=\sin\left(t\right)
 
 </details>
 
-#### 48. Template 1
+#### 48. Template 1 (`parametric.poly`)
 
 **Student question (English).** For the parametric equations below, find d²y/dx² in terms of t.
 
 \[
-x(t)=t^{2},\quad y(t)=t^{3}
+x(t)=8\cdot t^{2},\quad y(t)=t^{3}
 \]
 
 **Definition / validity conditions.** Give the result in t and require dx/dt ≠ 0. The second-derivative template also requires the displayed derivatives to exist.
@@ -1848,7 +1895,7 @@ x(t)=t^{2},\quad y(t)=t^{3}
 **Answer.**
 
 \[
-\frac{\mathrm{d}^{2}y}{\mathrm{d}x^{2}}=\frac{\frac{3\cdot 2\cdot t\cdot 2\cdot t-\left(3\cdot t^{2}\cdot 2\right)}{\left(2\cdot t\right)^{2}}}{2\cdot t}
+\frac{\mathrm{d}^{2}y}{\mathrm{d}x^{2}}=\frac{\frac{3\cdot 2\cdot t\cdot 8\cdot 2\cdot t-\left(3\cdot t^{2}\cdot 8\cdot 2\right)}{\left(8\cdot 2\cdot t\right)^{2}}}{8\cdot 2\cdot t}
 \]
 
 **Production metadata.**
@@ -1856,7 +1903,8 @@ x(t)=t^{2},\quad y(t)=t^{3}
 - Generator ID: `parametric:1:skill-examples-2026-09-19:parametric:template-1`
 - Seed: `skill-examples-2026-09-19:parametric:template-1`
 - Template: 1 (the generator's second structure)
-- Generator version: `1.1.0`
+- Template key: `parametric.poly`
+- Generator version: `1.2.0`
 - Differentiation variable: `t`
 - Generator domain text: Give your answer in t, where dx/dt ≠ 0.
 - Validation intervals sampled by the app: [-2.5, -0.2], [0.2, 2.5]
@@ -1874,7 +1922,7 @@ x(t)=t^{2},\quad y(t)=t^{3}
 
 **Rule / definition:** Differentiate each component with respect to the parameter.
 
-#### 49. Template 0
+#### 49. Template 0 (`vector.power_sin`)
 
 **Student question (English).** Differentiate the vector function component by component to find r′(t).
 
@@ -1898,7 +1946,8 @@ x(t)=t^{2},\quad y(t)=t^{3}
 - Generator ID: `vector:0:skill-examples-2026-09-19:vector:template-0`
 - Seed: `skill-examples-2026-09-19:vector:template-0`
 - Template: 0 (the generator's first structure)
-- Generator version: `1.1.0`
+- Template key: `vector.power_sin`
+- Generator version: `1.2.0`
 - Differentiation variable: `t`
 - Generator domain text: Use radians. Give an expression valid wherever the derivative exists.
 - Validation intervals sampled by the app: [-2.5, -0.2], [0.2, 2.5]
@@ -1908,12 +1957,12 @@ x(t)=t^{2},\quad y(t)=t^{3}
 
 </details>
 
-#### 50. Template 1
+#### 50. Template 1 (`vector.exp_cos`)
 
 **Student question (English).** Differentiate the vector function component by component to find r′(t).
 
 \[
-\mathbf{r}(t)=\langle e^{5\cdot t},\cos\left(t\right)\rangle
+\mathbf{r}(t)=\langle e^{5\cdot t},8\cdot \cos\left(t\right)\rangle
 \]
 
 **Definition / validity conditions.** Differentiate each component wherever that component derivative exists; use radians for the trigonometric component.
@@ -1924,7 +1973,7 @@ x(t)=t^{2},\quad y(t)=t^{3}
 **Answer.**
 
 \[
-\langle e^{5\cdot t}\cdot 5,\; -\left(\sin\left(t\right)\right) \rangle
+\langle e^{5\cdot t}\cdot 5,\; 8\cdot \left(-\left(\sin\left(t\right)\right)\right) \rangle
 \]
 
 **Production metadata.**
@@ -1932,7 +1981,8 @@ x(t)=t^{2},\quad y(t)=t^{3}
 - Generator ID: `vector:1:skill-examples-2026-09-19:vector:template-1`
 - Seed: `skill-examples-2026-09-19:vector:template-1`
 - Template: 1 (the generator's second structure)
-- Generator version: `1.1.0`
+- Template key: `vector.exp_cos`
+- Generator version: `1.2.0`
 - Differentiation variable: `t`
 - Generator domain text: Use radians. Give an expression valid wherever the derivative exists.
 - Validation intervals sampled by the app: [-2.5, -0.2], [0.2, 2.5]
@@ -1950,12 +2000,12 @@ x(t)=t^{2},\quad y(t)=t^{3}
 
 **Rule / definition:** Write x=r cos(θ), y=r sin(θ), then use (dy/dθ)/(dx/dθ).
 
-#### 51. Template 0
+#### 51. Template 0 (`polar.sin_limacon`)
 
 **Student question (English).** For the polar curve below, find the slope dy/dx in terms of θ.
 
 \[
-r(\theta)=7\cdot \sin\left(\theta\right)
+r(\theta)=7+2\cdot \sin\left(\theta\right)
 \]
 
 **Definition / validity conditions.** Write x = r cos(θ) and y = r sin(θ). The slope formula is valid where dx/dθ ≠ 0; use radians.
@@ -1966,7 +2016,7 @@ r(\theta)=7\cdot \sin\left(\theta\right)
 **Answer.**
 
 \[
-\frac{\mathrm{d}y}{\mathrm{d}x}=\frac{7\cdot \cos\left(\theta\right)\cdot \sin\left(\theta\right)+7\cdot \sin\left(\theta\right)\cdot \cos\left(\theta\right)}{7\cdot \cos\left(\theta\right)\cdot \cos\left(\theta\right)+7\cdot \sin\left(\theta\right)\cdot \left(-\left(\sin\left(\theta\right)\right)\right)}
+\frac{\mathrm{d}y}{\mathrm{d}x}=\frac{2\cdot \cos\left(\theta\right)\cdot \sin\left(\theta\right)+\left(7+2\cdot \sin\left(\theta\right)\right)\cdot \cos\left(\theta\right)}{2\cdot \cos\left(\theta\right)\cdot \cos\left(\theta\right)+\left(7+2\cdot \sin\left(\theta\right)\right)\cdot \left(-\left(\sin\left(\theta\right)\right)\right)}
 \]
 
 **Production metadata.**
@@ -1974,7 +2024,8 @@ r(\theta)=7\cdot \sin\left(\theta\right)
 - Generator ID: `polar:0:skill-examples-2026-09-19:polar:template-0`
 - Seed: `skill-examples-2026-09-19:polar:template-0`
 - Template: 0 (the generator's first structure)
-- Generator version: `1.1.0`
+- Template key: `polar.sin_limacon`
+- Generator version: `1.2.0`
 - Differentiation variable: `theta`
 - Generator domain text: Give your answer in θ, where dx/dθ ≠ 0.
 - Validation intervals sampled by the app: [-2.5, -0.2], [0.2, 2.5]
@@ -1984,12 +2035,12 @@ r(\theta)=7\cdot \sin\left(\theta\right)
 
 </details>
 
-#### 52. Template 1
+#### 52. Template 1 (`polar.cos`)
 
 **Student question (English).** For the polar curve below, find the slope dy/dx in terms of θ.
 
 \[
-r(\theta)=4+\cos\left(\theta\right)
+r(\theta)=4+5\cdot \cos\left(\theta\right)
 \]
 
 **Definition / validity conditions.** Write x = r cos(θ) and y = r sin(θ). The slope formula is valid where dx/dθ ≠ 0; use radians.
@@ -2000,7 +2051,7 @@ r(\theta)=4+\cos\left(\theta\right)
 **Answer.**
 
 \[
-\frac{\mathrm{d}y}{\mathrm{d}x}=\frac{\left(-\left(\sin\left(\theta\right)\right)\right)\cdot \sin\left(\theta\right)+\left(4+\cos\left(\theta\right)\right)\cdot \cos\left(\theta\right)}{\left(-\left(\sin\left(\theta\right)\right)\right)\cdot \cos\left(\theta\right)+\left(4+\cos\left(\theta\right)\right)\cdot \left(-\left(\sin\left(\theta\right)\right)\right)}
+\frac{\mathrm{d}y}{\mathrm{d}x}=\frac{5\cdot \left(-\left(\sin\left(\theta\right)\right)\right)\cdot \sin\left(\theta\right)+\left(4+5\cdot \cos\left(\theta\right)\right)\cdot \cos\left(\theta\right)}{5\cdot \left(-\left(\sin\left(\theta\right)\right)\right)\cdot \cos\left(\theta\right)+\left(4+5\cdot \cos\left(\theta\right)\right)\cdot \left(-\left(\sin\left(\theta\right)\right)\right)}
 \]
 
 **Production metadata.**
@@ -2008,7 +2059,8 @@ r(\theta)=4+\cos\left(\theta\right)
 - Generator ID: `polar:1:skill-examples-2026-09-19:polar:template-1`
 - Seed: `skill-examples-2026-09-19:polar:template-1`
 - Template: 1 (the generator's second structure)
-- Generator version: `1.1.0`
+- Template key: `polar.cos`
+- Generator version: `1.2.0`
 - Differentiation variable: `theta`
 - Generator domain text: Give your answer in θ, where dx/dθ ≠ 0.
 - Validation intervals sampled by the app: [-2.5, -0.2], [0.2, 2.5]

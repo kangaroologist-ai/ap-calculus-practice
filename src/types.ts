@@ -22,10 +22,19 @@ export interface Config {
   disabledFamilies: string[];
   sessionLength: number;
 }
+// A curve constrains a two-variable implicit question's sample points.
+// `circle`/`hyperbola` are the original single-parameter shapes (kept forever
+// so questions saved by generator <= 1.1.0 keep grading); `graph` is the
+// general form (SPEC-G4): the non-free variable equals one of `branches`,
+// evaluated at the free variable, so any implicit curve solvable for y (or x)
+// can be sampled the same way.
+export type Curve =
+  | { type: "circle" | "hyperbola"; parameter: number }
+  | { type: "graph"; free: "x" | "y"; branches: Expr[] };
 export interface Domain {
   variable: "x" | "t" | "theta";
   intervals: [number, number][];
-  curve?: { type: "circle" | "hyperbola"; parameter: number };
+  curve?: Curve;
   guards: Expr[];
 }
 export interface Question {

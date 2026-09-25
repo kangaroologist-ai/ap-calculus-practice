@@ -220,7 +220,7 @@ describe('domain metadata and parser boundaries', () => {
     }
 
     const implicit = generated('implicit', 0, 'domain');
-    expect(implicit.domain.curve?.type).toBe('circle');
+    expect(implicit.domain.curve?.type).toBe('graph');
     expect(implicit.domainText).toMatch(/curve|y/i);
 
     const parametric = generated('parametric', 1, 'domain');

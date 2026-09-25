@@ -85,6 +85,23 @@ export function sampleValues(q: Question, i: number, precision = 50): Values {
   let point = new D(lo).plus(new D(hi).minus(lo).times(unit));
   if (q.domain.curve) {
     const c = q.domain.curve;
+    // Checked first, since "graph" is the only member of the Curve union
+    // whose object shape TypeScript can narrow to by itself; circle and
+    // hyperbola share one shape (a type: "circle" | "hyperbola" field) and
+    // are told apart below without relying on excluding "graph" by then.
+    if (c.type === "graph") {
+      // Generic graph curve (SPEC-G4): the other variable is whichever
+      // branch this sample's turn lands on, evaluated at the free-variable
+      // point. Cycling the branch every `intervals.length` steps (while the
+      // interval itself alternates every step) spreads samples over every
+      // branch x interval combination instead of favoring one branch.
+      const other = c.free === "x" ? "y" : "x";
+      const k = Math.floor(i / q.domain.intervals.length) % c.branches.length;
+      return {
+        [c.free]: point,
+        [other]: calc(c.branches[k], { [c.free]: point }),
+      };
+    }
     if (c.type === "circle")
       return {
         x: new D(c.parameter).times(point.cos()),

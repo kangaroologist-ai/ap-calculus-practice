@@ -118,7 +118,8 @@ function makeFullProgress(): PortableProgress {
       let question = generateQuestion(SKILLS[si].id, `qr-audit:${si}:${ei}:0`, ei % 2);
       for (let k = 0; k < 200 && used.has(question.signature); k += 1)
         question = generateQuestion(SKILLS[si].id, `qr-audit:${si}:${ei}:${k + 1}`, ei % 2);
-      // Some template branches (notably parametric v=1) are deterministic.
+      // Every template branch now varies across seeds (SPEC-G1), but 200
+      // retries can still coincide by chance for a low-cardinality template.
       // The suffix is an audit-only unique evidence key; the generated source is unchanged.
       if (used.has(question.signature))
         question = { ...question, signature: `${question.signature}|audit-${si}-${ei}` };

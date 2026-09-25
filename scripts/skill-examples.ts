@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { convertLatexToMarkup } from "mathlive/ssr";
 import { SKILLS } from "../src/catalog";
 import {
+  GENERATOR_VERSION,
   generateQuestion,
 } from "../src/questions";
 import { TEMPLATES } from "../src/templates";
@@ -105,6 +106,17 @@ function mdMath(latex: string, display = true): string {
   return display ? `\\[\n${latex}\n\\]` : `\\(${latex}\\)`;
 }
 
+// root.sqrt (SPEC-G5) displays a real radical but derives its answer from
+// the rewritten fractional-power form, so an independent recomputation must
+// rewrite the same way before differentiating. This is a no-op for every
+// other family, which never puts a Sqrt node in its own source.
+function desugarSqrt(e: Expr): Expr {
+  if (!Array.isArray(e)) return e;
+  const [op, ...args] = e;
+  const mapped = args.map(desugarSqrt);
+  return op === "Sqrt" ? P(mapped[0], Q(1, 2)) : ([op, ...mapped] as Expr);
+}
+
 function answerExpressions(q: Question): Expr[] {
   const e = q.source[0];
   switch (q.family) {
@@ -150,7 +162,7 @@ function answerExpressions(q: Question): Expr[] {
       return [Q(d(y, "theta"), d(x, "theta"))];
     }
     default:
-      return [d(e, q.domain.variable)];
+      return [d(desugarSqrt(e), q.domain.variable)];
   }
 }
 
@@ -170,7 +182,7 @@ function verifyQuestion(skill: Skill, q: Question, template: number): string[] {
     errors.push(
       `answer tree mismatch: ${JSON.stringify(q.answers)} != ${JSON.stringify(expected)}`,
     );
-  if (q.generatorVersion !== "1.1.0")
+  if (q.generatorVersion !== GENERATOR_VERSION)
     errors.push(`unexpected generator version ${q.generatorVersion}`);
   return errors;
 }
@@ -189,7 +201,7 @@ function conditionText(q: Question): string {
     case "root":
       return !(q.meta?.oddRoot ?? q.template === 1)
         ? "For the square-root template, use x > 0 for the derivative (the function itself is real for x ≥ 0)."
-        : "For the cube-root template, the real function is defined for every x, but its derivative is undefined at x = 0. Thus x ≠ 0."
+        : "For the odd-root template (an odd-denominator rational exponent, e.g. cube or fifth root), the real function is defined for every x, but its derivative is undefined at x = 0. Thus x ≠ 0."
     case "exp":
       return "The displayed exponential is real and differentiable for every real x. Angles, when present, are measured in radians."
     case "log":
@@ -271,6 +283,7 @@ function metadataLines(q: Question): string[] {
     `- Generator ID: \`${q.id}\``,
     `- Seed: \`${q.seed}\``,
     `- Template: ${q.template} (the generator's ${q.template === 0 ? "first" : "second"} structure)`,
+    `- Template key: \`${q.templateKey}\``,
     `- Generator version: \`${q.generatorVersion}\``,
     `- Differentiation variable: \`${q.domain.variable}\``,
     `- Generator domain text: ${q.domainText}`,
@@ -286,7 +299,7 @@ function renderMarkdown(items: { skill: Skill; questions: Question[] }[]): strin
     "Two real generated examples for every differentiation skill in `src/catalog.ts`.",
     "The student-facing prompts are in English; each skill has a Chinese type note for teacher review.",
     "",
-    `Generated from \`generateQuestion\` version \`1.1.0\` on ${SEED_PREFIX.slice(-10)}; ${items.length} skills × 2 templates = ${items.length * 2} questions.`,
+    `Generated from \`generateQuestion\` version \`${GENERATOR_VERSION}\` on ${SEED_PREFIX.slice(-10)}; ${items.length} skills × 2 templates = ${items.length * 2} questions.`,
     "",
     "> The answers preserve the production generator's expression tree, so an unsimplified form may appear. Equivalent expressions are accepted by the app's grader.",
     "",
@@ -312,7 +325,7 @@ function renderMarkdown(items: { skill: Skill; questions: Question[] }[]): strin
     lines.push(`**Rule / definition:** ${skill.rule}`);
     lines.push("");
     for (const q of questions) {
-      lines.push(`#### ${number}. Template ${q.template}`);
+      lines.push(`#### ${number}. Template ${q.template} (\`${q.templateKey}\`)`);
       lines.push("");
       lines.push(`**Student question (English).** ${questionIntro(q)}`);
       lines.push("");
@@ -361,7 +374,7 @@ function renderHtml(
           .map((line) => `<li>${line.replace(/^- /, "")}</li>`)
           .join("");
         const card = `<article class="question" id="q-${number}">
-  <div class="question-heading"><span class="question-number">${number}</span><h3>Template ${q.template}</h3></div>
+  <div class="question-heading"><span class="question-number">${number}</span><h3>Template ${q.template} (<code>${escapeHtml(q.templateKey)}</code>)</h3></div>
   <p class="student-label">Student question (English)</p>
   <p>${escapeHtml(questionIntro(q))}</p>
   <div class="formula" role="img" aria-label="${escapeHtml(q.prompt)}">${mathMarkup(q.prompt)}</div>
@@ -411,7 +424,7 @@ ${staticCss}
 <header>
   <h1>Derivative Studio: Skill Examples</h1>
   <p class="lede">Two real generated examples for every differentiation skill in <code>src/catalog.ts</code>. Student-facing prompts are in English; each skill includes a Chinese type note for teacher review.</p>
-  <p class="meta">Generated from <code>generateQuestion</code> version <code>1.1.0</code> with fixed seeds; 26 skills × 2 templates = 52 questions. MathLive SSR pre-rendered the formula markup locally; this page makes no runtime network request.</p>
+  <p class="meta">Generated from <code>generateQuestion</code> version <code>${GENERATOR_VERSION}</code> with fixed seeds; 26 skills × 2 templates = 52 questions. MathLive SSR pre-rendered the formula markup locally; this page makes no runtime network request.</p>
 </header>
 <section class="panel" aria-labelledby="coverage-title">
   <h2 id="coverage-title">Coverage and verification</h2>

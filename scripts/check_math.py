@@ -261,6 +261,20 @@ def curve_points(q: dict[str, Any]) -> list[dict[str, float]]:
             for x_value in [lo + 0.37 * (hi - lo), lo + 0.63 * (hi - lo)]:
                 y_value = math.sqrt(x_value * x_value + parameter)
                 points.extend([{"x": x_value, "y": y_value}, {"x": x_value, "y": -y_value}])
+    elif curve["type"] == "graph":
+        free = curve["free"]
+        other = "y" if free == "x" else "x"
+        free_symbol = sp.Symbol(free, real=True)
+        for lo, hi in q["domain"]["intervals"]:
+            for frac in (0.37, 0.63):
+                free_value = lo + frac * (hi - lo)
+                for branch in curve["branches"]:
+                    expr = to_sympy(branch, {free: free_symbol})
+                    try:
+                        other_value = as_float(expr, {free_symbol: free_value})
+                    except (TypeError, ValueError, ZeroDivisionError):
+                        continue
+                    points.append({free: free_value, other: other_value})
     else:
         raise UnsupportedExpression(f"unsupported curve {curve['type']!r}")
     return points
