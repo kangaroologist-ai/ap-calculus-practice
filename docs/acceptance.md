@@ -5,15 +5,15 @@
 | 步骤 | 实现位置 | 验收证据 | 状态 |
 |---|---|---|---|
 | 1 项目、配置、接口 | `src/types.ts`、`catalog.ts`、`public/practice-config.json`、锁文件 | 配置边界单测；TypeScript 与 Vite 构建；本地字体和 Worker | 已实现，本地通过 |
-| 2 规则生成、答案、解析 | `questions.ts`、`math.ts` | 26 技能 × 2 结构 × 100 种子，5,200 题独立 SymPy 检查；函数组合多样性测试 | 通过；127 个表达式身份使用独立多点数值检查，非符号证明 |
+| 2 规则生成、答案、解析 | `questions.ts`、`math.ts` | 26 技能、101 模板 × 100 种子，10,100 题独立 SymPy 检查；函数组合多样性测试 | 通过；438 个表达式身份使用独立多点数值检查，非符号证明 |
 | 3 输入、提示、手机布局 | `main.ts`、`style.css` | MathLive 失焦不提交、Enter 不重复、草稿刷新；六级代表题实际浏览器渲染 | 浏览器验证；真机待验 |
 | 4 判分、定义域、计算隔离 | `grading.ts`、`domains.ts`、`grading.worker.ts`、`grader-client.ts` | 数学回归含等价变形、奇次根负数、额外定义域缺口、奇点、无效输入；1,040 次生成题标准答案判分；Worker 3 秒终止重建 | 本地验证，范围见测试 |
 | 5 FSRS 与补弱 | `progress.ts` | 固定参数、Good/Again、重试幂等、提前练习不改到期日、虚拟时钟 | 本地通过 |
-| 6 Ready 与解锁 | `progress.ts` | 最近两题独立正确／双结构，新错误补弱，不倒退等级，禁用级跳过 | 本地通过 |
+| 6 Ready 与解锁 | `progress.ts` | Basic/Mixed 各两题独立正确；按线补弱；Basic 通过解锁且不倒退等级，禁用级跳过 | 本地通过 |
 | 7 本机与便携快照 | `storage.ts`、`transfer.ts` | FSRS 全状态精度往返、UTC 日期、当前题草稿保留、跨设备不带当前题 | 本地通过，专项复核通过 |
 | 8 代码与二维码 | `transfer.ts`、`main.ts` | 压缩代码、分片乱序/重复/混用/缺失；qrcode→图像→jsQR 实际往返 | 本地通过；真实摄像头待验 |
 | 9 导入、备份、兼容 | `storage.ts`、`transfer.ts`、`main.ts` | 非法版本/日期/数值/长度拒绝，确认替换、取消不变，事务备份与恢复 | 本地通过，专项复核通过 |
-| 10 构建、完整流程、部署 | `README.md`、CI、`wrangler.toml` | 本地生产构建成功；三引擎共 81 项：69 通过、12 项按设计仅在 Chromium 执行而跳过、0 失败 | 本地生产页面通过；GitHub/线上状态见下方 |
+| 10 构建、完整流程、部署 | `README.md`、CI、`wrangler.toml` | 本地生产构建成功；三引擎共 135 项：111 通过、24 项按设计仅在 Chromium 执行而跳过、0 失败 | 本地生产页面通过；GitHub/线上状态见下方 |
 
 ## Phase 1 SPEC 验收映射
 
@@ -48,13 +48,13 @@ Phase 1 的测试映射不替代真机验收；U3/U4 的浏览器截图与真机
 | C7 全答对与首次 Mixed 错误后的有限收敛、依赖通过检查 | `tests/simulation.test.ts` |
 | MG1 v1→v2 Ready/历史 Ready/解锁门迁移、FSRS 与 session 处理 | `tests/migrate.test.ts`；`tests/legacy-fixtures.test.ts`；`tests/storage.test.ts` |
 | MG2 profile 3 编解码、旧 profile 导入、line 校验与 SPEC-M5 尺寸／raster QR | `tests/compact-progress.test.ts`；`tests/qr-image.test.ts`；`node --import tsx scripts/qr-size-audit.ts` |
-| Step 13 UI 导入摘要与 v1 自动迁移 | `src/main.ts`；`tests/app.spec.ts` 的冻结 v1 boot 用例（本实现轮只做 TypeScript 检查；Playwright 留给 reviewer 执行） |
+| Step 13 UI 导入摘要与 v1 自动迁移 | `src/main.ts`；`tests/app.spec.ts` 的冻结 v1 boot 用例（2026-09-26 三引擎执行通过） |
 
 本轮 QR 审计使用 `compact-full-snapshot.json` 经 v1→v2 迁移后的 profile 3：1,200 个 DSP2 字符，单张 28-M QR；`docs/progress-payload-review.md` 记录 tuple、压缩和二维码明细。
 
 ## 生成而非固定题库
 
-部署的应用包含受限表达式树、求导规则与带稳定 key 的模板注册表，不包含测试 corpus。每次选择技能后，根据随机种子实时生成题干、答案与解析。生成版本为 `1.2.0`；每道题按实际表达式记录 `requiredSkills`，隐函数以通用 graph curve 供判分采样。生成器有复杂度限制和有限重试。固定随机种子用于可重复测试，不是学生题库。
+部署的应用包含受限表达式树、求导规则与带稳定 key 的模板注册表，不包含测试 corpus。每次选择技能后，根据随机种子实时生成题干、答案与解析。生成版本为 `2.0.0`；每道题按实际表达式记录 `requiredSkills`，隐函数以通用 graph curve 供判分采样。生成器有复杂度限制和有限重试。固定随机种子用于可重复测试，不是学生题库。
 
 ## 可复现命令
 
@@ -75,7 +75,7 @@ npm run test:e2e
 ## 证据边界与待验
 
 - iPhone Safari 与 Android Chrome 真机输入、系统键盘切换和物理摄像头扫码：未验证。
-- 线上 HTTPS、Cloudflare 缓存与真实设备网络：尚未部署。当前 Cloudflare 登录已过期，需要账号持有者重新完成 OAuth 登录；发布授权已经具备。
+- 线上 HTTPS 与 Cloudflare 发布结果按各次发布记录核对；真实设备网络体验仍待真机验证。
 - FSRS 用于数学技能的效果尚无本项目课堂实证；0.9 是调度参数，不是学生掌握概率。
 - 数学等价判断先保存原始定义条件、使用受限解析和高精度数值比较。有限采样不构成任意函数的形式证明。
 - 初次加载需下载本地托管的数学组件；不依赖外部 CDN，但未实现离线 Service Worker。
@@ -98,7 +98,7 @@ npm run test:e2e
 - [x] Cloudflare Pages 部署完成并通过线上 smoke test。
 - [ ] iPhone Safari 与 Android Chrome 真机输入、物理摄像头扫码。
 
-## 当前测试结果
+## 早期版本测试结果（历史记录）
 
 - 单元与回归：9 个文件，98 个测试通过（包含 1,040 次 canonical 判分矩阵）。
 - 独立数学检查：5,200/5,200，通过；127 个表达式身份使用独立数值 fallback，不冒充符号证明。
@@ -141,3 +141,12 @@ npm run test:e2e
 - Mobile 390×844 and desktop 1280×800 export dialogs rendered and inspected. Dense canvas remains square, fits available width, and saved full-resolution PNG imports through the actual UI.
 - Physical phone-camera scanning is not independently verified. Unusually large imported snapshots can still require numbered QR frames in the in-app scanner; normal/full-curriculum fixtures use one link QR.
 - Reproduction: `npx tsx scripts/qr-size-audit.ts`, `npm test`, `npx playwright test tests/progress-link.spec.ts`, `npx playwright test --grep 'cross-context transfer'`.
+
+## 2026-09-26 发布前复核
+
+- 对 `ba035b0` 相对 `b25bb34` 的变更执行本地验证：320 项单元测试、10,100 道独立数学检查、TypeScript 与生产构建通过。数学检查中 438 个身份采用独立数值 fallback，不视为符号证明。
+- 三引擎浏览器全套：111 通过、24 按设计跳过、0 失败；含旧 v1 本机迁移、六级输入判分、备份恢复、二维码导入和连续练习。
+- 实际截图发现 MathLive 全屏根容器的背景遮挡题目。移除该容器的背景，保留底部键盘面板主题色，并新增透明背景回归断言。修复后重建成功；6 项明暗主题/桌面/手机定向检查与 2 项对比度单测通过。迁移、生成和调度代码未改，复用本轮对应验证。
+- 生产构建 390px 普通视口实际复核中，键盘打开后题目、输入框和提交按钮均可见。截图位于 `artifacts/ux-refresh/keyboard-viewport-fixed.png`，明暗主题矩阵位于 `after-*-keyboard.png`。
+- 一次将现有开发模式测试指向生产 preview 时，深色 token 断言因 CSS 压缩把 `#000000` 写成 `#000` 而失败；实际计算背景均为黑色。恢复测试配置指定的开发服务后 6 项通过，生产构建另作实际视口检查，未更改该断言。
+- 真机安全区、系统键盘及物理摄像头仍未验证；以上浏览器结果不代替真机验收。发布身份及线上验证以本次发布结果为准。

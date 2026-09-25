@@ -54,6 +54,14 @@ for (const width of [390, 1280]) {
         await page.getByRole("button", { name: /Start practicing|Continue practicing/ }).click();
         await page.locator("math-field").first().waitFor({ state: "visible" });
         await page.screenshot({ path: `${output}/after-${width}-${scheme}-question.png` });
+        await page.getByRole("button", { name: "Math keyboard" }).click();
+        await expect(page.locator(".ML__keyboard")).toBeVisible();
+        // MathLive's root covers the whole viewport. Only its bottom panel
+        // may paint a background, or the question and controls disappear.
+        await expect(page.locator(".ML__keyboard")).toHaveCSS(
+          "background-color", "rgba(0, 0, 0, 0)",
+        );
+        await page.screenshot({ path: `${output}/after-${width}-${scheme}-keyboard.png` });
       },
     );
   }

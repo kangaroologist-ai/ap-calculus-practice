@@ -968,7 +968,6 @@ dialog::backdrop {
 .ML__keyboard {
   --keyboard-zindex: 1000;
   color: var(--label);
-  background: var(--fill);
   --keyboard-background: var(--fill);
   --keycap-background: var(--surface);
   --keycap-text: var(--label);
