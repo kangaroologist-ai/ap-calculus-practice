@@ -36,9 +36,10 @@ function question(
   skill = 'power',
   template = 0,
   supportingSkills: string[] = [],
+  requiredSkills?: string[],
 ): Question {
   const level = SKILLS.find((item) => item.id === skill)?.level ?? 1;
-  return {
+  const base: Question = {
     id,
     seed: id,
     generatorVersion: 'test-generator',
@@ -60,6 +61,13 @@ function question(
     steps: [{ text: 'Apply the rule.', math: '1' }],
     signature: `signature-${id}`,
   };
+  // `requiredSkills` (SPEC-G3) is landing on the Question type via a concurrent
+  // change this worktree does not see yet. Attach it dynamically when a test
+  // supplies it; recordOutcome falls back to supportingSkills when it is absent.
+  const built: Question & { requiredSkills?: string[] } = requiredSkills
+    ? { ...base, requiredSkills }
+    : base;
+  return built;
 }
 
 function current(q: Question, hintsUsed = 0): Current {
@@ -195,14 +203,93 @@ describe('local progress and FSRS boundaries', () => {
     expect(p.skills.power.card.last_review).toBe(due);
   });
 
-  it('schedules a due incorrect answer as Again and queues supporting diagnostics', () => {
+  it('schedules a due incorrect answer as Again and queues diagnostics for Ready supporting skills', () => {
     const p = freshProgress(config(), NOW);
+    // Diagnostics are only meaningful for skills the learner has actually
+    // reached Ready on; make sum and power Ready first (SPEC-S1).
+    p.skills.sum = readyState(0, NOW);
+    p.skills.power = readyState(1, NOW);
     const cur = current(question('wrong-1', 'product', 0, ['sum', 'power']));
     expect(recordOutcome(p, cur, config(), incorrect, NOW)).toBe(true);
     expect(p.skills.product.needsRemediation).toBe(true);
     expect(p.skills.product.failureStreak).toBe(1);
     expect(p.pendingDiagnostics).toEqual(['sum', 'power']);
     expect(reviveCard(p.skills.product.card).stability).toBe(0.212);
+  });
+
+  it('queues a diagnostic only on the first failure of a streak, and again once a success resets it', () => {
+    const c = config();
+    const p = freshProgress(c, NOW);
+    p.skills.sum = readyState(0, NOW);
+
+    expect(
+      recordOutcome(p, current(question('streak-1', 'product', 0, ['sum'])), c, incorrect, NOW),
+    ).toBe(true);
+    expect(p.skills.product.failureStreak).toBe(1);
+    expect(p.pendingDiagnostics).toEqual(['sum']);
+
+    // chooseNext consumes the queued diagnostic exactly as it does in real play.
+    const picked = chooseNext(p, c, NOW);
+    expect(picked.question.primarySkill).toBe('sum');
+    expect(picked.reason).toBe('Targeted check');
+    expect(p.pendingDiagnostics).toEqual([]);
+
+    // A second consecutive failure on the same skill must not re-queue it.
+    expect(
+      recordOutcome(p, current(question('streak-2', 'product', 0, ['sum'])), c, incorrect, NOW + 1),
+    ).toBe(true);
+    expect(p.skills.product.failureStreak).toBe(2);
+    expect(p.pendingDiagnostics).toEqual([]);
+
+    // Nor does a third.
+    expect(
+      recordOutcome(p, current(question('streak-3', 'product', 0, ['sum'])), c, incorrect, NOW + 2),
+    ).toBe(true);
+    expect(p.skills.product.failureStreak).toBe(3);
+    expect(p.pendingDiagnostics).toEqual([]);
+
+    // A success resets the streak...
+    expect(
+      recordOutcome(p, current(question('streak-recover', 'product', 1, ['sum'])), c, correct, NOW + 3),
+    ).toBe(true);
+    expect(p.skills.product.failureStreak).toBe(0);
+
+    // ...so the next failure queues the diagnostic again.
+    expect(
+      recordOutcome(p, current(question('streak-4', 'product', 0, ['sum'])), c, incorrect, NOW + 4),
+    ).toBe(true);
+    expect(p.skills.product.failureStreak).toBe(1);
+    expect(p.pendingDiagnostics).toEqual(['sum']);
+  });
+
+  it('drops required skills that are not Ready, locked, or disabled, but keeps Ready ones', () => {
+    const c = config({ disabledFamilies: ['log'] });
+    const p = freshProgress(c, NOW);
+    p.skills.sum = readyState(0, NOW); // Ready, enabled, and unlocked.
+    // power: never practiced, so not Ready. exp: level 2, but unlockedLevel is
+    // still 1, so locked. log: explicitly disabled.
+    const cur = current(question('mixed-fail-1', 'product', 0, ['power'], ['power', 'exp', 'log', 'sum']));
+    expect(recordOutcome(p, cur, c, incorrect, NOW)).toBe(true);
+    expect(p.pendingDiagnostics).toEqual(['sum']);
+  });
+
+  it('reads requiredSkills for diagnostics when present, and falls back to supportingSkills for legacy questions', () => {
+    const c = config();
+    const p = freshProgress(c, NOW);
+    p.skills.sum = readyState(0, NOW);
+    p.skills.power = readyState(1, NOW);
+
+    // requiredSkills (SPEC-G3) takes precedence over supportingSkills.
+    const withRequired = current(question('inferred-1', 'product', 0, ['power'], ['sum']));
+    expect(recordOutcome(p, withRequired, c, incorrect, NOW)).toBe(true);
+    expect(p.pendingDiagnostics).toEqual(['sum']);
+
+    // A legacy question with no requiredSkills falls back to supportingSkills.
+    // Use a different primary skill so its failure streak starts fresh.
+    p.pendingDiagnostics = [];
+    const legacy = current(question('legacy-1', 'quotient', 0, ['power']));
+    expect(recordOutcome(p, legacy, c, incorrect, NOW + 60_000)).toBe(true);
+    expect(p.pendingDiagnostics).toEqual(['power']);
   });
 
   it('does not schedule a second FSRS update for a retry after an incorrect answer', () => {

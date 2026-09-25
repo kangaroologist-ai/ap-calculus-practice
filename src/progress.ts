@@ -142,6 +142,11 @@ export function unlock(p: Progress, c: Config) {
     p.unlockedLevel++;
   }
 }
+export function allEnabledReady(p: Progress, c: Config): boolean {
+  return SKILLS.filter((s) => !c.disabledFamilies.includes(s.id)).every((s) =>
+    isReady(p.skills[s.id]),
+  );
+}
 export function localPracticeDay(now = Date.now()): string {
   const d = new Date(now);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -206,13 +211,21 @@ export function recordOutcome(
     s.lastFailureAt = p.sequence;
     s.otherSinceFailure = 0;
     s.extraPracticeGiven = false;
-    const diagnostic = (q.requiredSkills ?? q.supportingSkills).filter(
-      (id) => !c.disabledFamilies.includes(id),
-    );
-    if (diagnostic.length) {
-      p.pendingDiagnostics = [
-        ...new Set([...p.pendingDiagnostics, ...diagnostic]),
-      ];
+    // Only the first failure of a streak is informative; repeated misses on the
+    // same skill would otherwise keep re-queuing diagnostics for skills we
+    // already know are shaky (SPEC-S1).
+    if (s.failureStreak === 1) {
+      const diagnostic = (q.requiredSkills ?? q.supportingSkills).filter(
+        (id) =>
+          !c.disabledFamilies.includes(id) &&
+          skillById(id).level <= p.unlockedLevel &&
+          isReady(p.skills[id]),
+      );
+      if (diagnostic.length) {
+        p.pendingDiagnostics = [
+          ...new Set([...p.pendingDiagnostics, ...diagnostic]),
+        ];
+      }
     }
   }
   p.updatedAt = now;
