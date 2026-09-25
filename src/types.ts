@@ -6,6 +6,15 @@ export interface Skill {
   rule: string;
   prerequisites: string[];
 }
+// Metadata a template attaches to the questions it produces. Numeric template
+// indices used to carry this meaning implicitly (template 1 = third
+// derivative, template 1 = odd root, ...); readers should prefer these
+// explicit fields and fall back to the old index-based meaning only for
+// questions saved by generator <= 1.1.0, which lack `meta`.
+export interface QuestionMeta {
+  derivativeOrder?: number;
+  oddRoot?: boolean;
+}
 export interface Config {
   schemaVersion: 1;
   revision: string;
@@ -24,6 +33,8 @@ export interface Question {
   seed: string;
   generatorVersion: string;
   template: number;
+  templateKey: string;
+  meta?: QuestionMeta;
   family: string;
   level: number;
   primarySkill: string;

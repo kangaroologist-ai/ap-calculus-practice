@@ -1,19 +1,8 @@
-import type { Expr, Question, Domain } from "./types";
-import {
-  add as A,
-  mul as M,
-  div as Q,
-  pow as P,
-  neg as N,
-  fn as F,
-  derivative as d,
-  latex as L,
-  random,
-  complexity,
-  evaluator,
-} from "./math";
+import type { Expr, Question, Domain, Skill } from "./types";
+import { derivative as d, latex as L, random, complexity } from "./math";
 import { skillById } from "./catalog";
-import { ddx, dydx } from "./notation";
+import { ddx } from "./notation";
+import { TEMPLATES, makeCtx, type Built, type Template } from "./templates";
 export const GENERATOR_VERSION = "1.1.0";
 export function generateQuestion(
   id: string,
@@ -36,268 +25,79 @@ export function generateQuestion(
 }
 function instantiate(id: string, seed: string, override?: number): Question {
   const skill = skillById(id),
+    list = TEMPLATES[id],
     r = random(seed),
-    v = override ?? Math.floor(r() * 2),
+    v = override ?? Math.floor(r() * list.length),
     a = 2 + Math.floor(r() * 8),
     b = 1 + Math.floor(r() * 9),
     n = 2 + Math.floor(r() * 4);
-  let variable: Domain["variable"] = "x",
-    source: Expr[] = [],
-    answers: Expr[] = [],
-    labels = ["f'(x)"],
-    prompt = "",
-    title = "Find the derivative",
-    domainText =
-      "Use radians. Give an expression valid wherever the derivative exists.",
-    intervals: [number, number][] = [
-      [-2.5, -0.2],
-      [0.2, 2.5],
-    ],
-    curve: Domain["curve"],
-    guards: Expr[] = [];
-  let e: Expr = 0,
-    steps: { text: string; math: string }[] = [];
-  const x = "x",
-    lin = A(M(a, x), b),
-    smooth = () => ["Sin", "Cos", "Exp"][Math.floor(r() * 3)],
-    innerPower = () => A(P(x, 2 + Math.floor(r() * 3)), b);
-  switch (id) {
-    case "constant":
-      e = v ? A(a, Q(b, n)) : a;
-      break;
-    case "power":
-      e = v ? M(a, P(x, -n)) : P(x, n);
-      break;
-    case "sum":
-      e = v ? A(M(a, P(x, n)), M(-b, x), n) : A(P(x, n), M(b, P(x, 2)), a);
-      break;
-    case "root":
-      e = v ? M(a, P(x, Q(1, 3))) : M(a, P(x, Q(1, 2)));
-      intervals = v
-        ? [
-            [-5, -0.1],
-            [0.1, 5],
-          ]
-        : [
-            [0.1, 1],
-            [1, 5],
-          ];
-      break;
-    case "exp":
-      e = v ? P(a, x) : F("Exp", lin);
-      break;
-    case "log":
-      e = v ? Q(F("Ln", x), F("Ln", a)) : F("Ln", lin);
-      intervals = [
-        [0.1, 1],
-        [1, 5],
-      ];
-      break;
-    case "sin":
-    case "cos":
-    case "tan":
-    case "cot":
-    case "sec":
-    case "csc":
-      e = v
-        ? F(id[0].toUpperCase() + id.slice(1), lin)
-        : M(a, F(id[0].toUpperCase() + id.slice(1), x));
-      break;
-    case "asin":
-    case "acos":
-    case "atan": {
-      const op = { asin: "Arcsin", acos: "Arccos", atan: "Arctan" }[id];
-      e = v ? F(op, Q(x, a)) : M(a, F(op, x));
-      intervals = [
-        [-0.8, -0.05],
-        [0.05, 0.8],
-      ];
-      break;
-    }
-    case "product":
-      e = v ? M(A(P(x, 2), a), F(smooth(), x)) : M(P(x, n), F(smooth(), x));
-      break;
-    case "quotient":
-      e = v ? Q(F(smooth(), x), A(P(x, 2), a)) : Q(A(P(x, 2), b), lin);
-      break;
-    case "chain":
-      e = v ? F(smooth(), innerPower()) : P(lin, n);
-      break;
-    case "nested":
-      e = v ? F(smooth(), P(lin, 2)) : F(smooth(), F("Sin", lin));
-      break;
-    case "mixed":
-      e = v
-        ? Q(F(smooth(), lin), A(P(x, 2), b))
-        : M(A(P(x, 2), b), F(smooth(), M(a, x)));
-      break;
-    case "implicit": {
-      curve = { type: v ? "hyperbola" : "circle", parameter: a };
-      source = [
-        v ? A(P("y", 2), N(P(x, 2)), -a) : A(P(x, 2), P("y", 2), -a * a),
-      ];
-      answers = [N(Q(d(source[0], "x"), d(source[0], "y")))];
-      prompt = `${L(source[0])}=0`;
-      labels = ["dy/dx"];
-      title = "Differentiate implicitly";
-      intervals = v
-        ? [
-            [-2, -0.2],
-            [0.2, 2],
-          ]
-        : [
-            [0.25, 2.8],
-            [3.4, 6.0],
-          ];
-      domainText = "Compare on the given curve, where y ≠ 0.";
-      steps = [
-        {
-          text: "Differentiate both sides, remembering that y depends on x.",
-          math: v ? `2y${dydx()}-2x=0` : `2x+2y${dydx()}=0`,
-        },
-        {
-          text: "Isolate the requested derivative.",
-          math: `${dydx()}=${L(answers[0])}`,
-        },
-      ];
-      break;
-    }
-    case "inverse": {
-      e = v ? A(P(x, 3), M(a, x)) : A(M(a, x), b);
-      const point = b,
-        evalr = evaluator();
-      const val = evalr.calc(e, { x: new evalr.D(point) }).toNumber(),
-        slope = evalr.calc(d(e), { x: new evalr.D(point) }).toNumber();
-      source = [e];
-      answers = [Q(1, slope)];
-      title = "Find an inverse-function derivative";
-      prompt = `f(x)=${L(e)},\\quad f(${point})=${val}.\\quad (f^{-1})'(${val})=?`;
-      labels = [`(f⁻¹)'(${val})`];
-      steps = [
-        {
-          text: "The inverse derivative is the reciprocal of the original derivative at the matching input.",
-          math: `(f^{-1})'(${val})=\\frac{1}{f'(${point})}=${L(answers[0])}`,
-        },
-      ];
-      break;
-    }
-    case "higher": {
-      e = v ? M(a, F("Sin", x)) : A(P(x, n + 1), M(b, P(x, 2)));
-      source = [e];
-      let z = e;
-      const order = v ? 3 : 2;
-      for (let i = 1; i <= order; i++) {
-        z = d(z);
-        steps.push({
-          text: `Differentiate ${i === 1 ? "once" : "again"}.`,
-          math: `f^{(${i})}(x)=${L(z)}`,
-        });
-      }
-      answers = [z];
-      labels = [v ? "f'''(x)" : "f''(x)"];
-      title = `Find the ${v ? "third" : "second"} derivative`;
-      break;
-    }
-    case "parametric": {
-      variable = "t";
-      const t = "t",
-        u = v ? P(t, 2) : A(M(a, t), b),
-        w = v ? P(t, 3) : F("Sin", t);
-      source = [u, w];
-      const slope = Q(d(w, t), d(u, t));
-      answers = [v ? Q(d(slope, t), d(u, t)) : slope];
-      guards = [Q(1, d(u, t))];
-      prompt = `x(t)=${L(u)},\\quad y(t)=${L(w)}`;
-      labels = [v ? "d²y/dx²" : "dy/dx"];
-      title = `Find the ${v ? "second derivative" : "slope"} in terms of t`;
-      steps = [
-        {
-          text: "Divide the derivatives with respect to t.",
-          math: `${dydx()}=${L(slope)}`,
-        },
-        ...(v
-          ? [
-              {
-                text: "Differentiate the slope in t, then divide by dx/dt again.",
-                math: `${dydx(2)}=${L(answers[0])}`,
-              },
-            ]
-          : []),
-      ];
-      domainText = "Give your answer in t, where dx/dt ≠ 0.";
-      break;
-    }
-    case "vector": {
-      variable = "t";
-      source = v
-        ? [F("Exp", M(a, "t")), F("Cos", "t")]
-        : [P("t", n), F("Sin", M(a, "t"))];
-      answers = source.map((e) => d(e, "t"));
-      prompt = `\\mathbf{r}(t)=\\langle ${source.map(L).join(",")}\\rangle`;
-      labels = ["First component of r′(t)", "Second component of r′(t)"];
-      title = "Differentiate the vector function";
-      steps = answers.map((e, i) => ({
-        text: `Differentiate component ${i + 1}.`,
-        math: L(e),
-      }));
-      break;
-    }
-    case "polar": {
-      variable = "theta";
-      e = v ? A(a, F("Cos", "theta")) : M(a, F("Sin", "theta"));
-      source = [e];
-      const u = M(e, F("Cos", "theta")),
-        w = M(e, F("Sin", "theta"));
-      answers = [Q(d(w, "theta"), d(u, "theta"))];
-      guards = [Q(1, d(u, "theta"))];
-      prompt = `r(\\theta)=${L(e)}`;
-      labels = ["dy/dx"];
-      title = "Find the polar slope in terms of θ";
-      steps = [
-        {
-          text: "Convert to Cartesian coordinates.",
-          math: `x=${L(u)},\\quad y=${L(w)}`,
-        },
-        {
-          text: "Divide their derivatives with respect to θ.",
-          math: `${dydx()}=${L(answers[0])}`,
-        },
-      ];
-      domainText = "Give your answer in θ, where dx/dθ ≠ 0.";
-      break;
-    }
-  }
+  const template = list[v];
+  return finalize(
+    skill,
+    template,
+    v,
+    seed,
+    template.build(makeCtx(r, a, b, n)),
+  );
+}
+function finalize(
+  skill: Skill,
+  template: Template,
+  v: number,
+  seed: string,
+  built: Built,
+): Question {
+  const variable: Domain["variable"] = built.variable ?? "x";
+  let source = built.source ?? [];
+  let answers = built.answers ?? [];
   if (!source.length) {
-    source = [e];
-    answers = [d(e)];
+    source = [built.e ?? 0];
+    answers = [d(built.e ?? 0)];
   }
-  if (!prompt) prompt = `f(x)=${L(e)}`;
-  if (!steps.length) {
-    steps = [
-      { text: skill.rule, math: ruleFormula(id) },
-      ...derivationSteps(e, variable),
-      {
-        text: "Apply the rule to this function. Equivalent unsimplified answers are accepted.",
-        math: `${labels[0]}=${L(answers[0])}`,
-      },
-    ];
-  }
-  const hintMath = structureHint(id, source, variable);
+  const prompt = built.prompt ?? `f(x)=${L(source[0])}`;
+  const labels = built.labels ?? ["f'(x)"];
+  const title = built.title ?? "Find the derivative";
+  const domainText =
+    built.domainText ??
+    "Use radians. Give an expression valid wherever the derivative exists.";
+  const intervals: [number, number][] = built.intervals ?? [
+    [-2.5, -0.2],
+    [0.2, 2.5],
+  ];
+  const steps =
+    built.steps && built.steps.length
+      ? built.steps
+      : [
+          { text: skill.rule, math: ruleFormula(skill.id) },
+          ...derivationSteps(source[0], variable),
+          {
+            text: "Apply the rule to this function. Equivalent unsimplified answers are accepted.",
+            math: `${labels[0]}=${L(answers[0])}`,
+          },
+        ];
+  const hintMath = structureHint(skill.id, source, variable);
   return {
-    id: `${id}:${v}:${seed}`,
+    id: `${skill.id}:${v}:${seed}`,
     seed,
     generatorVersion: GENERATOR_VERSION,
     template: v,
-    family: id,
+    templateKey: template.key,
+    meta: template.meta,
+    family: skill.id,
     level: skill.level,
-    primarySkill: id,
+    primarySkill: skill.id,
     supportingSkills: skill.prerequisites,
     title,
     prompt,
     source,
     answers,
     labels,
-    domain: { variable, intervals, curve, guards },
+    domain: {
+      variable,
+      intervals,
+      curve: built.curve,
+      guards: built.guards ?? [],
+    },
     domainText,
     hints: [
       skill.rule,
@@ -305,7 +105,7 @@ function instantiate(id: string, seed: string, override?: number): Question {
     ],
     hintMath,
     steps,
-    signature: JSON.stringify([id, v, source]),
+    signature: JSON.stringify([skill.id, v, source]),
   };
 }
 export function ruleFormula(id: string): string {

@@ -59,6 +59,34 @@ class UnsupportedExpression(Exception):
     pass
 
 
+def is_odd_root(q: dict[str, Any]) -> bool:
+    """True for the odd-root (e.g. cube-root) template.
+
+    Prefers the explicit `meta.oddRoot` flag a template registry entry
+    carries; corpora produced before that metadata existed (generator
+    <= 1.1.0) fall back to the old template-number convention, where
+    template 1 was always the odd root.
+    """
+
+    meta = q.get("meta")
+    if meta is not None and "oddRoot" in meta:
+        return bool(meta["oddRoot"])
+    return q["template"] == 1
+
+
+def derivative_order(q: dict[str, Any], order_by_template: dict[int, int]) -> int:
+    """The derivative order a `higher`/`parametric` question asks for.
+
+    Prefers the explicit `meta.derivativeOrder`; falls back to the old
+    template-number convention for corpora without `meta`.
+    """
+
+    meta = q.get("meta")
+    if meta is not None and "derivativeOrder" in meta:
+        return int(meta["derivativeOrder"])
+    return order_by_template[q["template"]]
+
+
 def rational_number(value: int | float) -> sp.Expr:
     if isinstance(value, bool):
         return sp.Integer(int(value))
@@ -254,13 +282,13 @@ def assert_sample_equivalent(
         # The application deliberately supports real odd roots, so the
         # negative half of this one generated template is checked below with
         # a real-domain evaluator instead of a complex numerical substitution.
-        if q["family"] == "root" and q["template"] == 1 and value < 0:
+        if q["family"] == "root" and is_odd_root(q) and value < 0:
             continue
         if close_numeric(expected, actual, {variable: value}):
             compared += 1
             continue
         raise AssertionError(f"symbolic/numeric mismatch at {variable}={value}: expected {expected}, got {actual}")
-    minimum = 2 if q["family"] == "root" and q["template"] == 1 else 3
+    minimum = 2 if q["family"] == "root" and is_odd_root(q) else 3
     if compared < minimum:
         raise AssertionError(
             f"numeric fallback had only {compared} finite comparison points for expected {expected}, got {actual}"
@@ -273,7 +301,7 @@ def check_direct(q: dict[str, Any], symbols: dict[str, sp.Symbol]) -> None:
     actual = to_sympy(q["answers"][0], symbols)
     expected = sp.diff(source, variable)
     assert_sample_equivalent(expected, actual, variable, q)
-    if q["family"] == "root" and q["template"] == 1:
+    if q["family"] == "root" and is_odd_root(q):
         source_node = q["source"][0]
         if not (isinstance(source_node, list) and source_node[0] == "Multiply"):
             raise AssertionError("unexpected odd-root source shape")
@@ -299,7 +327,7 @@ def check_direct(q: dict[str, Any], symbols: dict[str, sp.Symbol]) -> None:
 def check_higher(q: dict[str, Any], symbols: dict[str, sp.Symbol]) -> None:
     variable = symbols[q["domain"]["variable"]]
     expected = to_sympy(q["source"][0], symbols)
-    order = 3 if q["template"] == 1 else 2
+    order = derivative_order(q, {0: 2, 1: 3})
     for _ in range(order):
         expected = sp.diff(expected, variable)
     actual = to_sympy(q["answers"][0], symbols)
@@ -360,7 +388,7 @@ def check_parametric(q: dict[str, Any], symbols: dict[str, sp.Symbol]) -> None:
     x_expr = to_sympy(q["source"][0], symbols)
     y_expr = to_sympy(q["source"][1], symbols)
     expected = sp.diff(y_expr, t) / sp.diff(x_expr, t)
-    if q["template"] == 1:
+    if derivative_order(q, {0: 1, 1: 2}) == 2:
         expected = sp.diff(expected, t) / sp.diff(x_expr, t)
     actual = to_sympy(q["answers"][0], symbols)
     assert_sample_equivalent(expected, actual, t, q)
@@ -401,9 +429,9 @@ def check_domain_metadata(q: dict[str, Any]) -> None:
     family = q["family"]
     intervals = q["domain"]["intervals"]
     if family == "root":
-        if q["template"] == 0 and any(lo <= 0 or hi <= 0 for lo, hi in intervals):
+        if not is_odd_root(q) and any(lo <= 0 or hi <= 0 for lo, hi in intervals):
             raise AssertionError(f"square-root comparison interval is not strictly positive: {intervals}")
-        if q["template"] == 1:
+        if is_odd_root(q):
             if any(lo <= 0 <= hi for lo, hi in intervals) or not any(hi < 0 for lo, hi in intervals) or not any(lo > 0 for lo, hi in intervals):
                 raise AssertionError(f"odd-root comparison intervals must cover both signs without zero: {intervals}")
     if family == "log" and any(lo <= 0 or hi <= 0 for lo, hi in intervals):
@@ -463,9 +491,12 @@ def load_corpus(path: Path) -> dict[str, Any]:
         corpus = json.load(handle)
     if corpus.get("schemaVersion") != 1:
         raise AssertionError(f"unsupported corpus schema: {corpus.get('schemaVersion')!r}")
-    if corpus.get("templateCount") != 2 or corpus.get("seedsPerTemplate") != 100:
-        raise AssertionError("corpus does not contain two templates and 100 seeds per template")
-    expected = corpus["skillCount"] * corpus["templateCount"] * corpus["seedsPerTemplate"]
+    template_counts = corpus.get("templateCounts")
+    if not isinstance(template_counts, dict) or not template_counts or corpus.get("seedsPerTemplate") != 100:
+        raise AssertionError("corpus is missing per-skill template counts or 100 seeds per template")
+    if len(template_counts) != corpus.get("skillCount"):
+        raise AssertionError("corpus templateCounts does not cover every skill")
+    expected = sum(template_counts.values()) * corpus["seedsPerTemplate"]
     if corpus.get("questionCount") != expected or len(corpus.get("questions", [])) != expected:
         raise AssertionError("corpus question count is inconsistent with its header")
     return corpus

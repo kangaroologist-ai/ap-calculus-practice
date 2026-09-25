@@ -43,6 +43,7 @@ function question(
     seed: id,
     generatorVersion: 'test-generator',
     template,
+    templateKey: `${skill}.${template}`,
     family: skill,
     level,
     primarySkill: skill,

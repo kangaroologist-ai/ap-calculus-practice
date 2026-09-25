@@ -3,6 +3,7 @@ import { SKILLS } from '../src/catalog';
 import { grade, parseAnswer } from '../src/grading';
 import { add, derivative, evaluator, latex, type Values } from '../src/math';
 import { generateQuestion } from '../src/questions';
+import { TEMPLATES } from '../src/templates';
 import type { Expr, Question } from '../src/types';
 
 const DIRECT_FAMILIES = new Set([
@@ -115,13 +116,16 @@ describe('math primitives and real-domain edge cases', () => {
 });
 
 describe('question generation and independent derivative identities', () => {
-  it('generates exactly two deterministic templates for every catalog skill', () => {
-    const questions = SKILLS.flatMap((skill) => [0, 1].map((template) => generated(skill.id, template)));
-    expect(questions).toHaveLength(SKILLS.length * 2);
+  it('generates every registered template for every catalog skill', () => {
+    const questions = SKILLS.flatMap((skill) =>
+      TEMPLATES[skill.id].map((_, template) => generated(skill.id, template)),
+    );
+    const totalTemplates = SKILLS.reduce((sum, skill) => sum + TEMPLATES[skill.id].length, 0);
+    expect(questions).toHaveLength(totalTemplates);
     expect(new Set(questions.map((question) => question.id)).size).toBe(questions.length);
     for (const question of questions) {
       expect(question.template).toBeGreaterThanOrEqual(0);
-      expect(question.template).toBeLessThanOrEqual(1);
+      expect(question.template).toBeLessThanOrEqual(TEMPLATES[question.family].length - 1);
       expect(question.source.length).toBeGreaterThan(0);
       expect(question.answers.length).toBeGreaterThan(0);
       expect(question.family).toBe(question.primarySkill);
@@ -132,7 +136,7 @@ describe('question generation and independent derivative identities', () => {
   it('keeps rule-generated combination families structurally varied across seeds', () => {
     const families = ['product', 'quotient', 'chain', 'nested', 'mixed'];
     for (const family of families) {
-      for (const template of [0, 1]) {
+      for (let template = 0; template < TEMPLATES[family].length; template++) {
         const questions = Array.from({ length: 100 }, (_, seed) =>
           generateQuestion(family, `variety:${family}:${template}:${seed}`, template),
         );
@@ -164,7 +168,7 @@ describe('question generation and independent derivative identities', () => {
   it('matches the independently constructed derivative for every direct-rule family and template', () => {
     let checked = 0;
     for (const skill of SKILLS.filter((item) => DIRECT_FAMILIES.has(item.id))) {
-      for (const template of [0, 1]) {
+      for (let template = 0; template < TEMPLATES[skill.id].length; template++) {
         const question = generated(skill.id, template, 'direct-family');
         const expected = derivative(question.source[0], question.domain.variable);
         compareAtPoints(question, expected, question.answers[0]);

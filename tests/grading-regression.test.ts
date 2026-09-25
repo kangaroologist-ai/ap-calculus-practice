@@ -3,6 +3,7 @@ import { SKILLS } from '../src/catalog';
 import { grade } from '../src/grading';
 import { latex } from '../src/math';
 import { generateQuestion } from '../src/questions';
+import { TEMPLATES } from '../src/templates';
 import type { Question } from '../src/types';
 
 function canonical(question: Question) {
@@ -15,6 +16,7 @@ function polynomialQuestion(): Question {
     seed: 'grading-regression:removable-linear-hole',
     generatorVersion: '1.1.0',
     template: 0,
+    templateKey: 'power.xn',
     family: 'power',
     level: 1,
     primarySkill: 'power',
@@ -97,7 +99,7 @@ describe('grading regressions for generated calculus questions', () => {
   });
 
   it(
-    'grades 20 independent seeds for both templates of every catalog skill',
+    'grades 20 independent seeds for every template of every catalog skill',
     () => {
       const failures: Array<{
         skill: string;
@@ -109,9 +111,11 @@ describe('grading regressions for generated calculus questions', () => {
         verdict: ReturnType<typeof grade>;
       }> = [];
       let checked = 0;
+      let expectedChecked = 0;
 
       for (const skill of SKILLS) {
-        for (const template of [0, 1]) {
+        expectedChecked += TEMPLATES[skill.id].length * 20;
+        for (let template = 0; template < TEMPLATES[skill.id].length; template++) {
           for (let seedIndex = 0; seedIndex < 20; seedIndex++) {
             const seed = `canonical-matrix:${skill.id}:${template}:${seedIndex}`;
             const question = generateQuestion(skill.id, seed, template);
@@ -133,7 +137,7 @@ describe('grading regressions for generated calculus questions', () => {
         }
       }
 
-      expect(checked).toBe(26 * 2 * 20);
+      expect(checked).toBe(expectedChecked);
       expect(failures, JSON.stringify(failures, null, 2)).toEqual([]);
     },
     120_000,

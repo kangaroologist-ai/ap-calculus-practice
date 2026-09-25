@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { SKILLS } from '../src/catalog';
 import { generateQuestion, ruleFormula } from '../src/questions';
+import { TEMPLATES } from '../src/templates';
 import { ddx, dydx } from '../src/notation';
 
 // An italic \frac{d...}{d...} is the ISO 80000-2 violation this step removes:
@@ -31,7 +32,7 @@ describe('notation helpers render an upright differential d', () => {
 describe('generated formulas use an upright differential d', () => {
   it('every skill and template produces no italic differential d', () => {
     for (const s of SKILLS)
-      for (const t of [0, 1]) {
+      for (let t = 0; t < TEMPLATES[s.id].length; t++) {
         const q = generateQuestion(s.id, `notation:${s.id}:${t}`, t);
         for (const tex of [
           q.prompt,
@@ -44,7 +45,7 @@ describe('generated formulas use an upright differential d', () => {
   });
 
   it('keeps italic differential d out of the source tree', () => {
-    for (const file of ['src/main.ts', 'src/questions.ts', 'scripts/skill-examples.ts'])
+    for (const file of ['src/main.ts', 'src/questions.ts', 'src/templates.ts', 'scripts/skill-examples.ts'])
       expect(readFileSync(file, 'utf8')).not.toMatch(/\\\\frac\{d/);
   });
 });

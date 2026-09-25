@@ -5,6 +5,7 @@ import { SKILLS } from "../src/catalog";
 import {
   generateQuestion,
 } from "../src/questions";
+import { TEMPLATES } from "../src/templates";
 import {
   add as A,
   div as Q,
@@ -129,7 +130,7 @@ function answerExpressions(q: Question): Expr[] {
     }
     case "higher": {
       let result = e;
-      const order = q.template ? 3 : 2;
+      const order = q.meta?.derivativeOrder ?? (q.template ? 3 : 2);
       for (let i = 0; i < order; i++) result = d(result, "x");
       return [result];
     }
@@ -137,7 +138,8 @@ function answerExpressions(q: Question): Expr[] {
       const u = q.source[0];
       const w = q.source[1];
       const slope = Q(d(w, "t"), d(u, "t"));
-      return [q.template ? Q(d(slope, "t"), d(u, "t")) : slope];
+      const order = q.meta?.derivativeOrder ?? (q.template ? 2 : 1);
+      return [order === 2 ? Q(d(slope, "t"), d(u, "t")) : slope];
     }
     case "vector":
       return q.source.map((part) => d(part, "t"));
@@ -185,7 +187,7 @@ function conditionText(q: Question): string {
     case "higher":
       return "Work over the real domain of the displayed function and at points where the requested derivative exists.";
     case "root":
-      return q.template === 0
+      return !(q.meta?.oddRoot ?? q.template === 1)
         ? "For the square-root template, use x > 0 for the derivative (the function itself is real for x ≥ 0)."
         : "For the cube-root template, the real function is defined for every x, but its derivative is undefined at x = 0. Thus x ≠ 0."
     case "exp":
@@ -230,9 +232,9 @@ function questionIntro(q: Question): string {
     case "inverse":
       return "Use the inverse-function derivative theorem to find the requested value.";
     case "higher":
-      return `For the function shown below, find ${q.template ? "the third derivative" : "the second derivative"}.`;
+      return `For the function shown below, find ${(q.meta?.derivativeOrder ?? (q.template ? 3 : 2)) === 3 ? "the third derivative" : "the second derivative"}.`;
     case "parametric":
-      return q.template
+      return (q.meta?.derivativeOrder ?? (q.template ? 2 : 1)) === 2
         ? "For the parametric equations below, find d²y/dx² in terms of t."
         : "For the parametric equations below, find dy/dx in terms of t.";
     case "vector":
@@ -428,7 +430,7 @@ const items: { skill: Skill; questions: Question[] }[] = [];
 let verifiedCount = 0;
 for (const skill of SKILLS) {
   const questions: Question[] = [];
-  for (const template of [0, 1]) {
+  for (let template = 0; template < TEMPLATES[skill.id].length; template++) {
     const seed = `${SEED_PREFIX}:${skill.id}:template-${template}`;
     const q = generateQuestion(skill.id, seed, template);
     const errors = verifyQuestion(skill, q, template);
@@ -439,8 +441,9 @@ for (const skill of SKILLS) {
   items.push({ skill, questions });
 }
 
-if (items.length !== 26 || verifiedCount !== 52)
-  throw new Error(`Expected 26 skills and 52 questions, got ${items.length} and ${verifiedCount}`);
+const expectedTemplates = SKILLS.reduce((sum, skill) => sum + TEMPLATES[skill.id].length, 0);
+if (items.length !== 26 || verifiedCount !== expectedTemplates)
+  throw new Error(`Expected 26 skills and ${expectedTemplates} questions, got ${items.length} and ${verifiedCount}`);
 
 writeFileSync(resolve(OUT_DIR, "skill-examples.md"), renderMarkdown(items));
 writeFileSync(resolve(OUT_DIR, "skill-examples.html"), renderHtml(items, "docs"));
@@ -449,5 +452,5 @@ writeFileSync(
   renderHtml(items, "public"),
 );
 console.log(
-  `Generated docs/skill-examples.md, docs/skill-examples.html, and public/skill-examples.html: ${verifiedCount}/52 verified.`,
+  `Generated docs/skill-examples.md, docs/skill-examples.html, and public/skill-examples.html: ${verifiedCount}/${expectedTemplates} verified.`,
 );
