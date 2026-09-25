@@ -1,10 +1,10 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { SKILLS } from '../src/catalog';
-import { grade } from '../src/grading';
-import { latex } from '../src/math';
+import { grade, sampleValues } from '../src/grading';
+import { evaluator, fn as F, latex, mul as M } from '../src/math';
 import { generateQuestion } from '../src/questions';
-import { TEMPLATES } from '../src/templates';
+import { SKILL_FN, TEMPLATES } from '../src/templates';
 import type { Expr, Question } from '../src/types';
 
 // Reads off a p*x^2 or q*y^2 term's coefficient from an
@@ -187,8 +187,13 @@ describe('grading regressions for generated calculus questions', () => {
         expectedChecked += TEMPLATES[skill.id].length * 20;
         for (let template = 0; template < TEMPLATES[skill.id].length; template++) {
           for (let seedIndex = 0; seedIndex < 20; seedIndex++) {
-            const seed = `canonical-matrix:${skill.id}:${template}:${seedIndex}`;
-            const question = generateQuestion(skill.id, seed, template);
+            const templateEntry = TEMPLATES[skill.id][template];
+            const seed = `canonical-matrix:${templateEntry.key}:${seedIndex}`;
+            const question = generateQuestion(skill.id, seed, {
+              key: templateEntry.key,
+              role: templateEntry.role,
+              ok: () => true,
+            });
             const answer = canonical(question);
             const verdict = grade(question, answer);
             checked += 1;
@@ -212,4 +217,70 @@ describe('grading regressions for generated calculus questions', () => {
     },
     120_000,
   );
+
+  it('restricts pool draws to skills allowed by the caller', () => {
+    for (const skill of SKILLS) {
+      for (const template of TEMPLATES[skill.id]) {
+        const pools = Object.values(template.pools ?? {});
+        if (!pools.length) continue;
+        const allowed = new Set([
+          ...(template.requires ?? []),
+          ...pools.map((pool) => pool[0]),
+        ]);
+        for (let seedIndex = 0; seedIndex < 20; seedIndex++) {
+          const question = generateQuestion(skill.id, `restricted-pool:${template.key}:${seedIndex}`, {
+            key: template.key,
+            role: template.role,
+            ok: (id) => allowed.has(id),
+          });
+          expect(question.templateKey).toBe(template.key);
+          expect(question.role).toBe(template.role);
+        }
+      }
+    }
+
+    const original = TEMPLATES.product;
+    try {
+      TEMPLATES.product = [
+        {
+          key: 'product.mix.pool_restriction_test',
+          role: 'mix',
+          pools: { h: ['sin', 'cos', 'exp'] },
+          build: (context) => ({
+            e: M('x', F(SKILL_FN[context.pool('h')], 'x')),
+            intervals: [
+              [0.2, 0.6],
+              [0.7, 0.9],
+            ],
+          }),
+        },
+      ];
+      for (const allowedSkill of ['sin', 'cos', 'exp']) {
+        const question = generateQuestion('product', `restricted-only:${allowedSkill}`, {
+          key: 'product.mix.pool_restriction_test',
+          role: 'mix',
+          ok: (id) => id === allowedSkill,
+        });
+        expect(question.source[0]).toEqual(['Multiply', 'x', [SKILL_FN[allowedSkill], 'x']]);
+      }
+    } finally {
+      TEMPLATES.product = original;
+    }
+  });
+
+  it('samples implicit graph branches with y as the free variable on the curve', () => {
+    const { calc } = evaluator();
+    for (const key of ['implicit.mix.sine_curve', 'implicit.mix.exponential_curve']) {
+      const question = generateQuestion('implicit', `free-y:${key}`, {
+        key,
+        role: 'mix',
+        ok: () => true,
+      });
+      expect(question.domain.curve).toMatchObject({ type: 'graph', free: 'y' });
+      for (let index = 0; index < 8; index++) {
+        const point = sampleValues(question, index);
+        expect(Math.abs(calc(question.source[0], point).toNumber())).toBeLessThan(1e-10);
+      }
+    }
+  });
 });

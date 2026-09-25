@@ -42,12 +42,16 @@ describe('generated questions vary across seeds (SPEC-G1)', () => {
   it.each(
     SKILLS.flatMap((skill) =>
       TEMPLATES[skill.id].map(
-        (template, i) => [skill.id, i, template.key] as const,
+        (template, i) => [skill.id, i, template.key, template.role] as const,
       ),
     ),
-  )('%s template %i (%s) varies in source and answer', (id, i) => {
+  )('%s template %i (%s) varies in source and answer', (id, i, key, role) => {
     const questions = Array.from({ length: 200 }, (_, k) =>
-      generateQuestion(id, `variety:${id}:${i}:${k}`, i),
+      generateQuestion(id, `variety:${id}:${i}:${k}`, {
+        key,
+        role,
+        ok: () => true,
+      }),
     );
     const fingerprints = new Set(
       questions.map((q) => questionFingerprint(q.signature)),

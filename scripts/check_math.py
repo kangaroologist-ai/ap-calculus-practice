@@ -5,7 +5,7 @@ The TypeScript generator is deliberately not used as the oracle here.  This
 script converts the stored MathJSON-like expressions to SymPy expressions and
 checks each supported family with the appropriate calculus rule.  ``--limit``
 means that many questions to check per family; the default checks the complete
-two-template, 100-seed corpus.
+registered-template, 100-seed corpus.
 """
 
 from __future__ import annotations
@@ -263,6 +263,8 @@ def curve_points(q: dict[str, Any]) -> list[dict[str, float]]:
                 points.extend([{"x": x_value, "y": y_value}, {"x": x_value, "y": -y_value}])
     elif curve["type"] == "graph":
         free = curve["free"]
+        if free not in {"x", "y"}:
+            raise UnsupportedExpression(f"unsupported graph free variable {free!r}")
         other = "y" if free == "x" else "x"
         free_symbol = sp.Symbol(free, real=True)
         for lo, hi in q["domain"]["intervals"]:
@@ -354,34 +356,16 @@ def check_implicit(q: dict[str, Any], symbols: dict[str, sp.Symbol]) -> None:
     constraint = to_sympy(q["source"][0], symbols)
     actual = to_sympy(q["answers"][0], symbols)
     expected = -sp.diff(constraint, x) / sp.diff(constraint, y)
-    # First check the ordinary formula, then check actual curve points.  The
-    # second check keeps this oracle honest for answers that are only equivalent
-    # after using F(x,y)=0.
-    if not equivalent(expected, actual):
-        checked = 0
-        for point in curve_points(q):
-            substitutions = {x: point["x"], y: point["y"]}
-            try:
-                if not close_numeric(constraint, sp.Integer(0), substitutions):
-                    raise AssertionError(f"curve sample is off constraint: {point}")
-                if not close_numeric(expected, actual, substitutions):
-                    raise AssertionError(f"implicit mismatch on curve at {point}")
-            except ValueError:
-                continue
-            checked += 1
-        if checked < 3:
-            raise AssertionError(f"implicit answer {actual} is not equivalent to {expected}")
-    else:
-        checked = 0
-        for point in curve_points(q):
-            substitutions = {x: point["x"], y: point["y"]}
-            try:
-                if close_numeric(expected, actual, substitutions):
-                    checked += 1
-            except ValueError:
-                continue
-        if checked < 3:
-            raise AssertionError("implicit formula did not produce enough finite curve samples")
+    checked = 0
+    for point in curve_points(q):
+        substitutions = {x: point["x"], y: point["y"]}
+        if not close_numeric(constraint, sp.Integer(0), substitutions):
+            raise AssertionError(f"curve sample is off constraint: {point}")
+        if not close_numeric(expected, actual, substitutions):
+            raise AssertionError(f"implicit mismatch on curve at {point}: expected {expected}, got {actual}")
+        checked += 1
+    if checked < 3:
+        raise AssertionError("implicit formula did not produce enough finite curve samples")
 
 
 def check_inverse(q: dict[str, Any], symbols: dict[str, sp.Symbol]) -> None:
@@ -460,10 +444,18 @@ def check_domain_metadata(q: dict[str, Any]) -> None:
 
 def check_question(q: dict[str, Any]) -> None:
     family = q["family"]
+    role = q.get("role")
+    if role is not None and role not in {"basic", "mix"}:
+        raise AssertionError(f"unsupported template role {role!r}")
     if family not in SUPPORTED_FAMILIES:
         # This is deliberately non-blocking: a future catalog may add a family
         # before this independent oracle learns its rules.
         return
+    if family in {"higher", "parametric"}:
+        order = derivative_order(q, {0: 2, 1: 3} if family == "higher" else {0: 1, 1: 2})
+        allowed = {2, 3} if family == "higher" else {1, 2}
+        if order not in allowed:
+            raise AssertionError(f"invalid {family} derivative order {order}")
     identity = json.dumps(
         {
             "family": family,

@@ -50,9 +50,17 @@ function generateCorpus(): MathCorpus {
     for (let templateIndex = 0; templateIndex < templateCount; templateIndex += 1) {
       for (let seedIndex = 0; seedIndex < SEEDS_PER_TEMPLATE; seedIndex += 1) {
         const seed = makeSeed(skill.id, templateIndex, seedIndex);
-        const question = generateQuestion(skill.id, seed, templateIndex);
+        const template = TEMPLATES[skill.id][templateIndex];
+        const question = generateQuestion(skill.id, seed, {
+          key: template.key,
+          role: template.role,
+          ok: () => true,
+        });
         if (question.template !== templateIndex) {
           throw new Error(`${skill.id} generated template ${question.template}, expected ${templateIndex}`);
+        }
+        if (question.templateKey !== template.key || question.role !== template.role) {
+          throw new Error(`${skill.id} generated inconsistent template metadata for ${template.key}`);
         }
         if (question.seed !== seed) {
           throw new Error(`${skill.id} changed the requested seed ${seed}`);

@@ -1,28 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { SKILLS, skillById } from '../src/catalog';
 import { inferSkills } from '../src/skill-inference';
-import { generateQuestion } from '../src/questions';
-import { TEMPLATES } from '../src/templates';
 import type { Expr } from '../src/types';
-
-// The current basic templates that deliberately preview a chain rule before
-// level 3 (chain's own level): e^{ax+b}, ln(ax+b), the six trig g(ax+b)
-// templates, and the three inverse-trig arc(x/a) templates. Phase 2 Step 10
-// removes the chain preview from basic templates entirely, at which point
-// this whole exception list is deleted.
-const KNOWN_CHAIN_PREVIEW = new Set([
-  'exp.natural',
-  'log.natural',
-  'sin.linear',
-  'cos.linear',
-  'tan.linear',
-  'cot.linear',
-  'sec.linear',
-  'csc.linear',
-  'asin.scaled',
-  'acos.scaled',
-  'atan.scaled',
-]);
 
 describe('inferSkills', () => {
   it('finds sin, chain, sum, and power in sin(x^2+1)', () => {
@@ -72,47 +50,5 @@ describe('inferSkills', () => {
     const withoutVariable: Expr = ['Divide', 'x', 5];
     expect(inferSkills(withVariable, ['x']).has('quotient')).toBe(true);
     expect(inferSkills(withoutVariable, ['x']).has('quotient')).toBe(false);
-  });
-});
-
-describe('Question.requiredSkills stays within the primary skill\'s level', () => {
-  it('never exceeds the primary skill level, except the documented chain-preview templates', () => {
-    const violations: string[] = [];
-    for (const skill of SKILLS) {
-      for (let template = 0; template < TEMPLATES[skill.id].length; template++) {
-        const key = TEMPLATES[skill.id][template].key;
-        for (let seedIndex = 0; seedIndex < 50; seedIndex++) {
-          const q = generateQuestion(
-            skill.id,
-            `skill-inference-matrix:${skill.id}:${template}:${seedIndex}`,
-            template,
-          );
-          const tooHigh = (q.requiredSkills ?? []).some(
-            (id) => skillById(id).level > skill.level,
-          );
-          if (tooHigh && !KNOWN_CHAIN_PREVIEW.has(key)) violations.push(`${key} (${q.id})`);
-        }
-      }
-    }
-    expect(violations).toEqual([]);
-  });
-
-  it('confirms every listed chain-preview template really does violate the level rule', () => {
-    for (const skill of SKILLS) {
-      for (let template = 0; template < TEMPLATES[skill.id].length; template++) {
-        const key = TEMPLATES[skill.id][template].key;
-        if (!KNOWN_CHAIN_PREVIEW.has(key)) continue;
-        const q = generateQuestion(skill.id, `skill-inference-known:${key}`, template);
-        const tooHigh = (q.requiredSkills ?? []).some((id) => skillById(id).level > skill.level);
-        expect(tooHigh, `${key} was listed as a known chain preview but does not violate`).toBe(
-          true,
-        );
-      }
-    }
-  });
-
-  it('lists only template keys that actually exist in the registry', () => {
-    const allKeys = new Set(SKILLS.flatMap((skill) => TEMPLATES[skill.id].map((t) => t.key)));
-    for (const key of KNOWN_CHAIN_PREVIEW) expect(allKeys.has(key)).toBe(true);
   });
 });

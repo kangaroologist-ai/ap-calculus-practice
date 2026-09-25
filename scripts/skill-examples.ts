@@ -162,7 +162,7 @@ function answerExpressions(q: Question): Expr[] {
       return [Q(d(y, "theta"), d(x, "theta"))];
     }
     default:
-      return [d(desugarSqrt(e), q.domain.variable)];
+      return [d(q.templateKey === "root.basic.square_root" ? desugarSqrt(e) : e, q.domain.variable)];
   }
 }
 
@@ -223,7 +223,7 @@ function conditionText(q: Question): string {
     case "quotient":
       return "The denominator of the displayed quotient must be nonzero; the derivative is valid wherever both numerator and denominator are differentiable."
     case "implicit":
-      return "Stay on the displayed curve and use the generator condition y ≠ 0, so the implicit derivative can be isolated."
+      return q.domainText;
     case "inverse":
       return "Use the corresponding input b shown in f(b)=a. The inverse-function theorem requires f′(b) ≠ 0 and a local inverse at that point."
     case "parametric":
@@ -282,7 +282,7 @@ function metadataLines(q: Question): string[] {
   return [
     `- Generator ID: \`${q.id}\``,
     `- Seed: \`${q.seed}\``,
-    `- Template: ${q.template} (the generator's ${q.template === 0 ? "first" : "second"} structure)`,
+    `- Template: ${q.template} (${q.role})`,
     `- Template key: \`${q.templateKey}\``,
     `- Generator version: \`${q.generatorVersion}\``,
     `- Differentiation variable: \`${q.domain.variable}\``,
@@ -293,23 +293,24 @@ function metadataLines(q: Question): string[] {
 }
 
 function renderMarkdown(items: { skill: Skill; questions: Question[] }[]): string {
+  const totalTemplates = items.reduce((sum, item) => sum + item.questions.length, 0);
   const lines: string[] = [
     "# Derivative Studio: Skill Examples",
     "",
-    "Two real generated examples for every differentiation skill in `src/catalog.ts`.",
+    "Real generated examples for every basic and mixed template in `src/catalog.ts`.",
     "The student-facing prompts are in English; each skill has a Chinese type note for teacher review.",
     "",
-    `Generated from \`generateQuestion\` version \`${GENERATOR_VERSION}\` on ${SEED_PREFIX.slice(-10)}; ${items.length} skills × 2 templates = ${items.length * 2} questions.`,
+    `Generated from \`generateQuestion\` version \`${GENERATOR_VERSION}\`; ${items.length} skills, ${totalTemplates} total basic/mix templates and ${totalTemplates} questions.`,
     "",
     "> The answers preserve the production generator's expression tree, so an unsimplified form may appear. Equivalent expressions are accepted by the app's grader.",
     "",
     "## Coverage and verification",
     "",
-    "Every question below was generated with a fixed seed and an explicit template override (`0` and `1`). The verification pass checked the catalog skill ID, level, template, generator version, source/answer presence, and the answer tree recomputed from the production derivative rules. Inverse-function answers were additionally checked numerically as the reciprocal of the original derivative at the matching input.",
+    "Every question below was generated with a fixed seed and an explicit stable template key. The verification pass checked the catalog skill ID, role, level, template key, generator version, source/answer presence, and the answer tree recomputed from the production derivative rules. Inverse-function answers were additionally checked numerically as the reciprocal of the original derivative at the matching input.",
     "",
-    "| Skill ID | Level | Templates | Verification |",
-    "| --- | ---: | --- | --- |",
-    ...items.map(({ skill }) => `| \`${skill.id}\` | ${skill.level} | 0 and 1 | verified |`),
+    "| Skill ID | Level | Basic | Mixed | Verification |",
+    "| --- | ---: | ---: | ---: | --- |",
+    ...items.map(({ skill, questions }) => `| \`${skill.id}\` | ${skill.level} | ${questions.filter((q) => q.role === "basic").length} | ${questions.filter((q) => q.role === "mix").length} | verified |`),
     "",
     "## Examples",
     "",
@@ -324,31 +325,35 @@ function renderMarkdown(items: { skill: Skill; questions: Question[] }[]): strin
     lines.push("");
     lines.push(`**Rule / definition:** ${skill.rule}`);
     lines.push("");
-    for (const q of questions) {
-      lines.push(`#### ${number}. Template ${q.template} (\`${q.templateKey}\`)`);
+    for (const role of ["basic", "mix"] as const) {
+      lines.push(role === "basic" ? "#### Basic" : "#### Mixed");
       lines.push("");
-      lines.push(`**Student question (English).** ${questionIntro(q)}`);
-      lines.push("");
-      lines.push(mdMath(q.prompt));
-      lines.push("");
-      lines.push(`**Definition / validity conditions.** ${conditionText(q)}`);
-      lines.push("");
-      lines.push("<details>");
-      lines.push("<summary>Answer and generator verification</summary>");
-      lines.push("");
-      lines.push(`**Answer.**`);
-      lines.push("");
-      lines.push(mdMath(answerLatex(q)));
-      lines.push("");
-      lines.push("**Production metadata.**");
-      lines.push("");
-      lines.push(...metadataLines(q));
-      lines.push("");
-      lines.push("**Verified.** The answer was recomputed from the source expression using the production differentiation rules; this item passed the structural check.");
-      lines.push("");
-      lines.push("</details>");
-      lines.push("");
-      number++;
+      for (const q of questions.filter((item) => item.role === role)) {
+        lines.push(`##### ${number}. \`${q.templateKey}\``);
+        lines.push("");
+        lines.push(`**Student question (English).** ${questionIntro(q)}`);
+        lines.push("");
+        lines.push(mdMath(q.prompt));
+        lines.push("");
+        lines.push(`**Definition / validity conditions.** ${conditionText(q)}`);
+        lines.push("");
+        lines.push("<details>");
+        lines.push("<summary>Answer and generator verification</summary>");
+        lines.push("");
+        lines.push("**Answer.**");
+        lines.push("");
+        lines.push(mdMath(answerLatex(q)));
+        lines.push("");
+        lines.push("**Production metadata.**");
+        lines.push("");
+        lines.push(...metadataLines(q));
+        lines.push("");
+        lines.push("**Verified.** The answer was recomputed from the source expression using the production differentiation rules; this item passed the structural check.");
+        lines.push("");
+        lines.push("</details>");
+        lines.push("");
+        number++;
+      }
     }
   }
   return `${lines.join("\n")}\n`;
@@ -358,23 +363,25 @@ function renderHtml(
   items: { skill: Skill; questions: Question[] }[],
   target: "docs" | "public",
 ): string {
+  const totalTemplates = items.reduce((sum, item) => sum + item.questions.length, 0);
   const skillRows = items
     .map(
-      ({ skill }) =>
-        `<tr><td><code>${escapeHtml(skill.id)}</code></td><td>${skill.level}</td><td>0 and 1</td><td><span class="verified">verified</span></td></tr>`,
+      ({ skill, questions }) =>
+        `<tr><td><code>${escapeHtml(skill.id)}</code></td><td>${skill.level}</td><td>${questions.filter((q) => q.role === "basic").length}</td><td>${questions.filter((q) => q.role === "mix").length}</td><td><span class="verified">verified</span></td></tr>`,
     )
     .join("");
   const sections: string[] = [];
   let number = 1;
   for (const { skill, questions } of items) {
-    const cards = questions
-      .map((q) => {
+    const cards = (["basic", "mix"] as const)
+      .map((role) => {
+        const roleCards = questions.filter((q) => q.role === role).map((q) => {
         const answer = answerLatex(q);
         const metadata = metadataLines(q)
           .map((line) => `<li>${line.replace(/^- /, "")}</li>`)
           .join("");
         const card = `<article class="question" id="q-${number}">
-  <div class="question-heading"><span class="question-number">${number}</span><h3>Template ${q.template} (<code>${escapeHtml(q.templateKey)}</code>)</h3></div>
+  <div class="question-heading"><span class="question-number">${number}</span><h4><code>${escapeHtml(q.templateKey)}</code></h4></div>
   <p class="student-label">Student question (English)</p>
   <p>${escapeHtml(questionIntro(q))}</p>
   <div class="formula" role="img" aria-label="${escapeHtml(q.prompt)}">${mathMarkup(q.prompt)}</div>
@@ -389,6 +396,9 @@ function renderHtml(
 </article>`;
         number++;
         return card;
+      })
+        .join("\n");
+        return `<div class="template-role"><h3>${role === "basic" ? "Basic" : "Mixed"}</h3>${roleCards}</div>`;
       })
       .join("\n");
     sections.push(`<section id="skill-${escapeHtml(skill.id)}" class="skill-section">
@@ -410,7 +420,7 @@ function renderHtml(
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="Two production-generated derivative practice examples for each of 26 AP Calculus skills.">
+<meta name="description" content="Production-generated basic and mixed derivative practice examples for each AP Calculus skill.">
 <title>Derivative Studio — Skill Examples</title>
 <style>
 :root{color-scheme:light;--ink:#18302d;--muted:#5b706c;--line:#d7e3df;--paper:#fff;--wash:#f2f7f5;--teal:#0f766e;--red:#b42318;--blue:#1d4ed8;--amber:#9a6700;--shadow:0 14px 34px rgba(24,48,45,.08)}
@@ -423,13 +433,13 @@ ${staticCss}
 <main>
 <header>
   <h1>Derivative Studio: Skill Examples</h1>
-  <p class="lede">Two real generated examples for every differentiation skill in <code>src/catalog.ts</code>. Student-facing prompts are in English; each skill includes a Chinese type note for teacher review.</p>
-  <p class="meta">Generated from <code>generateQuestion</code> version <code>${GENERATOR_VERSION}</code> with fixed seeds; 26 skills × 2 templates = 52 questions. MathLive SSR pre-rendered the formula markup locally; this page makes no runtime network request.</p>
+  <p class="lede">Real generated examples for every basic and mixed template in <code>src/catalog.ts</code>. Student-facing prompts are in English; each skill includes a Chinese type note for teacher review.</p>
+  <p class="meta">Generated from <code>generateQuestion</code> version <code>${GENERATOR_VERSION}</code> with fixed seeds; ${items.length} skills, ${totalTemplates} total basic/mix templates and ${totalTemplates} questions. MathLive SSR pre-rendered the formula markup locally; this page makes no runtime network request.</p>
 </header>
 <section class="panel" aria-labelledby="coverage-title">
   <h2 id="coverage-title">Coverage and verification</h2>
-  <p>Every question was generated with an explicit template override (<code>0</code> and <code>1</code>). The verification pass checked the catalog skill ID, level, template, generator version, source/answer presence, and the answer tree recomputed from the production differentiation rules. Inverse-function answers were additionally checked numerically as the reciprocal of the original derivative at the matching input.</p>
-  <div class="coverage-wrap"><table class="coverage"><thead><tr><th>Skill ID</th><th>Level</th><th>Templates</th><th>Verification</th></tr></thead><tbody>${skillRows}</tbody></table></div>
+  <p>Every question was generated with an explicit stable template key. The verification pass checked the catalog skill ID, role, level, template key, generator version, source/answer presence, and the answer tree recomputed from the production differentiation rules. Inverse-function answers were additionally checked numerically as the reciprocal of the original derivative at the matching input.</p>
+  <div class="coverage-wrap"><table class="coverage"><thead><tr><th>Skill ID</th><th>Level</th><th>Basic</th><th>Mixed</th><th>Verification</th></tr></thead><tbody>${skillRows}</tbody></table></div>
   <p class="note">Answers preserve the production generator's expression tree, so an unsimplified form may appear. Equivalent expressions are accepted by the app's grader.</p>
 </section>
 ${sections.join("\n")}
@@ -444,8 +454,13 @@ let verifiedCount = 0;
 for (const skill of SKILLS) {
   const questions: Question[] = [];
   for (let template = 0; template < TEMPLATES[skill.id].length; template++) {
-    const seed = `${SEED_PREFIX}:${skill.id}:template-${template}`;
-    const q = generateQuestion(skill.id, seed, template);
+    const templateEntry = TEMPLATES[skill.id][template];
+    const seed = `${SEED_PREFIX}:${skill.id}:${templateEntry.key}`;
+    const q = generateQuestion(skill.id, seed, {
+      key: templateEntry.key,
+      role: templateEntry.role,
+      ok: () => true,
+    });
     const errors = verifyQuestion(skill, q, template);
     if (errors.length) throw new Error(`${skill.id} template ${template}: ${errors.join("; ")}`);
     questions.push(q);

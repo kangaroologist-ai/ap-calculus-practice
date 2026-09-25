@@ -1,5 +1,5 @@
 import type { Config, Skill } from "./types";
-export const CURRICULUM_VERSION = "ap-derivatives-1";
+export const CURRICULUM_VERSION = "ap-derivatives-2";
 const s = (
   id: string,
   label: string,
@@ -77,28 +77,28 @@ export const SKILLS: Skill[] = [
     "Product rule",
     3,
     "Differentiate the first factor times the second, plus the first times the derivative of the second.",
-    ["sum", "sin", "exp"],
+    ["sum", "sin", "cos", "exp", "tan"],
   ),
   s(
     "quotient",
     "Quotient rule",
     3,
     "Use (u′v − uv′)/v². Keep the order in the numerator.",
-    ["sum", "cos"],
+    ["sum", "power"],
   ),
   s(
     "chain",
     "Chain rule",
     3,
     "Differentiate the outer function at the inner function, then multiply by the inner derivative.",
-    ["power", "sin"],
+    ["power", "sin", "cos", "exp"],
   ),
   s(
     "nested",
     "Nested chain rule",
     4,
     "Work from the outside in, multiplying by the derivative of every inner layer.",
-    ["chain", "exp", "sin"],
+    ["chain", "exp", "sin", "cos"],
   ),
   s(
     "mixed",
@@ -140,7 +140,7 @@ export const SKILLS: Skill[] = [
     "Vector derivatives",
     6,
     "Differentiate each component with respect to the parameter.",
-    ["exp", "sin", "power"],
+    ["exp", "sin", "cos", "tan", "power"],
   ),
   s(
     "polar",

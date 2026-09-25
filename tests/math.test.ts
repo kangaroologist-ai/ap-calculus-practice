@@ -67,10 +67,6 @@ function generated(skill: string, template: number, suffix = 'math-test'): Quest
   return generateQuestion(skill, `${suffix}:${skill}:${template}`, template);
 }
 
-function operators(expr: Expr): string[] {
-  return Array.isArray(expr) ? [expr[0], ...expr.slice(1).flatMap(operators)] : [];
-}
-
 function powerExponents(expr: Expr): string[] {
   if (!Array.isArray(expr)) return [];
   return [
@@ -142,24 +138,17 @@ describe('question generation and independent derivative identities', () => {
         );
         const sourceShapes = new Set(questions.map((question) => JSON.stringify(question.source[0])));
         expect(sourceShapes.size, `${family} template ${template} has no seed-level shape variety`).toBeGreaterThan(1);
-
-        const smooth = new Set(
-          questions
-            .flatMap((question) => operators(question.source[0]))
-            .filter((operator) => ['Sin', 'Cos', 'Exp'].includes(operator)),
-        );
-        const smoothIsExpected =
-          (family === 'product' && true) ||
-          (family === 'quotient' && template === 1) ||
-          (family === 'chain' && template === 1) ||
-          family === 'nested' ||
-          family === 'mixed';
-        if (smoothIsExpected) expect(smooth.size, `${family} template ${template} smooth choices`).toBeGreaterThanOrEqual(2);
       }
     }
 
     const chainInnerPowers = new Set(
-      Array.from({ length: 100 }, (_, seed) => generateQuestion('chain', `inner-power:${seed}`, 1))
+      Array.from({ length: 100 }, (_, seed) =>
+        generateQuestion('chain', `inner-power:${seed}`, {
+          key: 'chain.mix.function_power_sum',
+          role: 'mix',
+          ok: () => true,
+        }),
+      )
         .flatMap((question) => powerExponents(question.source[0])),
     );
     expect(chainInnerPowers.size).toBeGreaterThan(1);

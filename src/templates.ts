@@ -84,10 +84,13 @@ export function makeCtx(
     },
   };
 }
-// ax+b, shared by every template that shows a chain-preview linear inner
-// argument. Pure: it only reads a/b, so calling it never consumes r().
+// ax+b for templates with a linear inner function.
 const lin = (c: Ctx): Expr => A(M(c.a, "x"), c.b);
-function higherBuilt(e: Expr, order: number): Built {
+function higherBuilt(
+  e: Expr,
+  order: number,
+  intervals: [number, number][],
+): Built {
   let z = e;
   const steps: { text: string; math: string }[] = [];
   for (let i = 1; i <= order; i++) {
@@ -102,10 +105,16 @@ function higherBuilt(e: Expr, order: number): Built {
     answers: [z],
     labels: [order === 3 ? "f'''(x)" : "f''(x)"],
     title: `Find the ${order === 3 ? "third" : "second"} derivative`,
+    intervals,
     steps,
   };
 }
-function parametricBuilt(u: Expr, w: Expr, order: 1 | 2): Built {
+function parametricBuilt(
+  u: Expr,
+  w: Expr,
+  order: 1 | 2,
+  intervals: [number, number][],
+): Built {
   const slope = Q(d(w, "t"), d(u, "t"));
   const answer = order === 2 ? Q(d(slope, "t"), d(u, "t")) : slope;
   return {
@@ -116,6 +125,7 @@ function parametricBuilt(u: Expr, w: Expr, order: 1 | 2): Built {
     prompt: `x(t)=${L(u)},\\quad y(t)=${L(w)}`,
     labels: [order === 2 ? "d²y/dx²" : "dy/dx"],
     title: `Find the ${order === 2 ? "second derivative" : "slope"} in terms of t`,
+    intervals,
     steps: [
       {
         text: "Divide the derivatives with respect to t.",
@@ -133,7 +143,7 @@ function parametricBuilt(u: Expr, w: Expr, order: 1 | 2): Built {
     domainText: "Give your answer in t, where dx/dt ≠ 0.",
   };
 }
-function polarBuilt(e: Expr): Built {
+function polarBuilt(e: Expr, intervals: [number, number][]): Built {
   const u = M(e, F("Cos", "theta")),
     w = M(e, F("Sin", "theta"));
   const answer = Q(d(w, "theta"), d(u, "theta"));
@@ -145,6 +155,7 @@ function polarBuilt(e: Expr): Built {
     prompt: `r(\\theta)=${L(e)}`,
     labels: ["dy/dx"],
     title: "Find the polar slope in terms of θ",
+    intervals,
     steps: [
       {
         text: "Convert to Cartesian coordinates.",
@@ -158,7 +169,7 @@ function polarBuilt(e: Expr): Built {
     domainText: "Give your answer in θ, where dx/dθ ≠ 0.",
   };
 }
-function vectorBuilt(source: Expr[]): Built {
+function vectorBuilt(source: Expr[], intervals: [number, number][]): Built {
   const answers = source.map((e) => d(e, "t"));
   return {
     variable: "t",
@@ -167,6 +178,7 @@ function vectorBuilt(source: Expr[]): Built {
     prompt: `\\mathbf{r}(t)=\\langle ${source.map(L).join(",")}\\rangle`,
     labels: ["First component of r′(t)", "Second component of r′(t)"],
     title: "Differentiate the vector function",
+    intervals,
     steps: answers.map((e, i) => ({
       text: `Differentiate component ${i + 1}.`,
       math: L(e),
@@ -181,6 +193,7 @@ function implicitBuilt(
   curve: Curve,
   sourceExpr: Expr,
   intervals: [number, number][],
+  domainText = "Compare on the given curve, where y ≠ 0.",
 ): Built {
   const fx = d(sourceExpr, "x"),
     fy = d(sourceExpr, "y");
@@ -193,7 +206,7 @@ function implicitBuilt(
     labels: ["dy/dx"],
     title: "Differentiate implicitly",
     intervals,
-    domainText: "Compare on the given curve, where y ≠ 0.",
+    domainText,
     steps: [
       {
         text: "Differentiate both sides, remembering that y depends on x.",
@@ -206,7 +219,11 @@ function implicitBuilt(
     ],
   };
 }
-function inverseBuilt(e: Expr, point: number): Built {
+function inverseBuilt(
+  e: Expr,
+  point: number,
+  intervals: [number, number][],
+): Built {
   const ev = evaluator();
   const val = ev.calc(e, { x: new ev.D(point) }).toNumber();
   const slope = ev.calc(d(e), { x: new ev.D(point) }).toNumber();
@@ -214,6 +231,7 @@ function inverseBuilt(e: Expr, point: number): Built {
   return {
     source: [e],
     answers,
+    intervals,
     title: "Find an inverse-function derivative",
     prompt: `f(x)=${L(e)},\\quad f(${point})=${val}.\\quad (f^{-1})'(${val})=?`,
     labels: [`(f⁻¹)'(${val})`],
@@ -225,98 +243,183 @@ function inverseBuilt(e: Expr, point: number): Built {
     ],
   };
 }
-// Both templates share the same coefficient-then-inner-chain shape; only the
-// trig function name changes, so the two entries are built by a factory
-// instead of copy-pasting six near-identical pairs.
-function trigTemplates(id: string): readonly Template[] {
-  const op = id[0].toUpperCase() + id.slice(1);
-  return [
-    {
-      key: `${id}.basic`, role: "basic",
-      // SPEC-G1: a local 2..13 draw (instead of the shared ctx.a, whose
-      // 2..9 range only ever produced 8 distinct questions).
-      build: (c) => {
-        const av = 2 + Math.floor(c.r() * 12);
-        return { e: M(av, F(op, "x")) };
-      },
-    },
-    { key: `${id}.linear`, role: "basic", build: (c) => ({ e: F(op, lin(c)) }) },
-  ];
-}
-function arcTemplates(id: string, op: string): readonly Template[] {
-  const intervals: [number, number][] = [
-    [-0.8, -0.05],
-    [0.05, 0.8],
-  ];
-  return [
-    {
-      key: `${id}.basic`, role: "basic",
-      build: (c) => {
-        const av = 2 + Math.floor(c.r() * 12);
-        return { e: M(av, F(op, "x")), intervals };
-      },
-    },
-    {
-      key: `${id}.scaled`, role: "basic",
-      build: (c) => {
-        const av = 2 + Math.floor(c.r() * 12);
-        return { e: F(op, Q("x", av)), intervals };
-      },
-    },
-  ];
-}
+export const SKILL_FN: Record<string, string> = {
+  sin: "Sin",
+  cos: "Cos",
+  exp: "Exp",
+  log: "Ln",
+  tan: "Tan",
+  cot: "Cot",
+  sec: "Sec",
+  csc: "Csc",
+  asin: "Arcsin",
+  acos: "Arccos",
+  atan: "Arctan",
+};
+
+const X_INTERVALS: [number, number][] = [
+  [-2.5, -0.2],
+  [0.2, 2.5],
+];
+const POSITIVE_INTERVALS: [number, number][] = [
+  [0.2, 1],
+  [1.2, 3],
+];
+const SAFE_TRIG_INTERVALS: [number, number][] = [
+  [0.2, 0.6],
+  [0.7, 0.9],
+];
+const T_INTERVALS: [number, number][] = [
+  [-2, -0.2],
+  [0.2, 2],
+];
+const POLAR_INTERVALS: [number, number][] = [
+  [-0.1, -0.05],
+  [0.05, 0.1],
+];
+const SMOOTH_POOL = ["sin", "cos", "exp"] as const;
+const implicitRequires = ["chain", "quotient"];
+const polarRequires = ["product", "quotient", "sin", "cos"];
+
+const int = (c: Ctx, min: number, max: number) =>
+  min + Math.floor(c.r() * (max - min + 1));
+const pooled = (c: Ctx, name: string, variable = "x") =>
+  F(SKILL_FN[c.pool(name)], variable);
+const trigIntervals = (id: string): [number, number][] =>
+  ["tan", "sec", "cot", "csc"].includes(id)
+    ? SAFE_TRIG_INTERVALS
+    : X_INTERVALS;
+const linearIntervals = (c: Ctx): [number, number][] => [
+  [(-c.b - 0.6) / c.a, (-c.b - 0.2) / c.a],
+  [(-c.b + 0.2) / c.a, (-c.b + 0.6) / c.a],
+];
+
 export const TEMPLATES: Record<string, readonly Template[]> = {
   constant: [
     {
-      key: "constant.value", role: "basic",
-      // SPEC-G1: one of {a, ln a, sqrt a, e^a} instead of always a bare
-      // number, so the source (and its displayed prompt) actually varies.
+      key: "constant.basic.forms",
+      role: "basic",
       build: (c) => {
-        const av = 2 + Math.floor(c.r() * 12);
+        const a = int(c, 2, 15);
         return {
-          e: c.pick<Expr>([av, F("Ln", av), F("Sqrt", av), F("Exp", av)]),
+          e: c.pick<Expr>([a, F("Ln", a), F("Sqrt", a), F("Exp", a)]),
+          intervals: X_INTERVALS,
         };
       },
     },
-    { key: "constant.frac", role: "basic", build: ({ a, b, n }) => ({ e: A(a, Q(b, n)) }) },
+    {
+      key: "constant.basic.rational",
+      role: "basic",
+      build: (c) => {
+        const a = int(c, 2, 15),
+          b = int(c, 2, 15),
+          n = int(c, 2, 9);
+        return { e: A(a, Q(b, n)), intervals: X_INTERVALS };
+      },
+    },
+    {
+      key: "constant.mix.power_sum",
+      role: "mix",
+      requires: ["sum", "power"],
+      build: (c) => {
+        const a = int(c, 2, 15),
+          b = int(c, 2, 15),
+          n = int(c, 2, 12);
+        return { e: A(a, M(b, P("x", n))), intervals: X_INTERVALS };
+      },
+    },
   ],
   power: [
     {
-      key: "power.xn", role: "basic",
-      // SPEC-G1: a local 2..12 draw; the shared ctx.n (2..5) stays untouched
-      // because chain.power, product.xn, and vector.power_sin still use it.
+      key: "power.basic.positive",
+      role: "basic",
+      build: (c) => ({ e: P("x", int(c, 2, 12)), intervals: X_INTERVALS }),
+    },
+    {
+      key: "power.basic.negative",
+      role: "basic",
+      build: (c) => ({ e: P("x", -int(c, 2, 12)), intervals: X_INTERVALS }),
+    },
+    {
+      key: "power.mix.polynomial_sum",
+      role: "mix",
+      requires: ["sum"],
       build: (c) => {
-        const nn = 2 + Math.floor(c.r() * 11);
-        return { e: P("x", nn) };
+        const n = int(c, 2, 5),
+          m = int(c, 2, 5),
+          a = int(c, 2, 15),
+          b = int(c, 2, 15),
+          k = int(c, 2, 15);
+        return { e: A(M(a, P("x", n)), M(b, P("x", m)), k), intervals: X_INTERVALS };
       },
     },
-    { key: "power.neg", role: "basic", build: ({ a, n }) => ({ e: M(a, P("x", -n)) }) },
+    {
+      key: "power.mix.negative_sum",
+      role: "mix",
+      requires: ["sum"],
+      build: (c) => {
+        const a = int(c, 2, 15),
+          b = int(c, 2, 15),
+          n = int(c, 2, 12);
+        return { e: A(M(a, P("x", -n)), M(b, "x")), intervals: X_INTERVALS };
+      },
+    },
   ],
   sum: [
     {
-      key: "sum.poly2", role: "basic",
-      // SPEC-G6: n now draws locally from 3..6, so xⁿ and bx² can never
-      // collapse into the same power and hide a like-terms case.
+      key: "sum.basic.polynomial_linear",
+      role: "basic",
       build: (c) => {
-        const nn = 3 + Math.floor(c.r() * 4);
-        return { e: A(P("x", nn), M(c.b, P("x", 2)), c.a) };
+        const a = int(c, 2, 15),
+          b = int(c, 2, 15),
+          k = int(c, 2, 15),
+          n = int(c, 2, 8);
+        return { e: A(M(a, P("x", n)), M(b, "x"), k), intervals: X_INTERVALS };
       },
     },
     {
-      key: "sum.scaled", role: "basic",
-      build: ({ a, b, n }) => ({ e: A(M(a, P("x", n)), M(-b, "x"), n) }),
+      key: "sum.mix.square_root",
+      role: "mix",
+      requires: ["root"],
+      build: (c) => {
+        const a = int(c, 2, 15),
+          b = int(c, 2, 15),
+          n = int(c, 2, 8);
+        return { e: A(M(a, F("Sqrt", "x")), M(b, P("x", n))), intervals: POSITIVE_INTERVALS };
+      },
+    },
+    {
+      key: "sum.mix.fractional_root",
+      role: "mix",
+      requires: ["root"],
+      meta: { oddRoot: true },
+      build: (c) => {
+        const a = int(c, 2, 15),
+          b = int(c, 2, 15),
+          n = int(c, 2, 8),
+          [p, q] = c.pick([
+            [1, 3],
+            [2, 3],
+            [4, 3],
+            [1, 5],
+            [2, 5],
+          ] as const);
+        return {
+          e: A(M(a, P("x", -n)), M(b, P("x", Q(p, q)))),
+          intervals: X_INTERVALS,
+        };
+      },
     },
   ],
   root: [
     {
-      key: "root.sqrt", role: "basic",
-      // SPEC-G5: the displayed source is a genuine radical (a real Sqrt
-      // node), and the answer is derived from the rewritten a*x^(1/2), with
-      // an explicit rewrite step ahead of the usual power-rule derivation.
+      key: "root.basic.square_root",
+      role: "basic",
+      meta: { oddRoot: false },
       build: (c) => {
-        const av = 2 + Math.floor(c.r() * 16);
-        const displayed = M(av, F("Sqrt", "x"));
-        const rewritten = M(av, P("x", Q(1, 2)));
+        const a = int(c, 2, 15),
+          displayed = M(a, F("Sqrt", "x")),
+          rewritten = M(a, P("x", Q(1, 2)));
         return {
           e: displayed,
           answers: [d(rewritten)],
@@ -327,28 +430,24 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
               math: `${L(displayed)}=${L(rewritten)}`,
             },
           ],
-          intervals: [
-            [0.1, 1],
-            [1, 5],
-          ],
+          intervals: POSITIVE_INTERVALS,
         };
       },
     },
     {
-      key: "root.frac_power", role: "basic",
+      key: "root.basic.fractional_power",
+      role: "basic",
       meta: { oddRoot: true },
-      // SPEC-G1: p/q now ranges over six rational exponents (not just the
-      // fixed cube root), keeping the Multiply(a, Power(x, Divide(p,q)))
-      // source shape check_math.py's odd-root real-branch check relies on.
-      build: ({ a, pick }) => {
-        const [p, q] = pick([
-          [1, 3],
-          [2, 3],
-          [4, 3],
-          [5, 3],
-          [1, 5],
-          [2, 5],
-        ] as const);
+      build: (c) => {
+        const a = int(c, 2, 15),
+          [p, q] = c.pick([
+            [1, 3],
+            [2, 3],
+            [4, 3],
+            [5, 3],
+            [1, 5],
+            [2, 5],
+          ] as const);
         return {
           e: M(a, P("x", Q(p, q))),
           intervals: [
@@ -358,122 +457,311 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
         };
       },
     },
+    {
+      key: "root.mix.square_root_power",
+      role: "mix",
+      requires: ["sum", "power"],
+      meta: { oddRoot: false },
+      build: (c) => {
+        const a = int(c, 2, 15),
+          b = int(c, 2, 15),
+          n = int(c, 2, 8);
+        return { e: A(M(a, F("Sqrt", "x")), M(b, P("x", n))), intervals: POSITIVE_INTERVALS };
+      },
+    },
   ],
   exp: [
-    { key: "exp.natural", role: "basic", build: (c) => ({ e: F("Exp", lin(c)) }) },
     {
-      key: "exp.base", role: "basic",
-      // SPEC-G1: an independent leading coefficient b*a^x.
-      build: ({ a, b }) => ({ e: M(b, P(a, "x")) }),
+      key: "exp.basic.natural",
+      role: "basic",
+      build: (c) => ({ e: M(int(c, 2, 15), F("Exp", "x")), intervals: X_INTERVALS }),
+    },
+    {
+      key: "exp.basic.base",
+      role: "basic",
+      build: (c) => {
+        const a = int(c, 2, 15),
+          b = int(c, 2, 15);
+        return { e: M(b, P(a, "x")), intervals: X_INTERVALS };
+      },
+    },
+    {
+      key: "exp.mix.polynomial",
+      role: "mix",
+      requires: ["sum", "power"],
+      build: (c) => {
+        const a = int(c, 2, 15),
+          b = int(c, 2, 15),
+          n = int(c, 2, 8);
+        return { e: A(M(a, F("Exp", "x")), M(b, P("x", n))), intervals: X_INTERVALS };
+      },
+    },
+    {
+      key: "exp.mix.square_root",
+      role: "mix",
+      requires: ["sum", "root"],
+      build: (c) => {
+        const a = int(c, 2, 15),
+          b = int(c, 2, 15);
+        return { e: A(F("Exp", "x"), M(a, F("Sqrt", "x"))), intervals: POSITIVE_INTERVALS };
+      },
     },
   ],
   log: [
     {
-      key: "log.natural", role: "basic",
-      build: (c) => ({
-        e: F("Ln", lin(c)),
-        intervals: [
-          [0.1, 1],
-          [1, 5],
-        ],
-      }),
+      key: "log.basic.natural",
+      role: "basic",
+      build: (c) => ({ e: M(int(c, 2, 15), F("Ln", "x")), intervals: POSITIVE_INTERVALS }),
     },
     {
-      key: "log.base", role: "basic",
-      // SPEC-G1: an independent leading coefficient b*ln(x)/ln(a).
-      build: ({ a, b }) => ({
-        e: Q(M(b, F("Ln", "x")), F("Ln", a)),
-        intervals: [
-          [0.1, 1],
-          [1, 5],
-        ],
+      key: "log.basic.scaled",
+      role: "basic",
+      build: (c) => {
+        const a = int(c, 2, 15),
+          b = int(c, 2, 15);
+        return { e: Q(M(a, F("Ln", "x")), F("Ln", b + 1)), intervals: POSITIVE_INTERVALS };
+      },
+    },
+    {
+      key: "log.mix.polynomial",
+      role: "mix",
+      requires: ["sum", "power"],
+      build: (c) => {
+        const a = int(c, 2, 15),
+          b = int(c, 2, 15),
+          n = int(c, 2, 8);
+        return { e: A(M(a, F("Ln", "x")), M(b, P("x", n))), intervals: POSITIVE_INTERVALS };
+      },
+    },
+    {
+      key: "log.mix.exponential",
+      role: "mix",
+      requires: ["sum", "exp"],
+      build: (c) => ({
+        e: A(F("Ln", "x"), N(M(int(c, 2, 15), F("Exp", "x")))),
+        intervals: POSITIVE_INTERVALS,
       }),
     },
   ],
-  sin: trigTemplates("sin"),
-  cos: trigTemplates("cos"),
-  tan: trigTemplates("tan"),
-  cot: trigTemplates("cot"),
-  sec: trigTemplates("sec"),
-  csc: trigTemplates("csc"),
-  asin: arcTemplates("asin", "Arcsin"),
-  acos: arcTemplates("acos", "Arccos"),
-  atan: arcTemplates("atan", "Arctan"),
+  sin: [],
+  cos: [],
+  tan: [],
+  cot: [],
+  sec: [],
+  csc: [],
+  asin: [],
+  acos: [],
+  atan: [],
   product: [
     {
-      key: "product.xn", role: "basic",
-      build: ({ n, smooth }) => ({ e: M(P("x", n), F(smooth(), "x")) }),
+      key: "product.basic.power_function",
+      role: "basic",
+      pools: { h: SMOOTH_POOL },
+      build: (c) => ({ e: M(P("x", int(c, 2, 5)), pooled(c, "h")), intervals: SAFE_TRIG_INTERVALS }),
     },
     {
-      key: "product.quad", role: "basic",
-      build: ({ a, smooth }) => ({
-        e: M(A(P("x", 2), a), F(smooth(), "x")),
+      key: "product.basic.function_pair",
+      role: "basic",
+      pools: { h: SMOOTH_POOL, g: SMOOTH_POOL },
+      build: (c) => ({ e: M(c.a, pooled(c, "h"), pooled(c, "g")), intervals: SAFE_TRIG_INTERVALS }),
+    },
+    {
+      key: "product.mix.quadratic_function",
+      role: "mix",
+      requires: ["sum", "power"],
+      pools: { h: SMOOTH_POOL },
+      build: (c) => ({
+        e: M(A(P("x", 2), int(c, 2, 15)), pooled(c, "h")),
+        intervals: SAFE_TRIG_INTERVALS,
+      }),
+    },
+    {
+      key: "product.mix.tangent_secant",
+      role: "mix",
+      requires: ["power"],
+      pools: { h: ["tan", "sec"] },
+      build: (c) => ({
+        e: M(P("x", int(c, 2, 12)), pooled(c, "h")),
+        intervals: SAFE_TRIG_INTERVALS,
       }),
     },
   ],
   quotient: [
     {
-      key: "quotient.poly", role: "basic",
-      // SPEC-G6: the denominator now draws its own constant c, instead of
-      // reusing the numerator's b (which could hide an unintended relation
-      // between numerator and denominator).
+      key: "quotient.basic.polynomial_linear",
+      role: "basic",
       build: (c) => {
-        const cc = 1 + Math.floor(c.r() * 9);
-        return { e: Q(A(P("x", 2), c.b), A(M(c.a, "x"), cc)) };
+        const a = int(c, 2, 15),
+          b = int(c, 2, 15),
+          k = int(c, 2, 15);
+        return { e: Q(A(P("x", 2), b), A(M(a, "x"), k)), intervals: POSITIVE_INTERVALS };
       },
     },
     {
-      key: "quotient.smooth", role: "basic",
-      build: ({ a, smooth }) => ({ e: Q(F(smooth(), "x"), A(P("x", 2), a)) }),
+      key: "quotient.basic.reciprocal_power",
+      role: "basic",
+      build: (c) => {
+        const a = int(c, 2, 15),
+          b = int(c, 2, 15),
+          n = int(c, 2, 8);
+        return { e: Q(a, A(P("x", n), b)), intervals: POSITIVE_INTERVALS };
+      },
+    },
+    {
+      key: "quotient.mix.function_quadratic",
+      role: "mix",
+      pools: { h: SMOOTH_POOL },
+      build: (c) => ({
+        e: Q(pooled(c, "h"), A(P("x", 2), int(c, 2, 15))),
+        intervals: SAFE_TRIG_INTERVALS,
+      }),
+    },
+    {
+      key: "quotient.mix.product_linear",
+      role: "mix",
+      requires: ["product"],
+      pools: { h: SMOOTH_POOL },
+      build: (c) => ({
+        e: Q(M(P("x", int(c, 2, 8)), pooled(c, "h")), A("x", int(c, 2, 15))),
+        intervals: SAFE_TRIG_INTERVALS,
+      }),
     },
   ],
   chain: [
-    { key: "chain.power", role: "basic", build: (c) => ({ e: P(lin(c), c.n) }) },
     {
-      key: "chain.smooth_inner", role: "basic",
-      build: ({ smooth, innerPower }) => ({ e: F(smooth(), innerPower()) }),
+      key: "chain.basic.power_linear",
+      role: "basic",
+      build: (c) => ({ e: P(lin(c), int(c, 2, 8)), intervals: X_INTERVALS }),
+    },
+    {
+      key: "chain.basic.function_linear",
+      role: "basic",
+      pools: { h: SMOOTH_POOL },
+      build: (c) => ({ e: F(SKILL_FN[c.pool("h")], lin(c)), intervals: X_INTERVALS }),
+    },
+    {
+      key: "chain.mix.function_power_sum",
+      role: "mix",
+      requires: ["power", "sum"],
+      pools: { h: SMOOTH_POOL },
+      build: (c) => {
+        const k = int(c, 2, 3),
+          b = int(c, 1, 9);
+        return { e: F(SKILL_FN[c.pool("h")], A(P("x", k), b)), intervals: POSITIVE_INTERVALS };
+      },
+    },
+    {
+      key: "chain.mix.square_root_quadratic",
+      role: "mix",
+      requires: ["root", "sum", "power"],
+      build: (c) => ({
+        e: F("Sqrt", A(M(int(c, 2, 15), P("x", 2)), int(c, 1, 15))),
+        intervals: X_INTERVALS,
+      }),
     },
   ],
   nested: [
     {
-      key: "nested.sin_linear", role: "basic",
-      build: (c) => ({ e: F(c.smooth(), F("Sin", lin(c))) }),
+      key: "nested.basic.function_quadratic",
+      role: "basic",
+      requires: ["chain"],
+      pools: { h: SMOOTH_POOL },
+      build: (c) => ({
+        e: F(SKILL_FN[c.pool("h")], P(lin(c), 2)),
+        intervals: linearIntervals(c),
+      }),
     },
     {
-      key: "nested.linear_sq", role: "basic",
-      build: (c) => ({ e: F(c.smooth(), P(lin(c), 2)) }),
+      key: "nested.basic.function_pair",
+      role: "basic",
+      requires: ["chain"],
+      pools: { h: SMOOTH_POOL, g: SMOOTH_POOL },
+      build: (c) => ({
+        e: F(SKILL_FN[c.pool("h")], F(SKILL_FN[c.pool("g")], lin(c))),
+        intervals: linearIntervals(c),
+      }),
+    },
+    {
+      key: "nested.mix.function_power_sum",
+      role: "mix",
+      requires: ["chain", "power", "sum"],
+      pools: { h: SMOOTH_POOL, g: SMOOTH_POOL },
+      build: (c) => {
+        const k = int(c, 2, 3),
+          b = -int(c, 1, 2),
+          g = SKILL_FN[c.pool("g")],
+          h = SKILL_FN[c.pool("h")];
+        return {
+          e: F(h, F(g, A(P("x", k), b))),
+          intervals: [
+            [0.2, 0.6],
+            [0.7, 0.9],
+          ],
+        };
+      },
+    },
+    {
+      key: "nested.mix.power_outer",
+      role: "mix",
+      requires: ["power"],
+      pools: { h: SMOOTH_POOL },
+      build: (c) => {
+        const b = int(c, 1, 9),
+          n = int(c, 2, 5);
+        return { e: P(A(F(SKILL_FN[c.pool("h")], lin(c)), b), n), intervals: linearIntervals(c) };
+      },
     },
   ],
   mixed: [
     {
-      key: "mixed.quad_smooth", role: "basic",
-      build: ({ a, b, smooth }) => ({
-        e: M(A(P("x", 2), b), F(smooth(), M(a, "x"))),
+      key: "mixed.basic.product_chain",
+      role: "basic",
+      pools: { h: SMOOTH_POOL },
+      build: (c) => ({
+        e: M(A(P("x", 2), int(c, 2, 15)), F(SKILL_FN[c.pool("h")], M(int(c, 2, 15), "x"))),
+        intervals: X_INTERVALS,
       }),
     },
     {
-      key: "mixed.smooth_over_quad", role: "basic",
-      // SPEC-G6: the denominator now draws its own constant c instead of
-      // reusing the numerator's b.
-      build: (c) => {
-        const cc = 1 + Math.floor(c.r() * 9);
-        return { e: Q(F(c.smooth(), lin(c)), A(P("x", 2), cc)) };
-      },
+      key: "mixed.basic.quotient_chain",
+      role: "basic",
+      pools: { h: SMOOTH_POOL },
+      build: (c) => ({
+        e: Q(F(SKILL_FN[c.pool("h")], lin(c)), A(P("x", 2), int(c, 2, 15))),
+        intervals: POSITIVE_INTERVALS,
+      }),
+    },
+    {
+      key: "mixed.mix.quotient_power",
+      role: "mix",
+      requires: ["product", "quotient", "chain"],
+      pools: { h: SMOOTH_POOL },
+      build: (c) => ({
+        e: Q(M(P("x", int(c, 2, 8)), F(SKILL_FN[c.pool("h")], lin(c))), A("x", int(c, 2, 15))),
+        intervals: POSITIVE_INTERVALS,
+      }),
+    },
+    {
+      key: "mixed.mix.log_product",
+      role: "mix",
+      requires: ["log", "product"],
+      pools: { h: SMOOTH_POOL },
+      build: (c) => ({
+        e: M(F("Ln", A(P("x", 2), int(c, 2, 15))), pooled(c, "h")),
+        intervals: X_INTERVALS,
+      }),
     },
   ],
   implicit: [
     {
-      key: "implicit.ellipse", role: "basic",
-      // Differentiating y^2 always introduces a chain-rule factor of dy/dx,
-      // even though that composition never shows up in the source constraint.
-      requires: ["chain"],
-      // SPEC-G4: a general ellipse p*x^2 + q*y^2 = c (p != q in general, so
-      // the answer is no longer always -x/y) on the generic graph curve.
+      key: "implicit.basic.ellipse",
+      role: "basic",
+      requires: implicitRequires,
       build: (c) => {
-        const p = c.pick([1, 2, 3, 4, 5]),
-          q = c.pick([1, 2, 3, 4, 5]),
-          cc = p * q * c.pick([4, 9, 16]);
-        const y = F("Sqrt", Q(A(cc, N(M(p, P("x", 2)))), q)),
+        const p = int(c, 1, 5),
+          q = int(c, 1, 5),
+          cc = p * q * int(c, 4, 16),
+          y = F("Sqrt", Q(A(cc, N(M(p, P("x", 2)))), q)),
           xm = Math.sqrt(cc / p);
         return implicitBuilt(
           { type: "graph", free: "x", branches: [y, N(y)] },
@@ -486,108 +774,287 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
       },
     },
     {
-      key: "implicit.hyperbola", role: "basic",
-      requires: ["chain"],
-      // SPEC-G4: a general hyperbola q*y^2 - p*x^2 = c on the generic graph
-      // curve (y is always defined and nonzero for every real x).
+      key: "implicit.basic.hyperbola",
+      role: "basic",
+      requires: implicitRequires,
       build: (c) => {
-        const p = c.pick([1, 2, 3, 4, 5]),
-          q = c.pick([1, 2, 3, 4, 5]),
-          cc = p * q * c.pick([4, 9, 16]);
-        const y = F("Sqrt", Q(A(cc, M(p, P("x", 2))), q));
+        const p = int(c, 1, 5),
+          q = int(c, 1, 5),
+          cc = p * q * int(c, 4, 16),
+          y = F("Sqrt", Q(A(cc, M(p, P("x", 2))), q));
         return implicitBuilt(
           { type: "graph", free: "x", branches: [y, N(y)] },
           A(M(q, P("y", 2)), N(M(p, P("x", 2))), -cc),
+          X_INTERVALS,
+        );
+      },
+    },
+    {
+      key: "implicit.mix.sine_curve",
+      role: "mix",
+      requires: [...implicitRequires, "sin"],
+      build: (c) => {
+        const a = int(c, 2, 15),
+          value = a + int(c, 1, 10),
+          x = F("Sqrt", A(value, N(M(a, F("Sin", "y")))));
+        return implicitBuilt(
+          { type: "graph", free: "y", branches: [x, N(x)] },
+          A(P("x", 2), M(a, F("Sin", "y")), -value),
           [
-            [-2, -0.2],
-            [0.2, 2],
+            [-0.8, -0.3],
+            [0.3, 0.8],
           ],
+          "Compare on the given curve, where cos(y) ≠ 0.",
+        );
+      },
+    },
+    {
+      key: "implicit.mix.exponential_curve",
+      role: "mix",
+      requires: [...implicitRequires, "exp"],
+      build: (c) => {
+        const a = int(c, 2, 15),
+          value = int(c, 10, 20) + 5,
+          x = F("Sqrt", Q(A(value, N(F("Exp", "y"))), a));
+        return implicitBuilt(
+          { type: "graph", free: "y", branches: [x, N(x)] },
+          A(F("Exp", "y"), M(a, P("x", 2)), -value),
+          [
+            [-1, -0.2],
+            [0.2, 1],
+          ],
+          "Compare on the given curve; the branch has x ≠ 0.",
         );
       },
     },
   ],
   inverse: [
     {
-      key: "inverse.linear", role: "basic",
-      build: ({ a, b }) => inverseBuilt(A(M(a, "x"), b), b),
+      key: "inverse.basic.linear",
+      role: "basic",
+      build: (c) => {
+        const a = int(c, 2, 15),
+          b = int(c, 1, 9);
+        return inverseBuilt(A(M(a, "x"), b), b, X_INTERVALS);
+      },
     },
     {
-      key: "inverse.cubic", role: "basic",
-      // The source previously depended only on a (b was only the evaluation
-      // point), so its signature only ever took 8 distinct values across any
-      // number of seeds -- below SPEC-G1's 10-fingerprint floor. b already
-      // varies per seed and drops out of the derivative, so folding it into
-      // the source as well costs nothing mathematically.
-      build: ({ a, b }) => inverseBuilt(A(P("x", 3), M(a, "x"), b), b),
+      key: "inverse.basic.cubic",
+      role: "basic",
+      build: (c) => inverseBuilt(A(P("x", 3), M(int(c, 2, 15), "x")), int(c, 1, 9), X_INTERVALS),
+    },
+    {
+      key: "inverse.mix.linear_exponential",
+      role: "mix",
+      requires: ["exp"],
+      build: (c) => inverseBuilt(A(M(int(c, 2, 15), "x"), F("Exp", "x")), 0, X_INTERVALS),
+    },
+    {
+      key: "inverse.mix.cubic_sine",
+      role: "mix",
+      requires: ["sin"],
+      build: (c) => {
+        const a = int(c, 5, 15),
+          b = int(c, 1, a - 1);
+        return inverseBuilt(A(P("x", 3), M(a, "x"), M(b, F("Sin", "x"))), 0, X_INTERVALS);
+      },
     },
   ],
   higher: [
     {
-      key: "higher.poly2", role: "basic",
+      key: "higher.basic.second_polynomial",
+      role: "basic",
       meta: { derivativeOrder: 2 },
-      build: ({ b, n }) => higherBuilt(A(P("x", n + 1), M(b, P("x", 2))), 2),
+      build: (c) => higherBuilt(A(P("x", int(c, 3, 9)), M(int(c, 2, 15), P("x", 2))), 2, X_INTERVALS),
     },
     {
-      key: "higher.trig3", role: "basic",
+      key: "higher.basic.third_power",
+      role: "basic",
       meta: { derivativeOrder: 3 },
-      // SPEC-G1: g ranges over {sin, cos} and the inner argument is scaled
-      // by k in 1..3, instead of always the fixed a*sin(x).
-      build: (c) => {
-        const g = c.pick(["Sin", "Cos"] as const);
-        const k = 1 + Math.floor(c.r() * 3);
-        return higherBuilt(M(c.a, F(g, M(k, "x"))), 3);
-      },
+      build: (c) => higherBuilt(M(int(c, 2, 15), P("x", int(c, 4, 12))), 3, X_INTERVALS),
+    },
+    {
+      key: "higher.mix.third_chain",
+      role: "mix",
+      requires: ["chain"],
+      pools: { h: SMOOTH_POOL },
+      meta: { derivativeOrder: 3 },
+      build: (c) => higherBuilt(M(int(c, 2, 15), F(SKILL_FN[c.pool("h")], M(int(c, 2, 5), "x"))), 3, X_INTERVALS),
+    },
+    {
+      key: "higher.mix.second_product",
+      role: "mix",
+      requires: ["product"],
+      pools: { h: SMOOTH_POOL },
+      meta: { derivativeOrder: 2 },
+      build: (c) => higherBuilt(M(P("x", int(c, 2, 5)), pooled(c, "h")), 2, SAFE_TRIG_INTERVALS),
     },
   ],
   parametric: [
     {
-      key: "parametric.linear", role: "basic",
-      meta: { derivativeOrder: 1 },
-      // The slope (dy/dt)/(dx/dt) is a quotient of derivatives; that division
-      // never appears in the x(t)/y(t) source expressions themselves.
+      key: "parametric.basic.linear_slope",
+      role: "basic",
       requires: ["quotient"],
-      build: ({ a, b }) => parametricBuilt(A(M(a, "t"), b), F("Sin", "t"), 1),
+      meta: { derivativeOrder: 1 },
+      build: (c) => parametricBuilt(A(M(int(c, 2, 15), "t"), int(c, 1, 9)), P("t", int(c, 2, 8)), 1, T_INTERVALS),
     },
     {
-      key: "parametric.poly", role: "basic",
-      meta: { derivativeOrder: 2 },
+      key: "parametric.basic.power_second",
+      role: "basic",
       requires: ["quotient"],
-      // SPEC-G1: x = a*t^2, y = t^k for k in 3..5, instead of the single
-      // fixed pair x=t^2, y=t^3.
-      build: (c) => {
-        const k = 3 + Math.floor(c.r() * 3);
-        return parametricBuilt(M(c.a, P("t", 2)), P("t", k), 2);
-      },
+      meta: { derivativeOrder: 2 },
+      build: (c) => parametricBuilt(M(int(c, 2, 15), P("t", 2)), P("t", int(c, 3, 8)), 2, T_INTERVALS),
+    },
+    {
+      key: "parametric.mix.exponential_product",
+      role: "mix",
+      requires: ["quotient", "exp", "product"],
+      pools: { h: SMOOTH_POOL },
+      meta: { derivativeOrder: 1 },
+      build: (c) => parametricBuilt(F("Exp", "t"), M(c.a, "t", pooled(c, "h", "t")), 1, SAFE_TRIG_INTERVALS),
+    },
+    {
+      key: "parametric.mix.linear_chain",
+      role: "mix",
+      requires: ["quotient", "chain"],
+      pools: { h: SMOOTH_POOL },
+      meta: { derivativeOrder: 1 },
+      build: (c) => parametricBuilt(
+        A(M(int(c, 2, 15), "t"), int(c, 1, 9)),
+        F(SKILL_FN[c.pool("h")], M(int(c, 2, 5), "t")),
+        1,
+        T_INTERVALS,
+      ),
     },
   ],
   vector: [
     {
-      key: "vector.power_sin", role: "basic",
-      build: ({ a, n }) => vectorBuilt([P("t", n), F("Sin", M(a, "t"))]),
+      key: "vector.basic.power_function",
+      role: "basic",
+      pools: { h: SMOOTH_POOL },
+      build: (c) => vectorBuilt([P("t", int(c, 2, 8)), M(int(c, 2, 15), pooled(c, "h", "t"))], T_INTERVALS),
     },
     {
-      key: "vector.exp_cos", role: "basic",
-      // SPEC-G1: an independent leading coefficient b on the cosine component.
-      build: ({ a, b }) =>
-        vectorBuilt([F("Exp", M(a, "t")), M(b, F("Cos", "t"))]),
+      key: "vector.basic.polynomial_exponential",
+      role: "basic",
+      build: (c) => vectorBuilt([
+        A(M(int(c, 2, 15), P("t", int(c, 2, 8))), int(c, 1, 9)),
+        F("Exp", "t"),
+      ], T_INTERVALS),
+    },
+    {
+      key: "vector.mix.product_chain",
+      role: "mix",
+      requires: ["product", "chain"],
+      pools: { h: SMOOTH_POOL },
+      build: (c) => vectorBuilt([
+        M(A(P("t", 2), int(c, 2, 15)), F("Exp", "t")),
+        F(SKILL_FN[c.pool("h")], P("t", 2)),
+      ], T_INTERVALS),
+    },
+    {
+      key: "vector.mix.log_product",
+      role: "mix",
+      requires: ["log", "chain", "product"],
+      pools: { h: SMOOTH_POOL },
+      build: (c) => vectorBuilt([
+        F("Ln", A(P("t", 2), int(c, 2, 15))),
+        M("t", pooled(c, "h", "t")),
+      ], T_INTERVALS),
     },
   ],
   polar: [
     {
-      key: "polar.sin_limacon", role: "basic",
-      // Converting to Cartesian (x=r cos theta, y=r sin theta) always brings
-      // in product, quotient, sin, and cos, none of which need appear in the
-      // bare radius expression r(theta).
-      requires: ["product", "quotient", "sin", "cos"],
-      // SPEC-G1/G4: a limaçon a+b*sin(theta) instead of the bare rose
-      // r=a*sin(theta), whose slope was always tan(2*theta) regardless of a.
-      build: ({ a, b }) => polarBuilt(A(a, M(b, F("Sin", "theta")))),
+      key: "polar.basic.sine_radius",
+      role: "basic",
+      requires: polarRequires,
+      build: (c) => polarBuilt(A(int(c, 2, 10), M(int(c, 11, 20), F("Sin", "theta"))), POLAR_INTERVALS),
     },
     {
-      key: "polar.cos", role: "basic",
-      requires: ["product", "quotient", "sin", "cos"],
-      // SPEC-G1: an independent leading coefficient b on the cosine term.
-      build: ({ a, b }) => polarBuilt(A(a, M(b, F("Cos", "theta")))),
+      key: "polar.basic.cosine_radius",
+      role: "basic",
+      requires: polarRequires,
+      build: (c) => polarBuilt(A(int(c, 2, 15), M(int(c, 2, 15), F("Cos", "theta"))), POLAR_INTERVALS),
+    },
+    {
+      key: "polar.mix.sine_frequency",
+      role: "mix",
+      requires: [...polarRequires, "chain"],
+      build: (c) => polarBuilt(A(int(c, 2, 10), F("Sin", M(int(c, 2, 3), "theta"))), POLAR_INTERVALS),
+    },
+    {
+      key: "polar.mix.cosine_frequency",
+      role: "mix",
+      requires: [...polarRequires, "chain"],
+      build: (c) => polarBuilt(A(int(c, 10, 20), M(int(c, 2, 15), F("Cos", M(int(c, 2, 3), "theta")))), POLAR_INTERVALS),
     },
   ],
 };
+
+for (const id of ["sin", "cos", "tan", "cot", "sec", "csc"] as const) {
+  const op = SKILL_FN[id];
+  TEMPLATES[id] = [
+    {
+      key: `${id}.basic.scaled`,
+      role: "basic",
+      build: (c) => ({ e: M(int(c, 2, 15), F(op, "x")), intervals: trigIntervals(id) }),
+    },
+    {
+      key: `${id}.basic.divided`,
+      role: "basic",
+      build: (c) => ({ e: Q(F(op, "x"), int(c, 2, 15)), intervals: trigIntervals(id) }),
+    },
+    {
+      key: `${id}.mix.power_sum`,
+      role: "mix",
+      requires: ["sum", "power"],
+      build: (c) => ({
+        e: A(M(int(c, 2, 15), F(op, "x")), M(int(c, 2, 15), P("x", int(c, 2, 8)))),
+        intervals: SAFE_TRIG_INTERVALS,
+      }),
+    },
+    {
+      key: `${id}.mix.function_sum`,
+      role: "mix",
+      requires: ["sum"],
+      pools: { h: SMOOTH_POOL.filter((fn) => fn !== id) },
+      build: (c) => ({
+        e: A(M(int(c, 2, 15), F(op, "x")), M(int(c, 2, 15), pooled(c, "h"))),
+        intervals: SAFE_TRIG_INTERVALS,
+      }),
+    },
+  ];
+}
+for (const id of ["asin", "acos", "atan"] as const) {
+  const op = SKILL_FN[id];
+  TEMPLATES[id] = [
+    {
+      key: `${id}.basic.scaled`,
+      role: "basic",
+      build: (c) => ({ e: M(int(c, 2, 15), F(op, "x")), intervals: SAFE_TRIG_INTERVALS }),
+    },
+    {
+      key: `${id}.basic.divided_value`,
+      role: "basic",
+      build: (c) => ({ e: Q(F(op, "x"), int(c, 2, 15)), intervals: SAFE_TRIG_INTERVALS }),
+    },
+    {
+      key: `${id}.mix.power_sum`,
+      role: "mix",
+      requires: ["sum", "power"],
+      build: (c) => ({
+        e: A(M(int(c, 2, 15), F(op, "x")), M(int(c, 2, 15), P("x", int(c, 2, 8)))),
+        intervals: SAFE_TRIG_INTERVALS,
+      }),
+    },
+    {
+      key: `${id}.mix.square_root`,
+      role: "mix",
+      requires: ["sum", "root"],
+      build: (c) => ({
+        e: A(F(op, "x"), M(int(c, 2, 15), F("Sqrt", "x"))),
+        intervals: SAFE_TRIG_INTERVALS,
+      }),
+    },
+  ];
+}

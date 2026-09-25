@@ -10,7 +10,7 @@ import {
   type Template,
 } from "./templates";
 import { inferSkills } from "./skill-inference";
-export const GENERATOR_VERSION = "1.2.0";
+export const GENERATOR_VERSION = "2.0.0";
 export interface QuestionOptions {
   role?: Role;
   key?: string;
@@ -150,7 +150,7 @@ function finalize(
     ],
     hintMath,
     steps,
-    signature: JSON.stringify([skill.id, v, source]),
+    signature: JSON.stringify([skill.id, template.key, source]),
   };
 }
 export function ruleFormula(id: string): string {
