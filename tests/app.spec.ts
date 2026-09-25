@@ -1,12 +1,13 @@
 import { makePortableProgress } from '../src/transfer';
 import { test as base, expect, type Page } from '@playwright/test';
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { createEmptyCard, fsrs, Rating, State } from 'ts-fsrs';
 import { freshProgress, PARAMETERS, stateFor, storeCard } from '../src/progress';
 import type { AppState, Progress, SkillState } from '../src/progress';
 import { latex } from '../src/math';
+import { questionFingerprint } from '../src/question-identity';
 import type { Config } from '../src/types';
 
 const appDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -79,21 +80,17 @@ function dueReviewCard(now: number) {
   return { ...storeCard(card), due: now - 1000 };
 }
 
-function seededEvidence(skill: string) {
-  return Array.from({ length: 4 }, (_, index) => ({
-    q: `e2e-seed:${skill}:${index}`,
-    template: index % 2,
-    correct: true,
-  }));
-}
-
 function seededSkill(skill: string, now: number): SkillState {
   return {
     card: dueReviewCard(now),
-    recent: seededEvidence(skill),
-    needsRemediation: false,
+    basic: {
+      streak: 1,
+      lastQ: questionFingerprint(`e2e-seed:${skill}`),
+      passed: false,
+      repair: false,
+    },
+    mix: { streak: 0, passed: false, repair: false },
     failureStreak: 0,
-    lastFailureAt: 0,
     otherSinceFailure: 0,
     extraPracticeGiven: false,
     lastSeen: 0,
@@ -119,8 +116,11 @@ async function seedCurrentState(
 ): Promise<void> {
   // This is deliberately test-owned state. Each Playwright context has its
   // own origin storage, and the app never receives a seed in production.
-  const seeded = { version: 1 as const, progress };
-  await page.evaluate((state) => new Promise<void>((resolve, reject) => {
+  await writeCurrentState(page, { version: 1, progress });
+}
+
+async function writeCurrentState(page: Page, state: unknown): Promise<void> {
+  await page.evaluate((saved) => new Promise<void>((resolve, reject) => {
     const request = indexedDB.open('derivative-studio', 1);
     request.onupgradeneeded = () => {
       if (!request.result.objectStoreNames.contains('state')) {
@@ -131,14 +131,14 @@ async function seedCurrentState(
     request.onsuccess = () => {
       const database = request.result;
       const transaction = database.transaction('state', 'readwrite');
-      transaction.objectStore('state').put(state, 'current');
+      transaction.objectStore('state').put(saved, 'current');
       transaction.oncomplete = () => {
         database.close();
         resolve();
       };
       transaction.onerror = () => reject(transaction.error ?? new Error('Could not seed IndexedDB.'));
     };
-  }), seeded);
+  }), state);
 }
 
 async function openApp(
@@ -219,6 +219,48 @@ test('welcome resumes practice and names the next skill when progress exists', a
   await openApp(page, config, undefined, progress);
   await expect(page.getByRole('button', { name: /Continue practicing/ })).toBeVisible();
   await expect(page.getByText('Level 1 · Constants', { exact: true })).toBeVisible();
+});
+
+test('boots with a frozen v1 state, migrates it, and retains the original before migration', async ({ page }) => {
+  const config = configFor();
+  const saved = JSON.parse(
+    readFileSync(path.join(appDir, 'tests/fixtures/local-state-v1.json'), 'utf8'),
+  ) as AppState;
+  await page.route('**/practice-config.json', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify(config),
+  }));
+  await page.goto('/practice-config.json');
+  await writeCurrentState(page, saved);
+  await page.goto('/');
+  await expect(page.getByRole('button', { name: /Continue practicing/ })).toBeVisible();
+
+  await page.locator('.progress-summary').click();
+  const levelOne = page.locator('.path-level[data-level="1"]');
+  await levelOne.locator('summary').click();
+  const constant = levelOne.locator('.path-skill').filter({ hasText: 'Constants' });
+  await expect(constant.locator('.skill-status')).toHaveText('Basic ✓ · Mixed 0/2');
+
+  const records = await page.evaluate(() => new Promise<{ current: unknown; preMigration: unknown }>((resolve, reject) => {
+    const request = indexedDB.open('derivative-studio', 1);
+    request.onerror = () => reject(request.error ?? new Error('Could not read migrated state.'));
+    request.onsuccess = () => {
+      const database = request.result;
+      const transaction = database.transaction('state', 'readonly');
+      const store = transaction.objectStore('state');
+      const current = store.get('current');
+      const preMigration = store.get('pre-migration');
+      transaction.oncomplete = () => {
+        database.close();
+        resolve({ current: current.result, preMigration: preMigration.result });
+      };
+      transaction.onerror = () => reject(transaction.error ?? new Error('Could not read migrated state.'));
+    };
+  }));
+  expect((records.current as AppState).progress.formatVersion).toBe(2);
+  expect((records.current as AppState).session).toBeUndefined();
+  expect(records.preMigration).toEqual(saved);
 });
 
 test.describe('Derivative Studio browser flows', () => {
@@ -487,7 +529,8 @@ test('cross-context transfer preserves FSRS fields and imports a generated QR im
     await expect(target.getByRole('button', { name: /Start practicing|Continue practicing/ })).toBeVisible();
     const targetProgress = await readStoredProgress(target);
     expect(targetProgress.skills.constant.card).toEqual(sourceProgress.skills.constant.card);
-    expect(targetProgress.skills.constant.recent).toEqual(sourceProgress.skills.constant.recent);
+    expect(targetProgress.skills.constant.basic).toEqual(sourceProgress.skills.constant.basic);
+    expect(targetProgress.skills.constant.mix).toEqual(sourceProgress.skills.constant.mix);
     expect(targetProgress.skills.constant.card.due).toBe(sourceProgress.skills.constant.card.due);
     await screenshot(target, 'cross-context-imported-fsrs');
 
@@ -604,10 +647,10 @@ test('Level 2 remediation round trip preserves FSRS and due across contexts', as
     await expect(desktop.locator('#feedback')).not.toContainText('Correct');
     const relearning = await readStoredProgress(desktop);
     const relearningSkill = relearning.skills.exp;
-    expect(relearningSkill.needsRemediation).toBe(true);
+    expect(relearningSkill.basic.repair).toBe(true);
     expect(relearningSkill.otherSinceFailure).toBe(0);
     expect(relearningSkill.failureStreak).toBeGreaterThan(0);
-    expect(relearningSkill.recent.at(-1)?.correct).toBe(false);
+    expect(relearningSkill.basic.streak).toBe(0);
     expect(relearningSkill.card.state).toBe(State.Relearning);
     expect(relearningSkill.card.due).toBeGreaterThan(fixedNow);
 
@@ -644,9 +687,9 @@ test('Level 2 remediation round trip preserves FSRS and due across contexts', as
     const advancedNow = await mobile.evaluate(() => Date.now());
     expect(advancedNow).toBeGreaterThan(relearningSkill.card.due);
     await mobile.getByRole('button', { name: /Start practicing|Continue practicing/ }).click();
-    await expect.poll(async () => (await readStoredState(mobile)).session?.current?.question.primarySkill).toBe('log');
+    await expect.poll(async () => (await readStoredState(mobile)).session?.current?.question.primarySkill).toBe('constant');
     await mobile.locator('#next').click();
-    await expect.poll(async () => (await readStoredState(mobile)).session?.current?.question.primarySkill).toBe('log');
+    await expect.poll(async () => (await readStoredState(mobile)).session?.current?.question.primarySkill).toBe('constant');
     await mobile.locator('#next').click();
     await expect.poll(async () => (await readStoredState(mobile)).session?.current?.question.primarySkill).toBe('exp');
 
@@ -661,7 +704,7 @@ test('Level 2 remediation round trip preserves FSRS and due across contexts', as
     await mobile.getByRole('button', { name: 'Check answer' }).click();
     await expect(mobile.locator('#feedback')).toContainText('Correct');
     const firstRecovery = await readStoredProgress(mobile);
-    expect(firstRecovery.skills.exp.needsRemediation).toBe(true);
+    expect(firstRecovery.skills.exp.basic.repair).toBe(true);
     const cardAfterDueReview = structuredClone(firstRecovery.skills.exp.card);
     await mobile.locator('#next').click();
     await expect.poll(async () => (await readStoredState(mobile)).session?.current?.question.primarySkill).toBe('exp');
@@ -672,9 +715,9 @@ test('Level 2 remediation round trip preserves FSRS and due across contexts', as
     await expect(mobile.locator('#feedback')).toContainText('Correct');
     const recovered = await readStoredProgress(mobile);
     expect(recovered.skills.exp.card).toEqual(cardAfterDueReview);
-    expect(recovered.skills.exp.needsRemediation).toBe(false);
+    expect(recovered.skills.exp.basic.repair).toBe(false);
     expect(recovered.skills.exp.otherSinceFailure).toBe(2);
-    expect(recovered.skills.exp.recent.at(-1)?.correct).toBe(true);
+    expect(recovered.skills.exp.basic.streak).toBe(2);
     expect(recovered.skills.exp.card.state).not.toBe(State.Relearning);
     expect(recovered.skills.exp.card.due).toBeGreaterThan(advancedNow);
     await screenshot(mobile, 'level2-flow-mobile-recovered');

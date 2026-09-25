@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { test, expect } from '@playwright/test';
 import { freshProgress, stateFor } from '../src/progress';
 import { makePortableProgress, encodeProgress, splitIntoQrFrames } from '../src/transfer';
+import { migrateProgress } from '../src/migrate';
 
 function link() {
   const now=Date.now();
@@ -47,7 +48,7 @@ test('damaged camera link does not overwrite existing progress',async({page})=>{
 
 test('full curriculum fits one square URL QR and opens on another device',async({page,browser})=>{
   const raw=JSON.parse(readFileSync(new URL('./fixtures/compact-full-snapshot.json',import.meta.url),'utf8')); 
-  const snapshot=makePortableProgress(raw as Parameters<typeof makePortableProgress>[0]);
+  const snapshot=makePortableProgress(migrateProgress(raw).progress);
   const frames=splitIntoQrFrames(encodeProgress(snapshot));expect(frames).toHaveLength(1);
   const url=new URL(frames[0]);await page.goto(url.pathname+url.hash);
   await page.getByRole('button',{name:'Move progress'}).click();

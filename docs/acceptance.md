@@ -35,6 +35,23 @@
 
 Phase 1 的测试映射不替代真机验收；U3/U4 的浏览器截图与真机安全区边界仍按本文件下方记录区分。
 
+## Phase 2 SPEC 验收映射
+
+| SPEC | 验证测试与证据 |
+|---|---|
+| C1 Basic/Mixed 模板角色与题量 | `tests/curriculum.test.ts`；`tests/generator-variety.test.ts` |
+| C2 Basic 题不越级，L1/L2 不含 chain/nested | `tests/curriculum.test.ts` |
+| C3 Mixed 组合声明、级别限制与开放门槛 | `tests/curriculum.test.ts`；`tests/template-options.test.ts`；`tests/simulation.test.ts` |
+| C4 两条 line 的 streak、粘性 passed、line-specific repair 与 Ready | `tests/progress.test.ts` |
+| C5 Basic/Mixed 开放条件与只升不降的等级解锁 | `tests/progress.test.ts`；`tests/curriculum.test.ts`；`tests/simulation.test.ts` |
+| C6 诊断、修复、到期复习、学习与暂停分支及 question role | `tests/progress.test.ts`；`tests/simulation.test.ts` |
+| C7 全答对与首次 Mixed 错误后的有限收敛、依赖通过检查 | `tests/simulation.test.ts` |
+| MG1 v1→v2 Ready/历史 Ready/解锁门迁移、FSRS 与 session 处理 | `tests/migrate.test.ts`；`tests/legacy-fixtures.test.ts`；`tests/storage.test.ts` |
+| MG2 profile 3 编解码、旧 profile 导入、line 校验与 SPEC-M5 尺寸／raster QR | `tests/compact-progress.test.ts`；`tests/qr-image.test.ts`；`node --import tsx scripts/qr-size-audit.ts` |
+| Step 13 UI 导入摘要与 v1 自动迁移 | `src/main.ts`；`tests/app.spec.ts` 的冻结 v1 boot 用例（本实现轮只做 TypeScript 检查；Playwright 留给 reviewer 执行） |
+
+本轮 QR 审计使用 `compact-full-snapshot.json` 经 v1→v2 迁移后的 profile 3：1,200 个 DSP2 字符，单张 28-M QR；`docs/progress-payload-review.md` 记录 tuple、压缩和二维码明细。
+
 ## 生成而非固定题库
 
 部署的应用包含受限表达式树、求导规则与带稳定 key 的模板注册表，不包含测试 corpus。每次选择技能后，根据随机种子实时生成题干、答案与解析。生成版本为 `1.2.0`；每道题按实际表达式记录 `requiredSkills`，隐函数以通用 graph curve 供判分采样。生成器有复杂度限制和有限重试。固定随机种子用于可重复测试，不是学生题库。

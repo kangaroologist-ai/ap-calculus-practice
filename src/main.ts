@@ -17,6 +17,11 @@ import {
   recordHint,
   finishQuestion,
   isReady,
+  lineReady,
+  needsRemediation,
+  basicPassed,
+  baseOpen,
+  mixOpen,
   todayCount,
   type AppState,
 } from "./progress";
@@ -244,18 +249,27 @@ function levelView(level: number, expanded = false) {
     <summary class="level ${unlocked ? "unlocked" : ""} ${skills.some(s => s.id === currentId) ? "active" : ""}"><span class="level-number">${String(level).padStart(2, "0")}</span><span class="level-copy"><strong>${["", "The foundations", "Essential functions", "Rules in combination", "Deeper compositions", "Beyond the first derivative", "Curves & coordinates"][level]}</strong><small>${!skills.length ? "Not included" : unlocked ? `${ready} of ${skills.length} skills ready` : "Locked · preview skills"}</small></span><span class="path-chevron" aria-hidden="true"></span></summary>
     <div class="path-skills">${skills.map(s => {
       const t = state.progress.skills[s.id];
-      const status = !unlocked ? "Locked" : isReady(t) ? "Ready" : t?.needsRemediation ? "Rebuilding" : t?.recent.length ? "Learning" : "Not started";
+      const status = !unlocked ? "Locked" : isReady(t) ? "Ready" : needsRemediation(t) ? "Rebuilding" : lineReady(t?.basic) ? `Basic ✓ · Mixed ${t!.mix.streak}/2` : t?.lastSeen ? `Basic ${t.basic.streak}/2` : "Not started";
       return `<div class="path-skill ${currentId === s.id ? "current" : ""}" ${currentId === s.id ? 'aria-current="step"' : ""}><div><strong>${esc(s.label)}</strong><span class="skill-status">${status}</span></div>${t?.card.reps ? `<small>Review ${esc(new Date(t.card.due).toLocaleString("en-US", {month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}))}</small>` : ""}</div>`;
     }).join("") || '<p class="fine">No enabled skills in this level.</p>'}</div></details>`;
 }
 function welcome() {
   const hasProgress = Object.keys(state.progress.skills).length > 0;
+  const available = SKILLS.filter(
+    (skill) =>
+      skill.level <= state.progress.unlockedLevel &&
+      !config.disabledFamilies.includes(skill.id),
+  );
   const nextSkill = hasProgress
-    ? SKILLS.find(
+    ? available.find(
         (skill) =>
-          skill.level <= state.progress.unlockedLevel &&
-          !config.disabledFamilies.includes(skill.id) &&
-          !isReady(state.progress.skills[skill.id]),
+          baseOpen(state.progress, config, skill) &&
+          !lineReady(state.progress.skills[skill.id]?.basic),
+      ) ??
+      available.find(
+        (skill) =>
+          mixOpen(state.progress, config, skill) &&
+          !lineReady(state.progress.skills[skill.id]?.mix),
       )
     : undefined;
   const nextSkillLine = nextSkill
@@ -769,8 +783,18 @@ function importView() {
 }
 function showImportPreview(p: PortableProgress, id: string, resume = false) {
   const existing = state.progress.updatedAt;
+  const basicPassedCount = SKILLS.filter(
+    (skill) =>
+      !config.disabledFamilies.includes(skill.id) &&
+      basicPassed(p, config, skill.id),
+  ).length;
+  const ready = SKILLS.filter(
+    (skill) =>
+      !config.disabledFamilies.includes(skill.id) &&
+      isReady(p.skills[skill.id]),
+  ).length;
   document.getElementById("import-preview")!.innerHTML =
-    `<section class="hint-panel"><h3>Review this snapshot</h3><p>Exported: ${esc(new Date(p.exportedAt).toLocaleString())}</p><p>Unlocked through Level ${p.unlockedLevel} · ${Object.keys(p.skills).length} skills started</p><p>${p.streak ?? 0} in a row · ${todayCount(p)} practiced today</p>${p.updatedAt < existing ? '<p class="notice">This snapshot has older learning activity than this device. Importing will replace your current progress.</p>' : ""}<p>Your current progress will be saved as a local backup. The two histories will not be merged.</p>${button("confirm-import", "Replace with this progress", "button primary")}</section>`;
+    `<section class="hint-panel"><h3>Review this snapshot</h3><p>Exported: ${esc(new Date(p.exportedAt).toLocaleString())}</p><p>Unlocked through Level ${p.unlockedLevel} · ${Object.keys(p.skills).length} skills started</p><p>Basic passed ${basicPassedCount} · Ready ${ready}</p><p>${p.streak ?? 0} in a row · ${todayCount(p)} practiced today</p>${p.updatedAt < existing ? '<p class="notice">This snapshot has older learning activity than this device. Importing will replace your current progress.</p>' : ""}<p>Your current progress will be saved as a local backup. The two histories will not be merged.</p>${button("confirm-import", "Replace with this progress", "button primary")}</section>`;
   on("confirm-import", async () => {
     if (replacing) return;
     replacing = true;

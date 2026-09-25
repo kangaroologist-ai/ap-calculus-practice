@@ -1,6 +1,8 @@
 # Derivative Studio skill hierarchy review
 
-本文件是对当前 `ap-calculus-practice` 的只读目录审查。它记录当前代码实际提供的 26 个 skill、每个 skill 的两个题目模板、声明的 `supportingSkills`，以及与拟议教学顺序的差异。这里的“模板混合”只指表达式结构同时出现了多个求导操作；它不判断题库答案或数学题目本身是否正确。
+**状态：已实施——保留 6 级 + 保守迁移。** 每个技能现有 Basic/Mixed 两条学习线；v1 Ready 技能迁移为 Basic legacy 通过，Mixed 从零开始。课程分组与技能顺序保持不变。
+
+本文件下文保存 Phase 2 实施前的只读目录审查与候选方案。“当前”“待批准”等措辞描述的是当时审查记录，不是现行实现。这里的“模板混合”只指表达式结构同时出现了多个求导操作；它不判断题库答案或数学题目本身是否正确。
 
 ## 证据边界
 
@@ -217,6 +219,8 @@
 
 ## 旧进度迁移与固定 compact codec 风险
 
+> 下列段落是 Phase 2 实施前的风险记录。现行决策为保留 6 级与技能顺序，并已实现 v1 → v2 保守迁移；对应规则见 README 和 `tests/migrate.test.ts`。
+
 这次 hierarchy 和完成契约一旦批准，旧用户进度不能直接按新字段猜测。当前 progress 只有一条 `recent` 证据流，每条证据只有 q fingerprint、template、correct（`src/progress.ts:26-30`, `188-197`）；没有 `basic`/`mix` role，也没有两条独立的连对计数。因此旧数据中“最近两个 template 通过”不能可靠地判定为“基础连对 2 题”和“混合连对 2 题”。当前题目还由 `generatorVersion`、template 和 expression signature 组成（`src/questions.ts:286-307`），如果同时重写模板，旧题证据也不能自动等价于新题型。
 
 迁移策略必须在产品改动前单独批准。保守候选是：保留旧 skill 的历史访问和原有已解锁状态，给旧证据标成 `legacy`，不把它伪装成新契约的 basic/mix 证据；对仍需新契约证明的 skill，只补做缺失的 basic 或 mix 连对 2 题。若选择严格重置，必须明确告诉用户会丢失哪些 mastery 证据。无论采用哪一种，混合失败都不能抹掉已经保存的基础通过；迁移也不能因为无法识别 role 就强迫所有用户从零重刷基础。这个文件只记录风险，没有执行迁移。
@@ -225,11 +229,9 @@ compact progress 还有一个独立的顺序兼容风险。`src/compact-progress
 
 如果批准新顺序，安全的设计方向是保留旧 profile 的 codec 顺序用于读取旧 payload，另建带新 `CURRICULUM_VERSION`/profile version 的新序列化 profile，并按稳定 ID 做显式迁移；不能复用旧数字 index，也不能只改 `PROFILE_SKILLS` 的排列。迁移需要独立的 round-trip、旧 payload、未知 skill 和重复 index 测试；这些都属于后续产品实现与用户审核范围。
 
-## 结论（仅现状与建议）
+## Phase 2 实施结论
 
-当前系统有 26 个 skill、每个 2 个模板，并且 product/quotient/chain/nested/mixed 等模板已经包含明显的组合结构；但完成判定只区分两个 template 数字，不区分 basic 与 mix，也不验证“之前 skill 混合通过”。`supportingSkills` 是静态 catalog 数组，且若遇到随机 `smooth`，多个 skill 的声明不能覆盖全部可能模板分支。
-
-建议先批准上面的 26 skill hierarchy、B-open/M-open 两条解锁线和“basic 连对 2 题 + mix 连对 2 题”的完成契约，再决定是采用保守 union 还是题目级 `requiredSkills`，以及旧进度如何迁移。尤其需要先确认基础题是否必须清除当前 affine-inner chain 预览，再开始模板和 schema 迁移；在批准前不应把这份建议当作已实施的 curriculum 改动。
+实施保留 26 个 skill 的 6 级编排，以 `role` 区分 Basic/Mixed 模板；Basic 通过用于开放后续基础线，Mixed 只在组合所需基础线通过后开放。v1 Ready 技能获得 Basic legacy 通过，Mixed 仍需两题证明。模板约束、收敛模拟、迁移与 profile 3 编码分别由 `tests/curriculum.test.ts`、`tests/simulation.test.ts`、`tests/migrate.test.ts` 和 `tests/compact-progress.test.ts` 验收。
 
 ## 验证记录
 

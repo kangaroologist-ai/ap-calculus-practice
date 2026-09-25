@@ -1,12 +1,14 @@
 # DSP2 / QR 进度载荷审查
 
-本文件是对当前 `ap-calculus-practice` 进度迁移实现的只读盘点。审查对象是实际导出路径 `makePortableProgress → encodeProgress`，并单独记录了 `encodeProgress` 直接接收旧快照时的差异。没有使用真实学生数据，也没有修改产品或 codec。
+本文件保存 Phase 1 profile 1/2 的历史尺寸审查，并在文末记录现行 profile 3。现行导出经过 `makePortableProgress → encodeProgress`：progress v2 的两条学习线按 profile 3 编码；profile 1/2 与 DSP1 仍可解码并迁移。没有使用真实学生数据。
+
+> 当前版本为 profile 3。下文标注 profile 1/2 的字段布局、尺寸与候选分析均为历史记录；文末 profile 3 结果是当前实现的尺寸与结构依据。
 
 ## 结论先行
 
-当前导出的 DSP2 是一个固定 profile 的 11 元 JSON 数组，之后经过 zlib level 9、Base64URL 和 32-bit FNV-1a 校验。数组中的版本、FSRS 参数和技能目录由本地固定 profile 重建，因此它们不会重复出现在 DSP2 压缩正文中。应用导出前会复制进度、把每个技能的证据截到最近 2 条、把题目表达式签名换成 `q1:` + 128-bit SHA-256 前缀。
+当前导出的 DSP2 是一个固定 profile 的 11 元 JSON 数组，之后经过 zlib level 9、Base64URL 和 32-bit FNV-1a 校验。profile 3 从固定目录重建版本、FSRS 参数和技能索引，不在正文中重复存储；每个技能行保存 FSRS 卡和 Basic/Mixed line 状态。
 
-全课程 fixture 的实际导出形态为 26 个技能、52 条证据、31 个日计数、52 个唯一题目指纹：压缩 tuple JSON 5,193 字符，zlib 2,010 bytes，DSP2 2,694 字符，一张 URL QR 3,588 字符、版本 37-L。它已经走 DSA2 密集 QR 的单码路径。尚未逐项验证删字段后是否会降低 QR 版本；能够明显缩短载荷的字段通常同时承载可见功能或调度状态。
+全课程 `compact-full-snapshot.json` 从 v1 迁移到 v2 后导出为 profile 3：26 个技能、52 条学习线、31 个日计数，tuple JSON 3,182 字符、zlib 889 bytes、DSP2 1,200 字符；一张 URL QR 为 1,663 字符、版本 28-M。profile 3 的导出代码低于 2,000 字符，并满足单帧与二维码版本目标。
 
 ## 入口与编码层
 
@@ -83,7 +85,7 @@ FSRS 参数固定为：`request_retention=0.9`、`maximum_interval=180`、`enabl
 
 `makePortableProgress` 的导出裁剪是当前真实功能边界：每个技能只取 `recent.slice(-2)`，并把其中的 `q` 指纹化；全局 `recentQuestionSignatures` 也指纹化但最多保留 10 条。`validateSnapshot` 和 `packProgress` 本身仍允许最多 5 条 `recent`；测试 fixture 直接传给 `encodeProgress` 时会保留 26×5=130 条，这不是应用导出路径。
 
-## 当前 fixture 的尺寸拆分
+## Profile 1/2 历史 fixture 的尺寸拆分（Step 7）
 
 以下是 `node_modules/.bin/tsx scripts/qr-size-audit.ts` 的当前输出。`tupleJsonChars` 是 compact 数组 JSON，`compactChars` 是 `DSP2...` 可复制代码；QR 的 `chars` 是实际 URL/DSA2/分片 frame 字符数。
 
@@ -139,7 +141,7 @@ FSRS 参数固定为：`request_retention=0.9`、`maximum_interval=180`、`enabl
 
 若愿意改变产品功能，`practiceDays` 是唯一能带来明显节省的简单开关，但代价是活动计数和“今日已练”显示消失。题目指纹缩短只在压缩前看起来节省约 520 字符，压缩后本 fixture 只省 9 个代码字符。`template`、`correct`、任何 FSRS card 数值、`otherSinceFailure`、`extraPracticeGiven`、`failureStreak` 和 `lastSeen` 都承载当前调度或推进逻辑，不应仅因载荷审查而移除。
 
-## Profile 2 实测（Step 7）
+## Profile 2 历史实测（Step 7）
 
 Profile 2 用 32-bit `q2` 指纹（字典只存 8 位 hex）和 `practiceDays` 差分编码 `[首日 UTC 日序号, 次数, Δ日, 次数, …]`；行结构与 profile 1 相同。编码只用最新 profile；profile 1 与 DSP1 永久可解码，并经 `migrateProgress` 升级。同一 fixture（`scripts/qr-size-audit.ts`，26 技能 × 2 条证据、31 个练习日）：
 
@@ -151,3 +153,15 @@ Profile 2 用 32-bit `q2` 指纹（字典只存 8 位 hex）和 `practiceDays` �
 | 单张 QR（链接字符 / 纠错 / 版本） | 3,588 / L / 37 | 2,031 / L / 27 |
 
 上一节“压缩后指纹缩短收益很小”的估算针对的是 16-byte 表示；截到 4 byte 后熵真正减少，zlib 省下约 870 字节。纠错等级改为：M 级能控制在 30 版以内就用 M，否则用 L——小进度仍用更强的 M，全课程进度用 L 保持在 30 版以下（同一载荷用 M 为 31 版）。
+
+## Profile 3 实测（Phase 2 Step 12）
+
+Profile 3 是当前唯一编码格式；profile 1、2 保留解码，DSP1 也会导入并经 `migrateProgress` 升级。它延续 11 元顶层 tuple 与 `practiceDays` 差分编码。每个技能行是 `[skillIndex, card[10], basicLine, mixLine, failureStreak, otherSinceFailure, extraPracticeGiven, lastSeen]`；每条 line 是 `[streak, passed, repair, legacy, lastQIdx|-1]`，指纹字典存 8 位 `q2` 十六进制值。`lastTemplate` 仅留在本机，不进入快照。
+
+审计命令 `node --import tsx scripts/qr-size-audit.ts` 将 `compact-full-snapshot.json` 迁移到 v2 后导出；`tests/compact-progress.test.ts` 同时执行复制代码字符数、单帧、QRCode 版本与 raster → jsQR → decode 的回归。
+
+| Profile | tuple JSON 字符 | zlib bytes | DSP2 字符 | 单张 QR（链接字符 / 纠错 / 版本） |
+|---|---:|---:|---:|---:|
+| Profile 1（历史） | 5,193 | 2,010 | 2,694 | 3,588 / L / 37 |
+| Profile 2（历史） | 3,452 | 1,144 | 1,540 | 2,031 / L / 27 |
+| Profile 3（现行，v1 fixture 迁移后） | 3,182 | 889 | 1,200 | 1,663 / M / 28 |
