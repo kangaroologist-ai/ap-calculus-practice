@@ -21,12 +21,15 @@ import {
   validateSnapshot,
   type PortableProgress,
 } from "../src/transfer";
-import { makePortableProgress } from "../src/transfer";
 import { questionFingerprint } from "../src/question-identity";
 
-const snapshot = JSON.parse(
+const rawSnapshot = JSON.parse(
   readFileSync(new URL("./fixtures/compact-full-snapshot.json", import.meta.url), "utf8"),
-) as PortableProgress;
+) as Record<string, any>;
+const snapshot = {
+  ...migrateProgress(rawSnapshot).progress,
+  exportedAt: rawSnapshot.exportedAt,
+} as PortableProgress;
 const fixture = (name: string) =>
   readFileSync(new URL(`./fixtures/${name}`, import.meta.url), "utf8");
 
@@ -63,62 +66,54 @@ describe("full compact progress transfer fixture", () => {
     }
   });
 
-  it("contains the intended 26 x 5 evidence and 31-day boundary", () => {
+  it("migrates the 26-skill fixture into v2 lines and retains its 31-day boundary", () => {
     validateSnapshot(snapshot);
     expect(Object.keys(snapshot.skills)).toHaveLength(26);
-    expect(Object.values(snapshot.skills).every((s) => s.recent.length === 5)).toBe(true);
+    expect(Object.values(snapshot.skills).every((s) => !("recent" in s))).toBe(true);
+    expect(Object.values(snapshot.skills).every((s) => s.basic && s.mix)).toBe(true);
     expect(Object.keys(snapshot.practiceDays ?? {})).toHaveLength(31);
-    const portable = makePortableProgress(snapshot, snapshot.exportedAt);
-    expect(
-      Object.values(portable.skills).every((s) =>
-        s.recent.every((e) => /^q2:[a-f0-9]{8}$/.test(e.q)),
-      ),
-    ).toBe(true);
-    expect(
-      portable.recentQuestionSignatures.every((q) =>
-        /^q2:[a-f0-9]{8}$/.test(q),
-      ),
-    ).toBe(true);
+    const portable = validateSnapshot(snapshot);
+    for (const skill of Object.values(portable.skills))
+      for (const line of [skill.basic, skill.mix])
+        if (line.lastQ) expect(line.lastQ).toMatch(/^q2:[a-f0-9]{8}$/);
+    expect(portable.recentQuestionSignatures.every((q) => /^q2:[a-f0-9]{8}$/.test(q))).toBe(true);
   });
 
-  it("round-trips all FSRS fields and the full evidence fixture through DSP2", () => {
-    const portable = validateSnapshot(snapshot);
-    const code = encodeProgress(portable);
+  it("round-trips all FSRS fields and the full v2 line fixture through DSP2", () => {
+    const code = encodeProgress(snapshot);
     const decoded = decodeProgress(code);
-    expect(isDeepStrictEqual(decoded, portable)).toBe(true);
+    expect(isDeepStrictEqual(decoded, snapshot)).toBe(true);
     expect(code.length).toBeGreaterThan(0);
   });
 
   it("keeps the latest profile skill table in curriculum order", () => {
-    expect(LATEST_PROFILE).toBe(2);
+    expect(LATEST_PROFILE).toBe(3);
     expect(LATEST_PROFILE_SKILLS).toEqual(SKILLS.map((skill) => skill.id));
   });
 
-  it("imports the frozen DSP1 and profile 1 fixtures as their migrated snapshots", () => {
-    const dsp1 = JSON.parse(
-      fixture("compact-full-snapshot.json"),
-    ) as PortableProgress;
-    const dsp1Expected = {
-      ...migrateProgress(dsp1).progress,
-      exportedAt: dsp1.exportedAt,
-    };
-    expect(decodeProgress(fixture("dsp1.txt"))).toEqual(dsp1Expected);
+  it("imports the frozen DSP1 and profile 1 and 2 fixtures as v2 snapshots", () => {
+    const direct = decodeProgress(fixture("dsp1.txt"));
+    const profile1 = decodeProgress(fixture("dsp2-profile1.txt"));
+    const profile2 = decodeProgress(fixture("dsp2-profile2.txt"));
+    expect(direct.formatVersion).toBe(2);
+    expect(profile1.formatVersion).toBe(2);
+    expect(profile2.formatVersion).toBe(2);
+    expect(direct.skills.constant.basic.passed).toBe(true);
+    expect(profile1.skills.constant.basic.passed).toBe(true);
+    expect(profile2.skills.constant.basic.passed).toBe(true);
+    expect(direct.skills.constant.mix).toEqual({ streak: 0, passed: false, repair: false });
 
-    const profile1 = makePortableProgress(dsp1, dsp1.exportedAt);
-    const profile1Expected = {
-      ...migrateProgress(profile1).progress,
-      exportedAt: profile1.exportedAt,
+    const expectedFromFixture = {
+      ...migrateProgress(rawSnapshot).progress,
+      exportedAt: rawSnapshot.exportedAt,
     };
-    expect(decodeProgress(fixture("dsp2-profile1.txt"))).toEqual(
-      profile1Expected,
-    );
+    expect(direct).toEqual(expectedFromFixture);
   });
 
-  it("round-trips profile 2 and rejects newer or malformed profile data", () => {
-    const portable = makePortableProgress(snapshot, snapshot.exportedAt);
-    const tuple = packProgress(portable);
-    expect(tuple[0]).toBe(2);
-    expect(decodeProgress(encodeProgress(portable))).toEqual(portable);
+  it("round-trips profile 3 and rejects newer or malformed profile data", () => {
+    const tuple = packProgress(snapshot);
+    expect(tuple[0]).toBe(3);
+    expect(decodeProgress(encodeProgress(snapshot))).toEqual(snapshot);
 
     expect(() => unpackProgress([99])).toThrow(NewerProgressError);
     expect(() => unpackProgress([99])).toThrow(
@@ -130,6 +125,25 @@ describe("full compact progress transfer fixture", () => {
     dictionary[0] = "not-hex!";
     expect(() => unpackProgress(badHex)).toThrow(/signatures/i);
 
+    const badStreak = structuredClone(tuple);
+    const rows = badStreak[10] as unknown[][];
+    (rows[0][2] as unknown[])[0] = 3;
+    expect(() => unpackProgress(badStreak)).toThrow(/compact index/i);
+
+    const badMixedPassed = structuredClone(tuple);
+    const passedRows = badMixedPassed[10] as unknown[][];
+    (passedRows[0][2] as unknown[])[0] = 0;
+    (passedRows[0][2] as unknown[])[1] = 0;
+    (passedRows[0][2] as unknown[])[2] = 0;
+    (passedRows[0][3] as unknown[])[0] = 2;
+    (passedRows[0][3] as unknown[])[1] = 1;
+    expect(() => migrateProgress(unpackProgress(badMixedPassed))).toThrow(/skill evidence/i);
+
+    const badLastQ = structuredClone(tuple);
+    const lastQRows = badLastQ[10] as unknown[][];
+    (lastQRows[0][2] as unknown[])[4] = 999;
+    expect(() => unpackProgress(badLastQ)).toThrow(/compact index/i);
+
     const firstDay = Date.parse("2026-09-25T00:00:00.000Z") / 86400000;
     const badFlatDelta = structuredClone(tuple);
     badFlatDelta[6] = [firstDay, 1, 0, 1];
@@ -139,14 +153,13 @@ describe("full compact progress transfer fixture", () => {
     nestedDays[6] = [firstDay, 1, [1, 1]];
     expect(() => unpackProgress(nestedDays)).toThrow();
 
-    const longGap = structuredClone(portable);
+    const longGap = structuredClone(snapshot);
     longGap.practiceDays = { "2026-01-02": 3, "2026-09-19": 4 };
     expect(decodeProgress(encodeProgress(longGap)).practiceDays).toEqual(longGap.practiceDays);
   });
 
-  it("meets the profile 2 full-fixture size and rendered QR targets", () => {
-    const portable = makePortableProgress(snapshot, snapshot.exportedAt);
-    const code = encodeProgress(portable);
+  it("keeps the migrated full fixture below 2000 chars in one QR version 30 or lower", () => {
+    const code = encodeProgress(snapshot);
     const frames = splitIntoQrFrames(code);
     expect(code.length).toBeLessThan(2000);
     expect(frames).toHaveLength(1);
@@ -158,8 +171,6 @@ describe("full compact progress transfer fixture", () => {
     expect(scanned).toBe(frames[0]);
     const result = new QrCollector().add(scanned);
     expect(result.code).toBe(code);
-    expect(isDeepStrictEqual(decodeProgress(result.code!), portable)).toBe(
-      true,
-    );
+    expect(isDeepStrictEqual(decodeProgress(result.code!), snapshot)).toBe(true);
   });
 });

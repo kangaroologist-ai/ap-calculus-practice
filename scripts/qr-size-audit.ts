@@ -24,6 +24,7 @@ import {
   type PortableProgress,
 } from "../src/transfer";
 import { packProgress } from "../src/compact-progress";
+import { migrateProgress } from "../src/migrate";
 
 const config = (initialUnlockedLevel: number) => ({
   schemaVersion: 1 as const,
@@ -115,9 +116,10 @@ function makeFullProgress(): PortableProgress {
     const startDay = Math.floor((si * 31) / SKILLS.length);
     for (let ei = 0; ei < 5; ei += 1) {
       const t = start + Math.min(30, startDay + ei) * day + ei * 60_000;
-      let question = generateQuestion(SKILLS[si].id, `qr-audit:${si}:${ei}:0`, ei % 2);
+      const role: "basic" | "mix" = ei % 2 ? "mix" : "basic";
+      let question = generateQuestion(SKILLS[si].id, `qr-audit:${si}:${ei}:0`, { role, ok: () => true });
       for (let k = 0; k < 200 && used.has(question.signature); k += 1)
-        question = generateQuestion(SKILLS[si].id, `qr-audit:${si}:${ei}:${k + 1}`, ei % 2);
+        question = generateQuestion(SKILLS[si].id, `qr-audit:${si}:${ei}:${k + 1}`, { role, ok: () => true });
       // Every template branch now varies across seeds (SPEC-G1), but 200
       // retries can still coincide by chance for a low-cardinality template.
       // The suffix is an audit-only unique evidence key; the generated source is unchanged.
@@ -142,8 +144,9 @@ function makeFullProgress(): PortableProgress {
       finishQuestion(state);
     }
   }
-  if (Object.keys(p.skills).length !== 26 || Object.values(p.skills).some((s) => s.recent.length !== 5))
-    throw new Error("Full audit fixture did not contain 26 x 5 evidence.");
+  for (const skill of SKILLS) p.skills[skill.id].basic.passed = true;
+  if (Object.keys(p.skills).length !== 26 || Object.values(p.skills).some((s) => !s.basic || !s.mix))
+    throw new Error("Full audit fixture did not contain 26 pairs of learning lines.");
   if (Object.keys(p.practiceDays ?? {}).length !== 31)
     throw new Error("Full audit fixture did not contain 31 practice days.");
   return makePortableProgress(p, anchor);
@@ -164,7 +167,7 @@ function measure(name: string, p: PortableProgress) {
       name,
       profile: JSON.parse(packedJson)[0],
       skills: Object.keys(p.skills).length,
-      evidence: Object.values(p.skills).reduce((n, s) => n + s.recent.length, 0),
+      lines: Object.values(p.skills).reduce((n, s) => n + Number(!!s.basic) + Number(!!s.mix), 0),
       practiceDays: Object.keys(p.practiceDays ?? {}).length,
       jsonChars: JSON.stringify(p).length,
       legacyJsonZlib9Chars: legacy.length,
@@ -183,7 +186,8 @@ measure("ten-real-questions", makeTenQuestionProgress());
 measure("full26-each5-varied-FSRS-31days", makeFullProgress());
 const rawFixture = JSON.parse(
   readFileSync(new URL("../tests/fixtures/compact-full-snapshot.json", import.meta.url), "utf8"),
-) as PortableProgress;
+) as Record<string, any>;
 // Keep the raw 26 x 5 fixture for comparison, but measure the transport form after
 // the same privacy-preserving makePortableProgress step used by the app.
-measure("fixture-portable", makePortableProgress(rawFixture, rawFixture.exportedAt));
+const fixtureV2 = migrateProgress(rawFixture).progress;
+measure("fixture-portable", makePortableProgress(fixtureV2, rawFixture.exportedAt));

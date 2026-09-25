@@ -1,4 +1,4 @@
-import { SKILLS, CURRICULUM_VERSION } from "./catalog";
+import { SKILLS, CURRICULUM_VERSION, skillById } from "./catalog";
 import { questionFingerprint } from "./question-identity";
 import {
   PARAMETERS,
@@ -11,7 +11,7 @@ import {
 const PROFILE1_PARAMETERS_JSON =
   '{"request_retention":0.9,"maximum_interval":180,"w":[0.212,1.2931,2.3065,8.2956,6.4133,0.8334,3.0194,0.001,1.8722,0.1666,0.796,1.4835,0.0614,0.2629,1.6483,0.6014,1.8729,0.5425,0.0912,0.0658,0.1542],"enable_fuzz":false,"enable_short_term":true,"learning_steps":["1m","10m"],"relearning_steps":["10m"]}';
 
-export const LATEST_FORMAT = 1;
+export const LATEST_FORMAT = 2;
 
 export class NewerProgressError extends Error {
   constructor(message: string) {
@@ -42,9 +42,15 @@ const KNOWN_IDENTITIES: Record<
     algorithm: ["v5.4.2 using FSRS-6.0"],
     parameters: [PROFILE1_PARAMETERS_JSON],
   },
+  2: {
+    curriculum: ["ap-derivatives-2"],
+    scheduler: ["5.4.2"],
+    algorithm: ["v5.4.2 using FSRS-6.0"],
+    parameters: [PROFILE1_PARAMETERS_JSON],
+  },
 };
 
-const STEPS: MigrationStep[] = [];
+const STEPS: MigrationStep[] = [{ from: 1, to: 2, run: migrateV1toV2 }];
 
 function unsupportedVersion() {
   throw Error(
@@ -108,6 +114,10 @@ function normalizeFingerprints(progress: MutableProgress) {
           )
         : recent;
   }
+  for (const skill of Object.values(progress.skills ?? {}) as any[])
+    for (const line of [skill?.basic, skill?.mix])
+      if (line && typeof line === "object" && typeof line.lastQ === "string")
+        line.lastQ = normalize(line.lastQ);
   if (Array.isArray(progress.recentQuestionSignatures)) {
     const signatures = progress.recentQuestionSignatures.map(normalize);
     progress.recentQuestionSignatures =
@@ -118,6 +128,69 @@ function normalizeFingerprints(progress: MutableProgress) {
         : signatures;
   }
   return progress;
+}
+
+// Frozen copy of the v1 advancement rule: the last two pieces of evidence are
+// independent successes on different questions and different templates.
+interface EvidenceV1 {
+  q: string;
+  template: number;
+  correct: boolean;
+}
+const readyPair = (a: EvidenceV1, b: EvidenceV1) =>
+  a.correct && b.correct && a.q !== b.q && a.template !== b.template;
+function checkV1Skill(s: any) {
+  if (
+    !s ||
+    typeof s !== "object" ||
+    !Array.isArray(s.recent) ||
+    s.recent.length > 5 ||
+    s.recent.some(
+      (e: any) =>
+        !e ||
+        typeof e.q !== "string" ||
+        !/^q2:[a-f0-9]{8}$/.test(e.q) ||
+        !integer(e.template, 0, 1) ||
+        typeof e.correct !== "boolean",
+    ) ||
+    typeof s.needsRemediation !== "boolean"
+  )
+    throw Error("Invalid skill evidence.");
+}
+// Conservative v1 → v2: a Ready skill has passed its basic line (mixed practice
+// starts from zero); a skill that was Ready somewhere in its evidence window, or
+// sits below the unlocked level, keeps basic access. Cards, unlocks, streaks,
+// days, and queues carry over unchanged; nothing ever locks again.
+function migrateV1toV2(p: MutableProgress): MutableProgress {
+  const skills: Record<string, unknown> = {};
+  for (const [id, s] of Object.entries(p.skills ?? {}) as [string, any][]) {
+    checkV1Skill(s);
+    const recent = s.recent as EvidenceV1[],
+      last = recent.at(-1),
+      lastQ = last ? { lastQ: last.q } : {};
+    const readyNow =
+      !s.needsRemediation &&
+      recent.length >= 2 &&
+      readyPair(recent[recent.length - 2], recent[recent.length - 1]);
+    const everReady = recent.some((e, i) => i > 0 && readyPair(recent[i - 1], e));
+    skills[id] = {
+      card: s.card,
+      basic: readyNow
+        ? { streak: 2, passed: true, repair: false, legacy: true, ...lastQ }
+        : {
+            streak: last?.correct ? 1 : 0,
+            passed: everReady || skillById(id).level < p.unlockedLevel,
+            repair: s.needsRemediation,
+            ...lastQ,
+          },
+      mix: { streak: 0, passed: false, repair: false },
+      failureStreak: s.failureStreak,
+      otherSinceFailure: s.otherSinceFailure,
+      extraPracticeGiven: s.extraPracticeGiven,
+      lastSeen: s.lastSeen,
+    };
+  }
+  return { ...p, formatVersion: 2, skills };
 }
 
 function currentIdentity() {
@@ -245,29 +318,31 @@ export function validateCurrent(value: unknown): Progress {
       throw Error("Invalid review dates or values.");
     for (const key of ["reps", "lapses", "learning_steps"] as const)
       if (!integer(card[key])) throw Error("Invalid review count.");
+    const lines = [s.basic, s.mix] as any[];
     if (
-      !Array.isArray(s.recent) ||
-      s.recent.length > 5 ||
-      s.recent.some(
-        (e: any) =>
-          !e ||
-          typeof e.q !== "string" ||
-          !/^q2:[a-f0-9]{8}$/.test(e.q) ||
-          !integer(e.template, 0, 1) ||
-          typeof e.correct !== "boolean",
+      lines.some(
+        (l) =>
+          !l ||
+          typeof l !== "object" ||
+          !integer(l.streak, 0, 2) ||
+          typeof l.passed !== "boolean" ||
+          typeof l.repair !== "boolean" ||
+          (l.legacy !== undefined && l.legacy !== true) ||
+          (l.lastQ !== undefined && !/^q2:[a-f0-9]{8}$/.test(l.lastQ)) ||
+          (l.streak === 2 && !l.repair && !l.passed),
       ) ||
-      new Set(s.recent.map((e: any) => e.q)).size !== s.recent.length
+      (s.mix.passed && !s.basic.passed)
     )
       throw Error("Invalid skill evidence.");
     if (
-      typeof s.needsRemediation !== "boolean" ||
+      "recent" in s ||
+      "needsRemediation" in s ||
+      "lastFailureAt" in s ||
       typeof s.extraPracticeGiven !== "boolean" ||
-      ![
-        s.failureStreak,
-        s.lastFailureAt,
-        s.otherSinceFailure,
-        s.lastSeen,
-      ].every((item) => integer(item))
+      !(s.lastTemplate === undefined || typeof s.lastTemplate === "string") ||
+      ![s.failureStreak, s.otherSinceFailure, s.lastSeen].every((item) =>
+        integer(item),
+      )
     )
       throw Error("Invalid practice state.");
   }

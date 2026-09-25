@@ -12,12 +12,9 @@ export function makePortableProgress(
 ): PortableProgress {
   const copy = structuredClone(p);
   for (const skill of Object.values(copy.skills)) {
-    skill.recent = dedupeKeepLast(
-      skill.recent
-        .slice(-2)
-        .map((e) => ({ ...e, q: questionFingerprint(e.q) })),
-      (e) => e.q,
-    );
+    delete skill.lastTemplate;
+    for (const line of [skill.basic, skill.mix])
+      if (line.lastQ !== undefined) line.lastQ = questionFingerprint(line.lastQ);
   }
   copy.recentQuestionSignatures = dedupeKeepLast(
     copy.recentQuestionSignatures.map(questionFingerprint),

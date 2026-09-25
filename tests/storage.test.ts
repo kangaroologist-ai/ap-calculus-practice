@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { freshProgress } from '../src/progress';
+import { validateLocalState } from '../src/storage';
 import { makePortableProgress } from '../src/transfer';
 import type { AppState, Progress } from '../src/progress';
 import type { Config } from '../src/types';
@@ -124,8 +125,10 @@ describe('serialized local persistence and backup replacement', () => {
   it('replaces pre-migration only for a format upgrade and leaves backup alone', async () => {
     const oldPreMigration = appState(freshProgress(config, NOW - 2));
     const backup = appState(freshProgress(config, NOW - 1), 'manual-backup');
-    const before = appState(freshProgress(config, NOW));
-    const after = appState(freshProgress(config, NOW + 1));
+    const before = JSON.parse(
+      readFileSync(new URL('./fixtures/local-state-v1.json', import.meta.url), 'utf8'),
+    ) as AppState;
+    const after = validateLocalState(before).state;
     fakeIdb.records.set('pre-migration', oldPreMigration);
     fakeIdb.records.set('backup', backup);
 
@@ -133,6 +136,8 @@ describe('serialized local persistence and backup replacement', () => {
 
     expect(fakeIdb.records.get('pre-migration')).toEqual(before);
     expect(await storage.loadState()).toEqual(after);
+    expect(after.progress.formatVersion).toBe(2);
+    expect(after.session).toBeUndefined();
     expect(fakeIdb.records.get('backup')).toEqual(backup);
   });
 

@@ -1,5 +1,5 @@
 import { NewerProgressError } from "./migrate";
-import type { Progress, SkillState } from "./progress";
+import type { LineState, Progress, SkillState } from "./progress";
 import type { PortableProgress } from "./transfer";
 
 // Each tuple profile permanently owns its identity and skill-index order.
@@ -93,6 +93,14 @@ const PROFILE2_IDENTITY = Object.freeze({
   parametersJson:
     '{"request_retention":0.9,"maximum_interval":180,"w":[0.212,1.2931,2.3065,8.2956,6.4133,0.8334,3.0194,0.001,1.8722,0.1666,0.796,1.4835,0.0614,0.2629,1.6483,0.6014,1.8729,0.5425,0.0912,0.0658,0.1542],"enable_fuzz":false,"enable_short_term":true,"learning_steps":["1m","10m"],"relearning_steps":["10m"]}',
 });
+const PROFILE3_IDENTITY = Object.freeze({
+  curriculumVersion: "ap-derivatives-2",
+  schedulerPackageVersion: "5.4.2",
+  fsrsAlgorithmVersion: "v5.4.2 using FSRS-6.0",
+  parametersJson:
+    '{"request_retention":0.9,"maximum_interval":180,"w":[0.212,1.2931,2.3065,8.2956,6.4133,0.8334,3.0194,0.001,1.8722,0.1666,0.796,1.4835,0.0614,0.2629,1.6483,0.6014,1.8729,0.5425,0.0912,0.0658,0.1542],"enable_fuzz":false,"enable_short_term":true,"learning_steps":["1m","10m"],"relearning_steps":["10m"]}',
+});
+const PROFILE3_SKILLS = PROFILE2_SKILLS;
 
 interface ProfileIdentity {
   curriculumVersion: string;
@@ -103,7 +111,7 @@ interface ProfileIdentity {
 interface Profile {
   skills: readonly string[];
   identity: ProfileIdentity;
-  signatures: "full" | "q2-hex";
+  format: "full" | "q2-hex" | "lines";
   decode(value: unknown[]): unknown;
   encode?(progress: PortableProgress): unknown[];
 }
@@ -209,7 +217,7 @@ function decodeProfile(value: unknown[], profile: Profile): unknown {
     dictionary.some(
       (entry) =>
         typeof entry !== "string" ||
-        (profile.signatures === "full"
+        (profile.format === "full"
           ? entry.length > 4096
           : !/^[a-f0-9]{8}$/.test(entry)),
     )
@@ -217,14 +225,14 @@ function decodeProfile(value: unknown[], profile: Profile): unknown {
     throw Error("Invalid compact signatures.");
   const signature = (index: unknown) => {
     const entry = dictionary[int(index, dictionary.length - 1)] as string;
-    return profile.signatures === "q2-hex" ? `q2:${entry}` : entry;
+    return profile.format === "full" ? entry : `q2:${entry}`;
   };
   const skill = (index: unknown) => profile.skills[int(index, profile.skills.length - 1)];
   const skills: Progress["skills"] = {};
   const rows = arr(a[10]);
   if (rows.length > 26) throw Error("Too many skills.");
   for (const raw of rows) {
-    const row = arr(raw, 9),
+    const row = arr(raw, profile.format === "lines" ? 8 : 9),
       id = skill(row[0]);
     if (skills[id]) throw Error("Duplicate skill.");
     const cardValues = arr(row[1], 10),
@@ -236,6 +244,29 @@ function decodeProfile(value: unknown[], profile: Profile): unknown {
         throw Error("Invalid compact card.");
       card[key] = number;
     });
+    if (profile.format === "lines") {
+      const line = (rawLine: unknown) => {
+        const l = arr(rawLine, 5);
+        const decoded: Record<string, unknown> = {
+          streak: int(l[0], 2),
+          passed: bool(l[1]),
+          repair: bool(l[2]),
+        };
+        if (bool(l[3])) decoded.legacy = true;
+        if (l[4] !== -1) decoded.lastQ = signature(l[4]);
+        return decoded;
+      };
+      skills[id] = {
+        card,
+        basic: line(row[2]),
+        mix: line(row[3]),
+        failureStreak: row[4],
+        otherSinceFailure: row[5],
+        extraPracticeGiven: bool(row[6]),
+        lastSeen: row[7],
+      } as unknown as SkillState;
+      continue;
+    }
     const evidence = arr(row[2]);
     if (evidence.length > 5) throw Error("Invalid compact evidence.");
     const state: Record<string, unknown> = {
@@ -259,7 +290,7 @@ function decodeProfile(value: unknown[], profile: Profile): unknown {
   }
   const identity = profile.identity;
   const progress: Record<string, unknown> = {
-    formatVersion: 1,
+    formatVersion: profile.format === "lines" ? 2 : 1,
     curriculumVersion: identity.curriculumVersion,
     schedulerPackageVersion: identity.schedulerPackageVersion,
     fsrsAlgorithmVersion: identity.fsrsAlgorithmVersion,
@@ -275,10 +306,13 @@ function decodeProfile(value: unknown[], profile: Profile): unknown {
   if (a[5] !== null) progress.streak = a[5];
   if (a[6] !== null)
     progress.practiceDays =
-      profile.signatures === "q2-hex" ? decodeDays(a[6]) : a[6];
+      profile.format === "full" ? a[6] : decodeDays(a[6]);
   return progress;
 }
-function encodeProfile2(progress: PortableProgress): unknown[] {
+// Profile 3 row: [skill, card[10], basic, mix, failureStreak,
+// otherSinceFailure, extraPracticeGiven, lastSeen]; a line is
+// [streak, passed, repair, legacy, lastQ index or -1].
+function encodeProfile3(progress: PortableProgress): unknown[] {
   const signatures: string[] = [];
   const signature = (value: string) => {
     if (!/^q2:[a-f0-9]{8}$/.test(value))
@@ -291,25 +325,30 @@ function encodeProfile2(progress: PortableProgress): unknown[] {
     }
     return index;
   };
+  const line = (l: LineState) => [
+    l.streak,
+    l.passed ? 1 : 0,
+    l.repair ? 1 : 0,
+    l.legacy ? 1 : 0,
+    l.lastQ === undefined ? -1 : signature(l.lastQ),
+  ];
   const skills = Object.entries(progress.skills).map(([id, state]) => {
-    const skillIndex = PROFILE2_SKILLS.indexOf(id);
+    const skillIndex = PROFILE3_SKILLS.indexOf(id);
     if (skillIndex < 0) throw Error("Unknown skill in compact progress.");
     return [
       skillIndex,
       CARD_KEYS.map((key) => state.card[key] ?? null),
-      state.recent.map((entry) => [
-        signature(entry.q),
-        entry.template,
-        entry.correct ? 1 : 0,
-      ]),
-      ...STATE_KEYS.map((key) =>
-        typeof state[key] === "boolean" ? (state[key] ? 1 : 0) : state[key],
-      ),
+      line(state.basic),
+      line(state.mix),
+      state.failureStreak,
+      state.otherSinceFailure,
+      state.extraPracticeGiven ? 1 : 0,
+      state.lastSeen,
     ];
   });
   const recent = progress.recentQuestionSignatures.map(signature);
   return [
-    2,
+    3,
     progress.exportedAt,
     progress.updatedAt,
     progress.unlockedLevel,
@@ -318,7 +357,7 @@ function encodeProfile2(progress: PortableProgress): unknown[] {
     encodeDays(progress.practiceDays),
     signatures,
     recent,
-    progress.pendingDiagnostics.map((id) => PROFILE2_SKILLS.indexOf(id)),
+    progress.pendingDiagnostics.map((id) => PROFILE3_SKILLS.indexOf(id)),
     skills,
   ];
 }
@@ -327,18 +366,24 @@ const PROFILES: Record<number, Profile> = Object.freeze({
   1: Object.freeze({
     skills: PROFILE1_SKILLS,
     identity: PROFILE1_IDENTITY,
-    signatures: "full",
+    format: "full",
     decode: (value: unknown[]) => decodeProfile(value, PROFILES[1]),
   }),
   2: Object.freeze({
     skills: PROFILE2_SKILLS,
     identity: PROFILE2_IDENTITY,
-    signatures: "q2-hex",
+    format: "q2-hex",
     decode: (value: unknown[]) => decodeProfile(value, PROFILES[2]),
-    encode: encodeProfile2,
+  }),
+  3: Object.freeze({
+    skills: PROFILE3_SKILLS,
+    identity: PROFILE3_IDENTITY,
+    format: "lines",
+    decode: (value: unknown[]) => decodeProfile(value, PROFILES[3]),
+    encode: encodeProfile3,
   }),
 });
-export const LATEST_PROFILE = 2;
+export const LATEST_PROFILE = 3;
 export const LATEST_PROFILE_SKILLS = PROFILES[LATEST_PROFILE].skills;
 
 function assertProfileIdentity(progress: PortableProgress, profile: Profile) {

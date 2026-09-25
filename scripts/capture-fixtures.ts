@@ -9,7 +9,6 @@ import {
   type PortableProgress,
 } from "../src/transfer";
 import { questionFingerprint } from "../src/question-identity";
-import type { AppState } from "../src/progress";
 import type { Question } from "../src/types";
 
 /**
@@ -47,8 +46,8 @@ if (process.argv.includes("--phase2-only")) {
 
   const state = JSON.parse(
     readFileSync(FIXTURES("local-state-v1.json"), "utf8"),
-  ) as AppState;
-  state.progress = normalizeQ2(state.progress) as AppState["progress"];
+  ) as { progress: Record<string, any>; session?: { current?: { question: Question } } };
+  state.progress = normalizeQ2(state.progress) as Record<string, any>;
   state.progress.formatVersion = 1;
   if (!state.session?.current)
     throw Error("The frozen local-state fixture has no current question.");

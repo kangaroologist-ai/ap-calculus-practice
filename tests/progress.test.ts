@@ -5,8 +5,11 @@ import {
   PARAMETERS,
   SCHEDULER_VERSION,
   chooseNext,
+  finishQuestion,
   freshProgress,
   isReady,
+  lineReady,
+  needsRemediation,
   recordHint,
   recordOutcome,
   reviveCard,
@@ -20,7 +23,7 @@ import {
 import { SKILLS, CURRICULUM_VERSION } from '../src/catalog';
 import { questionFingerprint } from '../src/question-identity';
 import { decodeProgress, encodeProgress, makePortableProgress, validateSnapshot } from '../src/transfer';
-import type { Config, Question, Verdict } from '../src/types';
+import type { Config, Question, Role, Verdict } from '../src/types';
 
 const NOW = Date.parse('2026-09-18T00:00:00.000Z');
 const config = (overrides: Partial<Config> = {}): Config => ({
@@ -38,6 +41,7 @@ function question(
   template = 0,
   supportingSkills: string[] = [],
   requiredSkills?: string[],
+  role?: Role,
 ): Question {
   const level = SKILLS.find((item) => item.id === skill)?.level ?? 1;
   const base: Question = {
@@ -61,11 +65,9 @@ function question(
     hintMath: "f'(x)",
     steps: [{ text: 'Apply the rule.', math: '1' }],
     signature: `signature-${id}`,
+    ...(role ? { role } : {}),
   };
-  // `requiredSkills` (SPEC-G3) is landing on the Question type via a concurrent
-  // change this worktree does not see yet. Attach it dynamically when a test
-  // supplies it; recordOutcome falls back to supportingSkills when it is absent.
-  const built: Question & { requiredSkills?: string[] } = requiredSkills
+  const built: Question = requiredSkills
     ? { ...base, requiredSkills }
     : base;
   return built;
@@ -86,16 +88,17 @@ const correct: Verdict = { status: 'correct', evidence: 'symbolic' };
 const incorrect: Verdict = { status: 'incorrect', feedbackCode: 'wrong-rule' };
 
 function readyState(templateOffset = 0, now = NOW): SkillState {
+  const line = (offset: number) => ({
+    streak: 2,
+    lastQ: `q2:${(templateOffset + offset).toString(16).padStart(8, '0')}`,
+    passed: true,
+    repair: false,
+  });
   return {
     card: storeCard(createEmptyCard(new Date(now))),
-    recent: [0, 1, 0, 1, 0].map((template, index) => ({
-      q: `ready-${templateOffset}-${index}`,
-      template: template + (templateOffset % 2),
-      correct: index !== 0,
-    })),
-    needsRemediation: false,
+    basic: line(1),
+    mix: line(2),
     failureStreak: 0,
-    lastFailureAt: 0,
     otherSinceFailure: 0,
     extraPracticeGiven: false,
     lastSeen: 0,
@@ -128,16 +131,21 @@ describe('local progress and FSRS boundaries', () => {
     expect(card.last_review?.getTime()).toBe(NOW);
   });
 
-  it('compares mixed q1 and q2 evidence fingerprints when recording an outcome', () => {
+  it('does not count q1 and its q2 form as different questions on one line', () => {
     const p = freshProgress(config(), NOW);
     const q1 = 'q1:12345678aaaaaaaaaaaaaaaaaaaaaaaa';
     const q2 = questionFingerprint(q1);
     const state = stateFor(p, 'power', NOW);
-    state.recent = [{ q: q1, template: 0, correct: false }];
-    const cur = current({ ...question('mixed-q-fingerprint'), signature: q2 });
+    state.basic = { streak: 1, lastQ: q2, passed: false, repair: false };
+    const cur = current({ ...question('mixed-q-fingerprint'), signature: q1 });
 
     expect(recordOutcome(p, cur, config(), correct, NOW)).toBe(true);
-    expect(state.recent).toEqual([{ q: q2, template: 0, correct: true }]);
+    expect(state.basic).toEqual({
+      streak: 1,
+      lastQ: q2,
+      passed: false,
+      repair: false,
+    });
   });
 
   it('does not update FSRS when the same question is submitted twice', () => {
@@ -169,8 +177,8 @@ describe('local progress and FSRS boundaries', () => {
     const cur = current(question('hint-before-submit-1'), 1);
     expect(recordOutcome(p, cur, config(), correct, NOW)).toBe(true);
     const state = p.skills.power;
-    expect(state.recent.at(-1)?.correct).toBe(false);
-    expect(state.needsRemediation).toBe(true);
+    expect(state.basic).toMatchObject({ streak: 0, repair: true });
+    expect(needsRemediation(state)).toBe(true);
     expect(reviveCard(state.card).stability).toBe(0.212);
   });
 
@@ -178,8 +186,8 @@ describe('local progress and FSRS boundaries', () => {
     const p = freshProgress(config(), NOW);
     const cur = current(question('input-help-1'), 0);
     expect(recordOutcome(p, cur, config(), correct, NOW)).toBe(true);
-    expect(p.skills.power.recent.at(-1)?.correct).toBe(true);
-    expect(p.skills.power.needsRemediation).toBe(false);
+    expect(p.skills.power.basic.streak).toBe(1);
+    expect(needsRemediation(p.skills.power)).toBe(false);
   });
 
   it('records a pre-submit hint as one assisted Again and does not double-count submit', () => {
@@ -188,7 +196,7 @@ describe('local progress and FSRS boundaries', () => {
     recordHint(p, cur, config(), NOW);
     expect(cur.hintsUsed).toBe(1);
     expect(cur.recorded).toBe(true);
-    expect(p.skills.power.recent.at(-1)?.correct).toBe(false);
+    expect(p.skills.power.basic).toMatchObject({ streak: 0, repair: true });
     expect(reviveCard(p.skills.power.card).stability).toBe(0.212);
     const afterHint = structuredClone(p);
     expect(recordOutcome(p, cur, config(), correct, NOW)).toBe(false);
@@ -224,7 +232,7 @@ describe('local progress and FSRS boundaries', () => {
     p.skills.power = readyState(1, NOW);
     const cur = current(question('wrong-1', 'product', 0, ['sum', 'power']));
     expect(recordOutcome(p, cur, config(), incorrect, NOW)).toBe(true);
-    expect(p.skills.product.needsRemediation).toBe(true);
+    expect(needsRemediation(p.skills.product)).toBe(true);
     expect(p.skills.product.failureStreak).toBe(1);
     expect(p.pendingDiagnostics).toEqual(['sum', 'power']);
     expect(reviveCard(p.skills.product.card).stability).toBe(0.212);
@@ -245,6 +253,7 @@ describe('local progress and FSRS boundaries', () => {
     const picked = chooseNext(p, c, NOW);
     expect(picked.question.primarySkill).toBe('sum');
     expect(picked.reason).toBe('Targeted check');
+    expect(picked.question.role).toBe('basic');
     expect(p.pendingDiagnostics).toEqual([]);
 
     // A second consecutive failure on the same skill must not re-queue it.
@@ -315,24 +324,43 @@ describe('local progress and FSRS boundaries', () => {
   });
 
   it('holds a remedial skill until two other skill opportunities have passed', () => {
-    const p = freshProgress(config(), NOW);
+    const c = config({
+      disabledFamilies: SKILLS.filter((item) => !['constant', 'power'].includes(item.id)).map((item) => item.id),
+    });
+    const p = freshProgress(c, NOW);
     const state = stateFor(p, 'power', NOW);
-    state.needsRemediation = true;
-    state.otherSinceFailure = 1;
+    state.basic = { streak: 0, lastQ: 'q2:00000001', passed: true, repair: true };
+    state.otherSinceFailure = 0;
+    state.card.due = NOW + 60_000;
+    state.card.last_review = NOW;
     p.pendingDiagnostics = [];
     expect(state.extraPracticeGiven).toBe(false);
-    const picked = chooseNext(p, config(), NOW);
-    expect(picked.question.primarySkill).not.toBe('power');
-    expect(p.skills.power.extraPracticeGiven).toBe(false);
-  });
+    const completeOther = (id: string, now: number) => {
+      const cur = current(question(id, 'constant'));
+      expect(recordOutcome(p, cur, c, correct, now)).toBe(true);
+      finishQuestion({
+        version: 1,
+        progress: p,
+        session: {
+          config: c,
+          completed: 0,
+          independent: 0,
+          assisted: 0,
+          skipped: 0,
+          finished: false,
+          current: cur,
+        },
+      });
+    };
 
-  it('marks a remedial slot once the two-other-skill spacing condition is met', () => {
-    const p = freshProgress(config(), NOW);
-    const state = stateFor(p, 'power', NOW);
-    state.needsRemediation = true;
-    state.otherSinceFailure = 2;
-    p.pendingDiagnostics = [];
-    const picked = chooseNext(p, config(), NOW);
+    completeOther('other-opportunity-1', NOW);
+    expect(state.otherSinceFailure).toBe(1);
+    expect(chooseNext(p, c, NOW + 1).question.primarySkill).toBe('constant');
+    expect(p.skills.power.extraPracticeGiven).toBe(false);
+
+    completeOther('other-opportunity-2', NOW + 2);
+    expect(state.otherSinceFailure).toBe(2);
+    const picked = chooseNext(p, c, NOW + 3);
     expect(picked.question.primarySkill).toBe('power');
     expect(picked.reason).toBe('Rebuild this skill');
     expect(p.skills.power.extraPracticeGiven).toBe(true);
@@ -343,7 +371,7 @@ describe('local progress and FSRS boundaries', () => {
     p.pendingDiagnostics = [];
     for (const skill of SKILLS.filter((item) => item.level === 1)) {
       const state = stateFor(p, skill.id, NOW);
-      state.needsRemediation = true;
+      state.basic = { streak: 0, passed: false, repair: true };
       state.otherSinceFailure = 0;
       state.card.due = NOW + 60_000;
       state.card.last_review = NOW;
@@ -363,13 +391,20 @@ describe('local progress and FSRS boundaries', () => {
 
     const resumed = chooseNext(p, onlyPower, NOW + 60_000);
     expect(resumed.question.primarySkill).toBe('power');
+    expect(resumed.reason).toBe('Keep building');
+    expect(resumed.question.role).toBe('basic');
   });
 
-  it('unlocks the next level only after every enabled skill is Ready', () => {
+  it('unlocks the next level when every enabled basic line has passed', () => {
     const p = freshProgress(config(), NOW);
-    for (const skill of SKILLS.filter((item) => item.level === 1)) p.skills[skill.id] = readyState(0);
+    for (const skill of SKILLS.filter((item) => item.level === 1)) {
+      p.skills[skill.id] = readyState(0);
+      p.skills[skill.id].mix = { streak: 0, passed: false, repair: false };
+    }
     unlock(p, config());
     expect(p.unlockedLevel).toBe(2);
+    expect(SKILLS.filter((item) => item.level === 1).every((item) => p.skills[item.id].mix.passed)).toBe(false);
+    expect(SKILLS.filter((item) => item.level === 1).every((item) => isReady(p.skills[item.id]))).toBe(false);
   });
 
   it('does not synthesize mastery merely because initialUnlockedLevel is higher', () => {
@@ -390,54 +425,119 @@ describe('local progress and FSRS boundaries', () => {
   it('keeps an already unlocked level open after a later error', () => {
     const p = freshProgress(config(), NOW);
     p.unlockedLevel = 2;
+    p.skills.power = readyState(0, NOW);
     const cur = current(question('regression-1'));
     expect(recordOutcome(p, cur, config(), incorrect, NOW)).toBe(true);
     expect(p.unlockedLevel).toBe(2);
-    expect(p.skills.power.needsRemediation).toBe(true);
+    expect(p.skills.power.basic.passed).toBe(true);
+    expect(p.skills.power.basic.repair).toBe(true);
+    expect(needsRemediation(p.skills.power)).toBe(true);
     expect(isReady(p.skills.power)).toBe(false);
   });
 
-  it('restores Ready after a new independent success and preserves the card timeline', () => {
+  it('keeps a passed basic line and unlocked level after a mixed-line miss', () => {
     const p = freshProgress(config(), NOW);
-    const s = stateFor(p, 'power', NOW);
-    s.recent = [0, 1, 0, 1, 0].map((template, index) => ({ q: `old-${index}`, template, correct: index !== 0 }));
-    s.needsRemediation = true;
+    p.unlockedLevel = 4;
+    p.skills.power = readyState(0, NOW);
+    const basicBefore = structuredClone(p.skills.power.basic);
+
+    expect(
+      recordOutcome(
+        p,
+        current(question('mixed-line-miss', 'power', 0, [], undefined, 'mix')),
+        config(),
+        incorrect,
+        NOW,
+      ),
+    ).toBe(true);
+
+    expect(p.skills.power.basic).toEqual(basicBefore);
+    expect(p.skills.power.mix).toMatchObject({ streak: 0, passed: true, repair: true });
+    expect(p.unlockedLevel).toBe(4);
+    expect(needsRemediation(p.skills.power)).toBe(true);
+  });
+
+  it('chooses basic, mixed, repair, and due-review roles with their branch reasons', () => {
+    const c = config({
+      disabledFamilies: SKILLS.filter((item) => item.id !== 'power').map((item) => item.id),
+    });
+    const p = freshProgress(c, NOW);
+    const first = chooseNext(p, c, NOW);
+    expect(first.reason).toBe('New skill');
+    expect(first.question.role).toBe('basic');
+    expect(recordOutcome(p, current(question('basic-one')), c, correct, NOW)).toBe(true);
+    expect(recordOutcome(p, current(question('basic-two')), c, correct, NOW + 1)).toBe(true);
+
+    const mixed = chooseNext(p, c, NOW + 2);
+    expect(mixed.reason).toBe('Mix it up');
+    expect(mixed.question.role).toBe('mix');
+
+    const repairing = freshProgress(c, NOW);
+    const repairState = (repairing.skills.power = readyState(0, NOW));
+    repairState.mix = { streak: 0, lastQ: 'q2:00000003', passed: true, repair: true };
+    repairState.otherSinceFailure = 2;
+    const repair = chooseNext(repairing, c, NOW + 1);
+    expect(repair.reason).toBe('Rebuild this skill');
+    expect(repair.question.role).toBe('mix');
+
+    const repairingBasic = freshProgress(c, NOW);
+    const basicRepairState = (repairingBasic.skills.power = readyState(0, NOW));
+    basicRepairState.basic = { streak: 0, lastQ: 'q2:00000004', passed: true, repair: true };
+    basicRepairState.otherSinceFailure = 2;
+    const basicRepair = chooseNext(repairingBasic, c, NOW + 1);
+    expect(basicRepair.reason).toBe('Rebuild this skill');
+    expect(basicRepair.question.role).toBe('basic');
+
+    const reviewing = freshProgress(c, NOW);
+    reviewing.skills.power = readyState(0, NOW);
+    const review = chooseNext(reviewing, c, NOW + 1);
+    expect(review.reason).toBe('Spaced review');
+    expect(review.question.role).toBe('mix');
+
+    const reviewingBasic = freshProgress(c, NOW);
+    stateFor(reviewingBasic, 'power', NOW).card.due = NOW;
+    const basicReview = chooseNext(reviewingBasic, c, NOW + 1);
+    expect(basicReview.reason).toBe('Spaced review');
+    expect(basicReview.question.role).toBe('basic');
+  });
+
+  it('clears a line repair after two new independent successes and preserves the card timeline', () => {
+    const p = freshProgress(config(), NOW);
+    const s = (p.skills.power = readyState(0, NOW));
     s.failureStreak = 2;
     s.card = storeCard(createEmptyCard(new Date(NOW)));
-    const cur = current(question('recover-1', 'power', 1));
-    expect(recordOutcome(p, cur, config(), correct, NOW)).toBe(true);
-    expect(s.needsRemediation).toBe(false);
+    expect(recordOutcome(p, current(question('repair-miss')), config(), incorrect, NOW)).toBe(true);
+    expect(s.basic).toMatchObject({ streak: 0, passed: true, repair: true });
+    expect(s.mix).toMatchObject({ streak: 2, passed: true, repair: false });
+    const cardAfterMiss = structuredClone(s.card);
+    expect(recordOutcome(p, current(question('recover-1')), config(), correct, NOW + 1)).toBe(true);
+    expect(s.basic).toMatchObject({ streak: 1, passed: true, repair: true });
+    expect(needsRemediation(s)).toBe(true);
+    expect(recordOutcome(p, current(question('recover-2')), config(), correct, NOW + 2)).toBe(true);
+    expect(s.basic).toMatchObject({ streak: 2, passed: true, repair: false });
+    expect(needsRemediation(s)).toBe(false);
     expect(s.failureStreak).toBe(0);
     expect(isReady(s)).toBe(true);
-    expect(reviveCard(s.card).reps).toBe(1);
+    expect(s.card).toEqual(cardAfterMiss);
   });
 
-  it('keeps a latest error from appearing Ready despite four earlier correct answers', () => {
+  it('does not let earlier successes hide a line miss before two new successes', () => {
     const p = freshProgress(config(), NOW);
-    const s = stateFor(p, 'power', NOW);
-    s.recent = [
-      { q: 'ready-a', template: 0, correct: true },
-      { q: 'ready-b', template: 1, correct: true },
-      { q: 'ready-c', template: 0, correct: true },
-      { q: 'ready-d', template: 1, correct: true },
-      { q: 'latest-error', template: 0, correct: false },
-    ];
-    s.needsRemediation = true;
-    expect(s.recent.filter((item) => item.correct)).toHaveLength(4);
-    expect(isReady(s)).toBe(false);
-
-    expect(recordOutcome(p, current(question('recovery-success', 'power', 1)), config(), correct, NOW)).toBe(true);
-    expect(s.needsRemediation).toBe(true);
-    expect(isReady(s)).toBe(false);
-    expect(recordOutcome(p, current(question('recovery-second', 'power', 0)), config(), correct, NOW + 1)).toBe(true);
-    expect(s.needsRemediation).toBe(false);
-    expect(isReady(s)).toBe(true);
+    const s = (p.skills.power = readyState(0, NOW));
+    expect(recordOutcome(p, current(question('latest-error')), config(), incorrect, NOW)).toBe(true);
+    expect(lineReady(s.basic)).toBe(false);
+    expect(s.basic.passed).toBe(true);
+    expect(recordOutcome(p, current(question('recovery-success-1')), config(), correct, NOW + 1)).toBe(true);
+    expect(lineReady(s.basic)).toBe(false);
+    expect(s.basic.repair).toBe(true);
+    expect(recordOutcome(p, current(question('recovery-success-2')), config(), correct, NOW + 2)).toBe(true);
+    expect(lineReady(s.basic)).toBe(true);
   });
 
-  it('keeps remediation active after one success when the recent evidence window is not Ready yet', () => {
+  it('keeps remediation active after one post-miss success', () => {
     const p = freshProgress(config(), NOW);
     expect(recordOutcome(p, current(question('failure-before-recovery', 'power', 0)), config(), incorrect, NOW)).toBe(true);
-    expect(p.skills.power.needsRemediation).toBe(true);
+    expect(needsRemediation(p.skills.power)).toBe(true);
 
     const submitAtDue = (id: string, template: number) => {
       const now = Math.max(NOW, p.skills.power.card.due);
@@ -445,47 +545,59 @@ describe('local progress and FSRS boundaries', () => {
     };
 
     submitAtDue('recovery-one', 1);
-    expect(p.skills.power.recent).toHaveLength(2);
-    expect(p.skills.power.needsRemediation).toBe(true);
+    expect(p.skills.power.basic.streak).toBe(1);
+    expect(p.skills.power.basic.repair).toBe(true);
+    expect(needsRemediation(p.skills.power)).toBe(true);
     expect(isReady(p.skills.power)).toBe(false);
 
     submitAtDue('recovery-two', 0);
-    expect(p.skills.power.recent).toHaveLength(3);
-    expect(p.skills.power.needsRemediation).toBe(false);
-    expect(isReady(p.skills.power)).toBe(true);
+    expect(p.skills.power.basic.streak).toBe(2);
+    expect(p.skills.power.basic.repair).toBe(false);
+    expect(needsRemediation(p.skills.power)).toBe(false);
+    expect(lineReady(p.skills.power.basic)).toBe(true);
   });
 
-  it('advances after two independent template variants without changing a not-due FSRS card', () => {
+  it('passes a line after two independent questions without changing a not-due FSRS card', () => {
     const p = freshProgress(config(), NOW);
     recordOutcome(p, current(question('constant-first', 'constant', 0)), config(), correct, NOW);
     expect(isReady(p.skills.constant)).toBe(false);
     expect(chooseNext(p, config(), NOW + 1).question.primarySkill).toBe('constant');
     const card = structuredClone(p.skills.constant.card);
     recordOutcome(p, current(question('constant-second', 'constant', 1)), config(), correct, NOW + 2);
-    expect(isReady(p.skills.constant)).toBe(true);
+    expect(p.skills.constant.basic.passed).toBe(true);
+    expect(lineReady(p.skills.constant.basic)).toBe(true);
+    expect(isReady(p.skills.constant)).toBe(false);
     expect(p.skills.constant.card).toEqual(card);
     expect(chooseNext(p, config(), NOW + 3).question.primarySkill).toBe('power');
   });
 
-  it('requires two distinct questions and two structures, not retries or repeated templates', () => {
+  it('requires two distinct questions on a line but permits the same template', () => {
     const p = freshProgress(config(), NOW);
     const s = stateFor(p, 'power', NOW);
-    s.recent = [{q:'a', template:0, correct:true}, {q:'b', template:0, correct:true}];
-    expect(isReady(s)).toBe(false);
-    s.recent[1].template = 1;
-    s.recent[1].q = 'a';
-    expect(isReady(s)).toBe(false);
-    s.recent[1].q = 'b';
-    expect(isReady(s)).toBe(true);
+    const repeated = current(question('repeat-one', 'power', 0));
+    expect(recordOutcome(p, repeated, config(), correct, NOW)).toBe(true);
+    const sameQuestion = current({ ...question('repeat-two', 'power', 0), signature: repeated.question.signature });
+    expect(recordOutcome(p, sameQuestion, config(), correct, NOW + 1)).toBe(true);
+    expect(s.basic.streak).toBe(1);
+    expect(s.basic.passed).toBe(false);
+
+    expect(recordOutcome(p, current(question('different-question', 'power', 0)), config(), correct, NOW + 2)).toBe(true);
+    expect(s.basic.streak).toBe(2);
+    expect(s.basic.passed).toBe(true);
   });
 
   it('pauses rather than recycling Ready skills before due, but reviews them when due', () => {
     const c = config({disabledFamilies: SKILLS.filter(s => s.id !== 'constant').map(s => s.id)});
     const p = freshProgress(c, NOW);
-    recordOutcome(p, current(question('c1', 'constant', 0)), c, correct, NOW);
-    recordOutcome(p, current(question('c2', 'constant', 1)), c, correct, NOW + 1);
-    expect(() => chooseNext(p, c, NOW + 2)).toThrow('PRACTICE_PAUSE');
-    expect(chooseNext(p, c, p.skills.constant.card.due).reason).toBe('Spaced review');
+    recordOutcome(p, current(question('c1', 'constant', 0, [], undefined, 'basic')), c, correct, NOW);
+    recordOutcome(p, current(question('c2', 'constant', 1, [], undefined, 'basic')), c, correct, NOW + 1);
+    recordOutcome(p, current(question('c3', 'constant', 0, [], undefined, 'mix')), c, correct, NOW + 2);
+    recordOutcome(p, current(question('c4', 'constant', 1, [], undefined, 'mix')), c, correct, NOW + 3);
+    expect(isReady(p.skills.constant)).toBe(true);
+    expect(() => chooseNext(p, c, NOW + 4)).toThrow('PRACTICE_PAUSE');
+    const review = chooseNext(p, c, p.skills.constant.card.due);
+    expect(review.reason).toBe('Spaced review');
+    expect(review.question.role).toBe('mix');
   });
 
   it('round-trips stored Date fields as epoch milliseconds and revives them', () => {
@@ -524,7 +636,7 @@ describe('local progress and FSRS boundaries', () => {
   });
 
   it.each([
-    ['format version', (p: Progress) => ({ ...p, formatVersion: 2 })],
+    ['format version', (p: Progress) => ({ ...p, formatVersion: 3 })],
     ['curriculum version', (p: Progress) => ({ ...p, curriculumVersion: 'future-curriculum' })],
     ['package version', (p: Progress) => ({ ...p, schedulerPackageVersion: '6.0.0' })],
     ['algorithm version', (p: Progress) => ({ ...p, fsrsAlgorithmVersion: 'future-fsrs' })],

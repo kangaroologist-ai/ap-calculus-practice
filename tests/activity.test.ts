@@ -60,6 +60,30 @@ describe("continuous activity counters", () => {
     expect(p.streak).toBe(0);
     expect(todayCount(p, now)).toBe(2);
   });
+  it("counts a first unassisted mixed-line answer as independent practice", () => {
+    const p = freshProgress(config, now);
+    const cur = current("mixed-line");
+    cur.question = generateQuestion("constant", "mixed-line", { role: "mix" });
+    cur.verdict = good;
+    recordOutcome(p, cur, config, good, now);
+    const state: AppState = {
+      version: 1,
+      progress: p,
+      session: {
+        config,
+        completed: 0,
+        independent: 0,
+        assisted: 0,
+        skipped: 0,
+        finished: false,
+        current: cur,
+      },
+    };
+    finishQuestion(state);
+    expect(state.session!.independent).toBe(1);
+    expect(p.skills.constant.basic.streak).toBe(0);
+    expect(p.skills.constant.mix.streak).toBe(1);
+  });
   it("teaching hints count a practiced question once and break the independent streak", () => {
     const p = freshProgress(config, now);
     p.streak = 9;
