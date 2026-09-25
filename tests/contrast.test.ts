@@ -75,4 +75,20 @@ describe("theme token contrast", () => {
       }
     }
   });
+
+  // WCAG 1.4.11: an answer field's or secondary button's boundary must be
+  // distinguishable (3:1) on both the card and the page background.
+  test("control borders meet the non-text contrast minimum in both themes", () => {
+    for (const [scheme, block] of [
+      ["light", lightBlock!],
+      ["dark", darkBlock!],
+    ] as const) {
+      const tokens = tokenSet(block);
+      for (const background of ["surface", "bg"] as const)
+        expect(
+          contrast(tokens["control-border"], tokens[background]),
+          `${scheme} control-border/${background}`,
+        ).toBeGreaterThanOrEqual(3);
+    }
+  });
 });

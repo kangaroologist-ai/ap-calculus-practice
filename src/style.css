@@ -11,6 +11,7 @@
   --label: #1d1d1f;
   --label-2: #6c6c70;
   --separator: #d2d2d7;
+  --control-border: #86868b;
   --fill: #f0f0f3;
   --bg: #f5f5f7;
   --surface: #ffffff;
@@ -42,6 +43,7 @@
     --label: #f5f5f7;
     --label-2: #a1a1a6;
     --separator: #38383a;
+    --control-border: #7c7c80;
     --fill: #2c2c2e;
     --bg: #000000;
     --surface: #1c1c1e;
@@ -477,7 +479,7 @@ footer .text-button {
 }
 .button.subtle {
   background: transparent;
-  border-color: var(--separator);
+  border-color: var(--control-border);
 }
 .button.subtle:hover {
   background: var(--fill);
@@ -538,6 +540,7 @@ math-field::part(menu-toggle) {
 }
 .actions .next {
   margin-left: auto;
+  min-width: 44px;
 }
 .hint-panel {
   border-top: 1px solid var(--separator);
@@ -569,13 +572,13 @@ math-field {
   min-height: 66px;
   color: var(--label);
   background: var(--surface);
-  border: 1.5px solid var(--separator);
+  border: 1.5px solid var(--control-border);
   border-radius: 10px;
   font-size: var(--t-equation);
   padding: 10px 12px;
   margin-top: 7px;
   --contains-highlight-background-color: color-mix(in srgb, var(--tint) 10%, var(--surface));
-  border-color: var(--separator);
+  border-color: var(--control-border);
   --caret-color: var(--focus);
   --selection-background-color: color-mix(in srgb, var(--tint) 15%, var(--surface));
 }
