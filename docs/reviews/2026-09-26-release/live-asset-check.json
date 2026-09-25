@@ -1,0 +1,37 @@
+{
+  "commit": "c14b709fab76a6815753b80fe54fd394a9aeecd4",
+  "checks": [
+    {
+      "path": "index.html",
+      "matches": true
+    },
+    {
+      "path": "help.html",
+      "matches": true
+    },
+    {
+      "path": "practice-config.json",
+      "matches": true
+    },
+    {
+      "path": "skill-examples.html",
+      "matches": true
+    },
+    {
+      "path": "assets/grading.worker-CNPKA4zC.js",
+      "matches": true
+    },
+    {
+      "path": "assets/main-DAuEv4C6.js",
+      "matches": true
+    },
+    {
+      "path": "assets/style-BPDCi0d2.js",
+      "matches": true
+    },
+    {
+      "path": "assets/style-CmbwNClR.css",
+      "matches": true
+    }
+  ]
+}
