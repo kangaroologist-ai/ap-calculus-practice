@@ -45,10 +45,10 @@ function pseudoRandomText(length: number, seed: number): string {
 
 function largeCode(now = NOW): string {
   const p = portable(now);
-  // The uncompressible strings force several QR frames without changing the
-  // schema or adding an attempt history to the portable snapshot.
-  p.recentQuestionSignatures = Array.from({ length: 10 }, (_, index) => pseudoRandomText(4096, index + 1));
-  return encodeProgress(p);
+  // Keep QR multipart coverage after fingerprints become fixed-size q2 values.
+  const raw = { ...p, exportPadding: pseudoRandomText(4096, 1) };
+  const body = base64Url(zlibSync(strToU8(JSON.stringify(raw))));
+  return `DSP1.${checksum(body)}.${body}`;
 }
 
 function replaceFrameBody(frame: string, body: string): string {

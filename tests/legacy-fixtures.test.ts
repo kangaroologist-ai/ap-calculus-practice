@@ -14,10 +14,35 @@ const rawSnapshot = JSON.parse(
   fixture('compact-full-snapshot.json'),
 ) as PortableProgress;
 
+function qFields(value: unknown): string[] {
+  if (Array.isArray(value)) return value.flatMap(qFields);
+  if (!value || typeof value !== 'object') return [];
+  return Object.entries(value).flatMap(([key, child]) => [
+    ...(key === 'q' && typeof child === 'string' ? [child] : []),
+    ...qFields(child),
+  ]);
+}
+
+function expectQ2Fingerprints(value: unknown) {
+  expect(qFields(value).every((q) => /^q2:[a-f0-9]{8}$/.test(q))).toBe(true);
+}
+
 describe('legacy fixtures stay readable by the current code', () => {
-  it('decodes the frozen DSP1 export without changing any field', () => {
+  it('decodes the frozen DSP1 export and normalizes all evidence fingerprints', () => {
     const decoded = decodeProgress(fixture('dsp1.txt'));
-    expect(decoded).toEqual(rawSnapshot);
+    expect(decoded.unlockedLevel).toBe(rawSnapshot.unlockedLevel);
+    expect(decoded.sequence).toBe(rawSnapshot.sequence);
+    expect(Object.keys(decoded.skills).sort()).toEqual(
+      Object.keys(rawSnapshot.skills).sort(),
+    );
+    for (const id of Object.keys(rawSnapshot.skills))
+      expect(decoded.skills[id].card).toEqual(rawSnapshot.skills[id].card);
+    expectQ2Fingerprints(decoded);
+    expect(
+      decoded.recentQuestionSignatures.every((q) =>
+        /^q2:[a-f0-9]{8}$/.test(q),
+      ),
+    ).toBe(true);
   });
 
   it('decodes the frozen DSP2 (compact profile 1) export and keeps key fields', () => {
@@ -31,11 +56,15 @@ describe('legacy fixtures stay readable by the current code', () => {
     );
     for (const id of Object.keys(rawSnapshot.skills))
       expect(decoded.skills[id].card).toEqual(rawSnapshot.skills[id].card);
+    expectQ2Fingerprints(decoded);
   });
 
   it('validates the frozen formatVersion-1 local state', () => {
     const state = JSON.parse(fixture('local-state-v1.json')) as AppState;
-    expect(validateLocalState(state).state).toEqual(state);
+    const result = validateLocalState(state);
+    expect(result.migrated).toBe(true);
+    expect(result.from).toBe(1);
+    expectQ2Fingerprints(result.state.progress);
   });
 
   it('loads the frozen golden generator output at its full size', () => {

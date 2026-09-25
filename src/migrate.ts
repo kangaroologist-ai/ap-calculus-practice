@@ -1,4 +1,5 @@
 import { SKILLS, CURRICULUM_VERSION } from "./catalog";
+import { questionFingerprint } from "./question-identity";
 import {
   PARAMETERS,
   SCHEDULER_VERSION,
@@ -64,7 +65,58 @@ function checkKnownIdentity(progress: MutableProgress, version: number) {
     throw Error("Unsupported review settings. No progress was changed.");
 }
 
+export function dedupeKeepLast<T>(
+  values: T[],
+  key: (value: T) => string | undefined,
+): T[] {
+  const seen = new Set<string>();
+  const retained: T[] = [];
+  for (let i = values.length - 1; i >= 0; i--) {
+    const value = values[i];
+    const fingerprint = key(value);
+    if (fingerprint !== undefined && seen.has(fingerprint)) continue;
+    if (fingerprint !== undefined) seen.add(fingerprint);
+    retained.push(value);
+  }
+  return retained.reverse();
+}
+
 function normalizeFingerprints(progress: MutableProgress) {
+  // Keep the legacy size limit visible to validation before hashing shortens values.
+  const normalize = (value: unknown) =>
+    typeof value === "string" && value.length <= 4096
+      ? questionFingerprint(value)
+      : value;
+  for (const skill of Object.values(progress.skills ?? {}) as any[]) {
+    if (
+      !skill ||
+      typeof skill !== "object" ||
+      Array.isArray(skill) ||
+      !Array.isArray(skill.recent)
+    )
+      continue;
+    const recent = skill.recent.map((entry: any) =>
+      entry && typeof entry === "object" && !Array.isArray(entry)
+        ? { ...entry, q: normalize(entry.q) }
+        : entry,
+    );
+    // Let validation reject over-limit collections before deduplication can shrink them.
+    skill.recent =
+      recent.length <= 5
+        ? dedupeKeepLast(recent, (entry: any) =>
+            typeof entry?.q === "string" ? entry.q : undefined,
+          )
+        : recent;
+  }
+  if (Array.isArray(progress.recentQuestionSignatures)) {
+    const signatures = progress.recentQuestionSignatures.map(normalize);
+    progress.recentQuestionSignatures =
+      signatures.length <= 10
+        ? dedupeKeepLast(signatures, (signature: unknown) =>
+            typeof signature === "string" ? signature : undefined,
+          )
+        : signatures;
+  }
   return progress;
 }
 
@@ -200,7 +252,7 @@ export function validateCurrent(value: unknown): Progress {
         (e: any) =>
           !e ||
           typeof e.q !== "string" ||
-          e.q.length > 4096 ||
+          !/^q2:[a-f0-9]{8}$/.test(e.q) ||
           !integer(e.template, 0, 1) ||
           typeof e.correct !== "boolean",
       ) ||
@@ -229,7 +281,8 @@ export function validateCurrent(value: unknown): Progress {
     p.recentQuestionSignatures.length > 10 ||
     p.recentQuestionSignatures.some(
       (signature) =>
-        typeof signature !== "string" || signature.length > 4096,
+        typeof signature !== "string" ||
+        !/^q2:[a-f0-9]{8}$/.test(signature),
     )
   )
     throw Error("Invalid practice queue.");

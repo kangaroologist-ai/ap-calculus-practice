@@ -18,6 +18,7 @@ import {
   type SkillState,
 } from '../src/progress';
 import { SKILLS, CURRICULUM_VERSION } from '../src/catalog';
+import { questionFingerprint } from '../src/question-identity';
 import { decodeProgress, encodeProgress, makePortableProgress, validateSnapshot } from '../src/transfer';
 import type { Config, Question, Verdict } from '../src/types';
 
@@ -125,6 +126,18 @@ describe('local progress and FSRS boundaries', () => {
     expect(card.learning_steps).toBe(1);
     expect(card.due.getTime()).toBe(NOW + 10 * 60 * 1000);
     expect(card.last_review?.getTime()).toBe(NOW);
+  });
+
+  it('compares mixed q1 and q2 evidence fingerprints when recording an outcome', () => {
+    const p = freshProgress(config(), NOW);
+    const q1 = 'q1:12345678aaaaaaaaaaaaaaaaaaaaaaaa';
+    const q2 = questionFingerprint(q1);
+    const state = stateFor(p, 'power', NOW);
+    state.recent = [{ q: q1, template: 0, correct: false }];
+    const cur = current({ ...question('mixed-q-fingerprint'), signature: q2 });
+
+    expect(recordOutcome(p, cur, config(), correct, NOW)).toBe(true);
+    expect(state.recent).toEqual([{ q: q2, template: 0, correct: true }]);
   });
 
   it('does not update FSRS when the same question is submitted twice', () => {

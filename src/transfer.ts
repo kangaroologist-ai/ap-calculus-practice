@@ -2,20 +2,26 @@ import { questionFingerprint } from "./question-identity";
 import { packProgress, unpackProgress } from "./compact-progress";
 import { strToU8, strFromU8, zlibSync, Unzlib } from "fflate";
 import { localPracticeDay, type Progress } from "./progress";
-import { migrateProgress, validateCurrent } from "./migrate";
+import { dedupeKeepLast, migrateProgress, validateCurrent } from "./migrate";
 export type PortableProgress = Progress & { exportedAt: number };
+
 export function makePortableProgress(
   p: Progress,
   now = Date.now(),
 ): PortableProgress {
   const copy = structuredClone(p);
   for (const skill of Object.values(copy.skills)) {
-    skill.recent = skill.recent
-      .slice(-2)
-      .map((e) => ({ ...e, q: questionFingerprint(e.q) }));
+    skill.recent = dedupeKeepLast(
+      skill.recent
+        .slice(-2)
+        .map((e) => ({ ...e, q: questionFingerprint(e.q) })),
+      (e) => e.q,
+    );
   }
-  copy.recentQuestionSignatures =
-    copy.recentQuestionSignatures.map(questionFingerprint);
+  copy.recentQuestionSignatures = dedupeKeepLast(
+    copy.recentQuestionSignatures.map(questionFingerprint),
+    (signature) => signature,
+  );
   return {
     ...copy,
     streak: p.streak ?? 0,

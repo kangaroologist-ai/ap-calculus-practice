@@ -1,5 +1,6 @@
-// A 128-bit SHA-256 prefix identifies a question without exporting its formula.
-// This is duplicate detection, not authentication or a student identity.
+// Short SHA-256 prefixes identify questions without exporting their formula.
+// Across a 15-comparison window, collision risk is about 15/2^32; at worst one
+// new evidence item is not counted. A collision can block Ready, never create it.
 const K = [
   0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1,
   0x923f82a4, 0xab1c5ed5, 0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3,
@@ -14,8 +15,7 @@ const K = [
   0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2,
 ];
 const rotate = (n: number, r: number) => (n >>> r) | (n << (32 - r));
-export function questionFingerprint(signature: string): string {
-  if (/^q1:[a-f0-9]{32}$/.test(signature)) return signature;
+function sha256Hex(signature: string): string {
   const input = new TextEncoder().encode(signature);
   const bytes = new Uint8Array(Math.ceil((input.length + 9) / 64) * 64);
   bytes.set(input);
@@ -63,11 +63,12 @@ export function questionFingerprint(signature: string): string {
     }
     [a, b, c, d, e, f, g, z].forEach((n, i) => (h[i] = (h[i] + n) | 0));
   }
-  return (
-    "q1:" +
-    h
-      .slice(0, 4)
-      .map((n) => (n >>> 0).toString(16).padStart(8, "0"))
-      .join("")
-  );
+  return h.map((n) => (n >>> 0).toString(16).padStart(8, "0")).join("");
+}
+
+export function questionFingerprint(signature: string): string {
+  if (/^q2:[a-f0-9]{8}$/.test(signature)) return signature;
+  if (/^q1:[a-f0-9]{32}$/.test(signature))
+    return `q2:${signature.slice(3, 11)}`;
+  return `q2:${sha256Hex(signature).slice(0, 8)}`;
 }

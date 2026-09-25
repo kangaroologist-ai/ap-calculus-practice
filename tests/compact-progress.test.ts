@@ -41,11 +41,14 @@ function decodeRenderedQr(frame: string): string {
 }
 
 describe("full compact progress transfer fixture", () => {
-  it("uses the SHA-256 128-bit question fingerprint for ASCII and Unicode", () => {
+  it("uses idempotent q2 fingerprints and truncates q1 to the same SHA-256 prefix", () => {
     for (const value of ["", "abc", "微积分🌌".repeat(32)]) {
-      const expected =
-        "q1:" + createHash("sha256").update(value, "utf8").digest("hex").slice(0, 32);
+      const hash = createHash("sha256").update(value, "utf8").digest("hex");
+      const expected = `q2:${hash.slice(0, 8)}`;
+      const legacy = `q1:${hash.slice(0, 32)}`;
       expect(questionFingerprint(value)).toBe(expected);
+      expect(questionFingerprint(legacy)).toBe(expected);
+      expect(questionFingerprint(expected)).toBe(expected);
       expect(questionFingerprint(questionFingerprint(value))).toBe(expected);
     }
   });
@@ -55,12 +58,24 @@ describe("full compact progress transfer fixture", () => {
     expect(Object.keys(snapshot.skills)).toHaveLength(26);
     expect(Object.values(snapshot.skills).every((s) => s.recent.length === 5)).toBe(true);
     expect(Object.keys(snapshot.practiceDays ?? {})).toHaveLength(31);
+    const portable = makePortableProgress(snapshot, snapshot.exportedAt);
+    expect(
+      Object.values(portable.skills).every((s) =>
+        s.recent.every((e) => /^q2:[a-f0-9]{8}$/.test(e.q)),
+      ),
+    ).toBe(true);
+    expect(
+      portable.recentQuestionSignatures.every((q) =>
+        /^q2:[a-f0-9]{8}$/.test(q),
+      ),
+    ).toBe(true);
   });
 
   it("round-trips all FSRS fields and the full evidence fixture through DSP2", () => {
-    const code = encodeProgress(snapshot);
+    const portable = validateSnapshot(snapshot);
+    const code = encodeProgress(portable);
     const decoded = decodeProgress(code);
-    expect(isDeepStrictEqual(decoded, snapshot)).toBe(true);
+    expect(isDeepStrictEqual(decoded, portable)).toBe(true);
     expect(code.length).toBeGreaterThan(2300);
   });
 
