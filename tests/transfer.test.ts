@@ -209,3 +209,10 @@ describe('portable progress encoding and QR transfer', () => {
    s.card.last_review = NOW - 123.75;
    expect(decodeProgress(encodeProgress(snapshot))).toEqual(snapshot);
  });
+
+it('explains a structurally damaged code without exposing internal field names', () => {
+  const body = Buffer.from(zlibSync(strToU8(JSON.stringify([3, Date.now(), Date.now(), 1, 0, 0, null, [], [], [], [[0, 'bad']]])), { level: 9 }))
+    .toString('base64url');
+  const code = `DSP2.${checksum(body)}.${body}`;
+  expect(() => decodeProgress(code)).toThrow(/can’t be read.*Copy the whole code again/);
+});

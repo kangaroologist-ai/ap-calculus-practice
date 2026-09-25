@@ -3,7 +3,12 @@ import { packProgress, unpackProgress } from "./compact-progress";
 import { strToU8, strFromU8, zlibSync, Unzlib } from "fflate";
 import QRCode from "qrcode";
 import { localPracticeDay, type Progress } from "./progress";
-import { dedupeKeepLast, migrateProgress, validateCurrent } from "./migrate";
+import {
+  dedupeKeepLast,
+  migrateProgress,
+  NewerProgressError,
+  validateCurrent,
+} from "./migrate";
 export type PortableProgress = Progress & { exportedAt: number };
 
 export function makePortableProgress(
@@ -88,13 +93,26 @@ export function decodeProgress(code: string): PortableProgress {
     out.set(c, offset);
     offset += c.length;
   }
-  const data = JSON.parse(strFromU8(out));
-  const raw = m[1] === "2" ? unpackProgress(data) : data;
-  const exportedAt = (raw as { exportedAt?: unknown })?.exportedAt;
-  if (!finite(exportedAt, 946684800000, Date.now() + 86400000))
-    throw Error("Invalid progress data.");
-  const { progress } = migrateProgress(raw);
-  return { ...progress, exportedAt } as PortableProgress;
+  try {
+    const data = JSON.parse(strFromU8(out));
+    const raw = m[1] === "2" ? unpackProgress(data) : data;
+    const exportedAt = (raw as { exportedAt?: unknown })?.exportedAt;
+    if (!finite(exportedAt, 946684800000, Date.now() + 86400000))
+      throw Error("Invalid progress data.");
+    const { progress } = migrateProgress(raw);
+    return { ...progress, exportedAt } as PortableProgress;
+  } catch (error) {
+    // Version messages already tell the student what to do; structural
+    // details ("Invalid compact card.") would not.
+    if (
+      error instanceof NewerProgressError ||
+      /not supported|Unsupported review settings/.test((error as Error).message)
+    )
+      throw error;
+    throw Error(
+      "This progress code can’t be read. Copy the whole code again, or export a new one on the other device.",
+    );
+  }
 }
 // Base45 uses QR's denser alphanumeric mode; the copyable code stays Base64URL.
 const QR_ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:";
