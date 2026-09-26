@@ -67,7 +67,7 @@ rem 刻度，最小 12 px（`--t-caption`），由 `tests/visual-tokens.spec.ts`
 
 字距：大标题用负字距（`h1` 为 −1.6 px），正文保持 0。
 
-### 3.3 间距（**待实现：S-3**）
+### 3.3 间距（已实现，`src/style.css:40` 起）
 
 `--space-N = N × 4px`，只定义用到的档位：
 
@@ -87,7 +87,7 @@ rem 刻度，最小 12 px（`--t-caption`），由 `tests/visual-tokens.spec.ts`
 
 现有取值到令牌的对应（按 `src/style.css` 中 padding / margin / gap 的出现次数统计）：
 
-| 现值（次数） | 目标 | 说明 |
+| 原值（次数） | 目标 | 说明 |
 |---|---|---|
 | 4（5）、8（9）、12（27）、16（12）、20（15）、24（6）、28（7）、32（2） | 同值令牌 | 直接替换 |
 | 5（4）、6（4）、7（5） | 视上下文取 4 或 8 | 同一组件内保持原来的大小关系 |
@@ -102,7 +102,7 @@ rem 刻度，最小 12 px（`--t-caption`），由 `tests/visual-tokens.spec.ts`
 
 验收（Spec S2）：每处数值变化 ≤ 2 px，超出的逐条说明理由；改前改后的截图矩阵由审核者比对，不允许破版、换行变化或裁切。
 
-### 3.4 圆角（**待实现：S-3**）
+### 3.4 圆角（已实现，`src/style.css:51` 起）
 
 | 令牌 | 值 | 用于 | 现值 |
 |---|---|---|---|
@@ -113,7 +113,9 @@ rem 刻度，最小 12 px（`--t-caption`），由 `tests/visual-tokens.spec.ts`
 | `--radius-xl` | 20px | 桌面卡片 | 20 |
 | `--radius-full` | 999px | 圆形与胶囊 | 50% |
 
-### 3.5 阴影（**待实现：S-3**）
+例外：站点图标 `.brand-mark` 的圆角随图标大小按比例设置（11 px / 手机 9 px），不使用组件圆角令牌。
+
+### 3.5 阴影（已实现，`src/style.css:57` 起，深色值在深色令牌块中）
 
 | 令牌 | 浅色 | 用于 |
 |---|---|---|
@@ -121,7 +123,7 @@ rem 刻度，最小 12 px（`--t-caption`），由 `tests/visual-tokens.spec.ts`
 | `--shadow-dialog` | `0 24px 90px` `--label` 20% | 对话框 |
 | `--shadow-bar` | `0 −4px 16px` `--label` 3% | 键盘上方的操作栏 |
 
-深色模式在深色令牌块中重新定义这三个值（现有的深色覆盖写在 `src/style.css` 的 `@media (prefers-color-scheme: dark)` 组件块里，届时移入令牌块）。一个元素只用阴影或描边中的一种表示层级。
+深色模式在深色令牌块中重新定义这三个值（已移入深色令牌块）。一个元素只用阴影或描边中的一种表示层级。
 
 ### 3.6 动效（**待实现：D-2**）
 
@@ -159,7 +161,7 @@ rem 刻度，最小 12 px（`--t-caption`），由 `tests/visual-tokens.spec.ts`
 
 | 状态 | 规则 | 落实位置 |
 |---|---|---|
-| 默认 | 最小高度 44 px；圆角 `--radius-md` | `src/style.css:464`；圆角**待实现：S-3** |
+| 默认 | 最小高度 44 px；圆角 `--radius-md` | `src/style.css:464`；圆角 `var(--radius-md)` |
 | 悬停 | 只在 `@media (hover: hover) and (pointer: fine)` 下生效 | **待实现：D-2**（现为无条件 `:hover`，`src/style.css:446、484、487`） |
 | 按下 | `transform: scale(0.97)`，`--dur-press`；< 32 px 的图标按钮只变背景 | **待实现：D-2** |
 | 焦点 | 3 px `--focus` 描边，偏移 4 px，只在 `:focus-visible` | `src/style.css:80-99` |
