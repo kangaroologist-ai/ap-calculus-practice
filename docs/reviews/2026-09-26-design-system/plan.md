@@ -263,7 +263,7 @@ Codex 沙盒不能起服务器，所有浏览器测试和截图都由 Claude 运
 - [ ] **D-2 · D2/D3 · Luna max**（样式表内的机械改动，数值已定）— 在 `src/style.css` 中加按压态、限定悬停、给反馈框 / 对话框 / 操作栏加过渡、重写减少动态的规则；另新建 `tests/motion.spec.ts`，断言正常模式与 reduced-motion 下的计算样式。文件：只动这两个。必须在 S-3 之后执行。
 - [ ] **D-3 · D4/D5/D6 · Claude**（多处小改动）— `src/main.ts`：SVG 图标、弹窗标题文案、对话框初始焦点、`h1`；`src/style.css`：页脚对齐、固定对话框头部；对应的测试断言。
 - [ ] ~~**D-4 · D7 · Claude**~~ — **取消**（用户决定不改庆祝频率）。只剩一项：在 `docs/ui-review.md` 中把 U-R12 标为“已决定：保持现状”，由 R-1 一并完成。
-- [ ] **D-8 · D8 · Claude**（滚动与键盘、焦点相互影响，需要在浏览器里反复调试）— 修改 `src/main.ts` 中 `keepAnswerVisible` 和判分 / 提示之后的滚动逻辑；在 `tests/app.spec.ts` 加 390 px 触屏下的两项断言。验证：新测试通过、改前失败；截图矩阵中答错、无效、提示三种状态都能看到内容。
+- [x] **D-8 · D8 · Claude**（滚动与键盘、焦点相互影响，需要在浏览器里反复调试）— 修改 `src/main.ts` 中 `keepAnswerVisible` 和判分 / 提示之后的滚动逻辑；在 `tests/app.spec.ts` 加 390 px 触屏下的两项断言。验证：新测试通过、改前失败；截图矩阵中答错、无效、提示三种状态都能看到内容。 **结果**（提交 `1c01317`）：`keepAnswerVisible` 把可见的反馈框一并算进“需要露出的区域”；新增 `revealNewHint`，在新提示出现后把它滚到视野里。WebKit iPhone 仿真连续 4 次实测：反馈框 y = 301–350，操作栏 y = 365；提示面板 y = 78–157。新测试在 Chromium 触屏 390 px 下通过；换回修复前的 `main.ts` 时失败。改后截图：`after/390-light-incorrect-feedback-visible.png`、`after/390-light-hint-visible.png`。
 - [ ] **D-5 · 复核 D-2 · Claude** — 读 diff，查有没有放宽断言；运行全部测试；截 `prefers-reduced-motion` 截图；录一段键盘打开的慢放视频，看操作栏是否与键盘同步。
 - [ ] **D-6 · D1–D7 · Sonnet** — 用 W-1 的截图矩阵做前后对比，按 Emil 清单（按压、悬停、时长、缓动、减少动态）与 impeccable polish 清单逐项检查。
 - [ ] **D-7 · 复核 D-6 · Claude** — 核实结论；不通过的项退回对应的 D 项。
