@@ -178,6 +178,8 @@ MathLive `math-field`，边框 `--control-border`，聚焦时 3 px `--focus` 外
 
 答对之后：`Check answer` 与 `Need a hint?` 隐藏，`Next question →` 显示为主按钮并获得焦点；3 秒自动前进与 Enter 继续保持不变（**待实现：D-1**）。
 
+手机键盘打开时：判分后答题框保留焦点、键盘重新打开，页面必须滚动到让反馈框完整位于固定操作栏上方；新出现的提示面板也要滚进视野。落实位置：`src/main.ts` 的 `keepAnswerVisible` 与 `revealNewHint`；`tests/app.spec.ts` “phone keyboard keeps feedback and new hints above the action bar”。（v1.1.1 及之前两者都被操作栏遮住，见审查记录 U-R15、U-R16。）
+
 ### 5.4 对话框
 
 原生 `<dialog>`，圆角 `--radius-lg`，阴影 `--shadow-dialog`，遮罩为 `--label` 32% 加 3 px 模糊（`src/style.css:939-956`）。

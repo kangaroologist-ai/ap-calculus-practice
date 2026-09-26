@@ -278,7 +278,7 @@ Codex 沙盒不能起服务器，所有浏览器测试和截图都由 Claude 运
   - **阴影**：`--shadow-card`（原 `0 4px 24px`）、`--shadow-dialog`（原 `0 24px 90px`）、`--shadow-bar`（键盘上方操作栏，原 `0 -4px 16px`）；深色模式在深色令牌块中重新定义这三个值，不在组件里另写覆盖。
   - **动效**：采用 D3 的六个令牌，不增加别的档位。
   - **组件规则**：每个界面状态只有一个 `.button.primary`；禁用的控件不保留主按钮样式；可点控件最小 44 × 44 px（数学键盘键宽除外，见 K2）；焦点环统一为 3 px `--focus`、偏移 4 px（沿用现状）；图标一律用内联 SVG，不用 emoji。
-- [ ] **S-2 · S1 · Luna max**（按决策清单写文档）— 撰写 `docs/design/DESIGN.md`：盘点 `src/style.css` 现有值并映射到令牌，每条规则注明对应的代码或测试位置。文件：只动这一个新文件。
+- [x] **S-2 · S1 · Claude**（按决策清单写文档）— 撰写 `docs/design/DESIGN.md`：盘点 `src/style.css` 现有值并映射到令牌，每条规则注明对应的代码或测试位置。文件：只动这一个新文件。 **结果**：由我撰写（`f7b3e46`，随后补充 D8）。十节齐全；已实现的规则都注明了代码或测试位置，逐一核对存在（包括 K-4 加入的 `tests/math-keyboard-layout.test.ts` 与 `scripts/key-usage.ts`）。尚未实现的 19 处标为“待实现：To Do ID”，由 R-1 在发布前逐条改为实际位置。
 - [ ] **S-3 · S2 · Luna max**（样式表重组，视觉零变化）— 把 `src/style.css` 中写死的值换成令牌。与 D-2 同一文件，**必须在 D-2 之前完成、串行执行**。
 - [ ] **S-4 · 复核 S-2/S-3 · Claude** — 逐条对照 DESIGN.md 与代码；运行 S3 的截图矩阵，与改前逐像素对比，差异为 0。
 
@@ -296,7 +296,7 @@ Codex 沙盒不能起服务器，所有浏览器测试和截图都由 Claude 运
 
 ### 阶段 R · 发布（本身就是 S4 的第一次演练）
 
-- [ ] **R-1 · Claude** — `package.json` 升到 1.2.0；`src/whats-new.ts` 新增条目；`README.md` 与 `help.html` 中键盘两页的描述改为 Main / More 的新布局（现有描述在 README 第 38 行和 help “Typing formulas”），并核对其他相关说法。
+- [ ] **R-1 · Claude** — `package.json` 升到 1.2.0；`src/whats-new.ts` 新增条目；`README.md` 与 `help.html` 中键盘两页的描述改为 Main / More 的新布局（现有描述在 README 第 38 行和 help “Typing formulas”），并核对其他相关说法。 另外：把 `docs/design/DESIGN.md` 中所有“待实现”标记改为实际的代码或测试位置（发布时不应留下已实现却仍标“待实现”的条目）；`docs/ui-review.md` 的 U-R12 标为“已决定：保持现状”，#8（`h1`）、#9（页脚）按 D-3 的结果更新。
 - [ ] **R-2 · Claude** — 完整单元测试、数学核验、构建、三引擎浏览器测试。
 - [ ] **R-3 · S4 · Sonnet ×3 → Claude** — 按 W-2 流程做发布前设计审核，结论存到本目录 `release-review.md`；P0 / P1 清零。
 - [ ] **R-4 · Claude** — 提交、推送、部署 Cloudflare Pages，确认线上 `/` 与 `/help` 已是新版；在本文件记录提交哈希、测试数量和线上核对结果。
