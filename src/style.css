@@ -866,6 +866,26 @@ math-field:focus-within {
 .modal-body li {
   margin-bottom: 9px;
 }
+.whats-new-entry + .whats-new-entry {
+  border-top: 1px solid var(--separator);
+  margin-top: 18px;
+  padding-top: 18px;
+}
+.whats-new-entry h3 {
+  margin: 0;
+  font-size: var(--t-body);
+  line-height: 1.4;
+}
+.whats-new-entry .fine {
+  margin: 2px 0 10px;
+}
+.whats-new-entry ul {
+  margin: 0;
+  padding-left: 20px;
+}
+.whats-new .modal-body > .button {
+  margin-top: 12px;
+}
 .transfer-options {
   display: flex;
   gap: 12px;

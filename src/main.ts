@@ -46,6 +46,7 @@ import {
 } from "./transfer";
 import { Grader } from "./grader-client";
 import { ddx, dydx } from "./notation";
+import { WHATS_NEW, unseenEntries, type WhatsNewEntry } from "./whats-new";
 import "./style.css";
 MathfieldElement.fontsDirectory = "/fonts";
 MathfieldElement.soundsDirectory = null;
@@ -227,7 +228,7 @@ function render() {
  <main>${location.hostname === "ap-derivative-practice.pages.dev" ? '<p class="notice">We’ve moved to <a href="https://ap-calculus-practice.pages.dev/">AP Calculus Practice</a>. Use Move progress to export here, then import at the new address.</p>' : ""}<div id="notice" class="notice" role="status" ${temporary ? "" : "hidden"}>${temporary ? "Temporary session: export progress before leaving." : ""}</div>
  <div class="workspace"><section class="practice-card" aria-label="Practice">${!ses ? welcome() : ses.finished ? summary() : questionView()}</section>
  <details class="journey" ${journeyOpen ? "open" : ""}><summary class="progress-summary">Progress <span>Level ${p.unlockedLevel} · ${readyCount()} skills ready</span></summary><div class="aside-heading"><span class="eyebrow">YOUR LEARNING PATH</span><span class="count">${readyCount()} / ${SKILLS.filter((s) => !config.disabledFamilies.includes(s.id)).length}</span></div><div class="level-list">${Array.from({ length: 6 }, (_, i) => levelView(i + 1, expandedLevels.has(i + 1))).join("")}</div></details></div>
- <footer><span>No account. No uploaded answers.</span><div><a class="text-button" href="/help.html">How to use</a>${button("input-help", "Input guide", "text-button")}${button("restore", "Restore backup", "text-button")}${button("reset", "Reset progress", "text-button")}</div></footer></main><div id="modal-root"></div>`;
+ <footer><span>No account. No uploaded answers.</span><div><a class="text-button" href="/help.html">How to use</a>${button("input-help", "Input guide", "text-button")}${button("whats-new", `What’s new · v${__APP_VERSION__}`, "text-button")}${button("restore", "Restore backup", "text-button")}${button("reset", "Reset progress", "text-button")}</div></footer></main><div id="modal-root"></div>`;
   on("transfer", openTransfer);
   on("start", startSession);
   on("again", startSession);
@@ -235,6 +236,7 @@ function render() {
   on("hint", hint);
   on("next", next);
   on("input-help", inputHelp);
+  on("whats-new", () => whatsNew(WHATS_NEW));
   on("restore", confirmRestore);
   on("reset", confirmReset);
   if (cur && !ses?.finished) mountInputs();
@@ -560,6 +562,37 @@ function inputHelp() {
     "A quick input guide",
     `<p>Type formulas with your keyboard, or use the math keyboard on your phone.</p><ul><li>Use <strong>x^2</strong> for powers and <strong>/</strong> for fractions.</li><li>Use parentheses to group: <strong>sin(x^2)</strong>.</li><li><strong>ln</strong> is natural logarithm; <strong>log</strong> uses base 10.</li><li>Use <strong>arcsin</strong>, <strong>arccos</strong> and <strong>arctan</strong> for inverse trig.</li><li>All angles are in radians. Enter only the requested expression, without “y =”.</li><li>Use the keyboard arrows to move out of a fraction or exponent.</li></ul><p>Input help does not count as a hint.</p>`,
   );
+}
+const SEEN_KEY = "apcalc.whatsNewSeen";
+/** The last version whose notes were shown; undefined when storage is unavailable. */
+function readSeen(): string | null | undefined {
+  try {
+    return localStorage.getItem(SEEN_KEY);
+  } catch {
+    return undefined;
+  }
+}
+function writeSeen(version: string): boolean {
+  try {
+    localStorage.setItem(SEEN_KEY, version);
+    return true;
+  } catch {
+    return false;
+  }
+}
+function whatsNew(entries: WhatsNewEntry[]) {
+  const date = (d: string) =>
+    new Date(`${d}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  const d = modal(
+    "What’s new",
+    `${entries.map((e) => `<section class="whats-new-entry"><h3>${esc(e.title)}</h3><p class="fine">Version ${esc(e.version)} · ${date(e.date)}</p><ul>${e.items.map((item) => `<li>${item}</li>`).join("")}</ul></section>`).join("")}${button("whats-new-done", "Got it", "button primary")}`,
+  );
+  d.classList.add("whats-new");
+  modalCleanup = () =>
+    requestAnimationFrame(() => {
+      if (!document.querySelector("dialog[open]") && state.session?.current && !state.session.finished) focusAnswer();
+    });
+  on("whats-new-done", () => document.getElementById("close-modal")?.click());
 }
 function openTransfer() {
   if (busy || replacing) return;
@@ -899,6 +932,15 @@ async function boot() {
         await commitMigration(saved, state, result.from < LATEST_FORMAT);
     } else state = { version: 1, progress: freshProgress(config) };
     render();
+    const seen = readSeen();
+    // New learners have nothing to compare against; returning ones see notes newer than their last visit.
+    if (seen !== undefined) {
+      if (!saved) writeSeen(WHATS_NEW[0].version);
+      else if (!progressLink) {
+        const unseen = unseenEntries(WHATS_NEW, seen);
+        if (unseen.length && writeSeen(WHATS_NEW[0].version)) whatsNew(unseen);
+      }
+    }
     if (progressLink) {
       try {
         const code = new QrCollector().add(progressLink).code;

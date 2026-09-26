@@ -33,9 +33,11 @@ npm run preview
 
 ## 学生操作
 
-按 Start practicing 开始，焦点进入答题框；已有进度时按钮显示 Continue practicing，下方提示接下来的技能。输入公式后点击 Check answer 或按 Enter，失焦不会判分。答对后焦点移到 Next question，再按 Enter 立即继续；不操作则倒计时 3 秒自动继续。答错或输入无效时焦点回到答题框。下一题自动聚焦，手机数学键盘保持展开。打开帮助／迁移窗口或切到后台会取消当前倒计时。接受合理的未化简等价答案。Need a hint? 依次显示规则、结构、完整解析。查看教学帮助会作为一次非独立完成记录；输入指南不影响学习记录。
+按 Start practicing 开始，焦点进入答题框；已有进度时按钮显示 Continue practicing，下方提示接下来的技能。输入公式后点击 Check answer 或按 Enter，失焦不会判分。答对后焦点移到 Next question，再按 Enter 立即继续；不操作则倒计时 3 秒自动继续。答错或输入无效时焦点回到答题框。下一题自动聚焦，手机数学键盘保持展开。打开帮助、迁移或 What’s new 窗口，或切到后台，都会取消当前倒计时。接受合理的未化简等价答案。Need a hint? 依次显示规则、结构、完整解析。查看教学帮助会作为一次非独立完成记录；输入指南不影响学习记录。
 
 电脑和手机都可点 Math keyboard 打开数学键盘。键盘分两页：Derivatives 页第一行放本题所用变量（x、y、t 或 θ），另有数字、分式、指数、根式、sin/cos/tan/sec/csc、ln 与 eˣ；Functions 页另有 cot、log、arcsin/arccos/arctan、立方根和 π。所有角度均为弧度；`ln` 是自然对数，`log` 为常用对数。答案只输入表达式，不写 `y=`。
+
+网站更新后，本机已有进度的学生下次打开页面时会看到 What’s new 窗口，列出自上次看过以来的所有更新，看过一次后不再自动弹出；第一次使用的新设备（包括用二维码链接首次恢复进度）不弹。页脚的 What’s new 按钮显示当前版本号（如 v1.1.1），可随时重新打开全部更新记录。浏览器禁用站点存储时不自动弹出。“已读”标记只存在本机浏览器，不进入进度、导出代码或备份。
 
 页面跟随系统的浅色／深色设置；公式以可朗读文本提供给读屏软件。完整的英文学生说明在 [How to use](help.html)。Progress 内直接展开各等级查看技能与复习日期。独立连对从第 5 题起每次播放局部庆祝，从第 10 题起每次增加全屏彩纸；开启“减少动态效果”时停用动画。
 
@@ -116,6 +118,8 @@ npm run test:e2e
 `tests/fixtures/dsp1.txt`、`dsp2-profile1.txt`、`local-state-v1.json`、`generator-1.1.0.json` 是旧格式的冻结样本；`dsp2-profile2.txt` 与 `local-state-v1-q2.json` 是 Phase 2 迁移基线。所有文件一经提交都不得重新生成或手工编辑；`tests/legacy-fixtures.test.ts` 用当前代码解码／校验它们。只需生成新增的两份时，运行 `node --import tsx scripts/capture-fixtures.ts --phase2-only`；该选项只写 profile 2 与 q2 本机状态，退出前不会运行原有四份样本的捕获代码。捕获脚本不在测试或构建中运行。
 
 ## Cloudflare Pages
+
+**版本与更新记录：** `package.json` 的 `version` 是网站版本号，构建时注入页面。每次发布学生可见的变化，都要提升版本号，并在 `src/whats-new.ts` 顶部新增同版本条目（英文，2–6 条要点）；单元测试要求两者一致。纯重构、测试或内部文档不改版本、不加条目。
 
 纯静态部署，无 Workers Functions 和数据库需求。使用现有账号免费计划即可；不在仓库保存 token。
 

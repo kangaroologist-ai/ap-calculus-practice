@@ -1,4 +1,5 @@
 import { makePortableProgress } from '../src/transfer';
+import { WHATS_NEW } from '../src/whats-new';
 import { test as base, expect, type Page } from '@playwright/test';
 import { mkdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -120,6 +121,8 @@ async function seedCurrentState(
 }
 
 async function writeCurrentState(page: Page, state: unknown): Promise<void> {
+  // Seeded learners have already read the current What's new notes; tests/whats-new.spec.ts covers the window.
+  await page.evaluate((version) => localStorage.setItem('apcalc.whatsNewSeen', version), WHATS_NEW[0].version);
   await page.evaluate((saved) => new Promise<void>((resolve, reject) => {
     const request = indexedDB.open('derivative-studio', 1);
     request.onupgradeneeded = () => {

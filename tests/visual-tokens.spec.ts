@@ -106,3 +106,28 @@ for (const scheme of ["light", "dark"] as const) {
     },
   );
 }
+
+for (const width of [390, 1280]) {
+  for (const scheme of ["light", "dark"] as const) {
+    test(
+      `What's new notes fit and stay readable in ${scheme} at ${width}px`,
+      async ({ page, browserName }) => {
+        test.skip(browserName !== "chromium", "Visual token checks use Chromium.");
+        await page.setViewportSize({ width, height: 900 });
+        await page.emulateMedia({ colorScheme: scheme });
+        await page.goto("/");
+        await page.getByRole("button", { name: /What’s new/ }).click();
+        const dialog = page.locator("dialog.whats-new");
+        await expect(dialog).toBeVisible();
+        await expectReadableText(page);
+        const overflow = await dialog.evaluate((element) => ({
+          dialog: element.scrollWidth - element.clientWidth,
+          page: document.documentElement.scrollWidth - window.innerWidth,
+          fits: element.getBoundingClientRect().bottom <= window.innerHeight,
+        }));
+        expect(overflow).toEqual({ dialog: 0, page: 0, fits: true });
+        await page.screenshot({ path: `${output}/whats-new-${width}-${scheme}.png` });
+      },
+    );
+  }
+}
