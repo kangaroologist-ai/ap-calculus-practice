@@ -33,9 +33,9 @@ npm run preview
 
 ## 学生操作
 
-按 Start practicing 开始，焦点进入答题框；已有进度时按钮显示 Continue practicing，下方提示接下来的技能。输入公式后点击 Check answer 或按 Enter，失焦不会判分。答对后焦点移到 Next question，再按 Enter 立即继续；不操作则倒计时 3 秒自动继续。答错或输入无效时焦点回到答题框。下一题自动聚焦，手机数学键盘保持展开。打开帮助、迁移或 What’s new 窗口，或切到后台，都会取消当前倒计时。接受合理的未化简等价答案。Need a hint? 依次显示规则、结构、完整解析。查看教学帮助会作为一次非独立完成记录；输入指南不影响学习记录。
+按 Start practicing 开始，焦点进入答题框；已有进度时按钮显示 Continue practicing，下方提示接下来的技能。输入公式后点击 Check answer 或按 Enter，失焦不会判分。答对后 Check answer 与 Need a hint? 隐藏，Next question 成为唯一的主按钮并获得焦点，再按 Enter 立即继续；不操作则倒计时 3 秒自动继续。答错或输入无效时焦点回到答题框，手机上数学键盘随之重新打开，页面会滚动到让反馈显示在键盘上方的操作栏之上；点 Need a hint? 后，新提示也会滚进视野。下一题自动聚焦，手机数学键盘保持展开。打开帮助、迁移或 What’s new 窗口，或切到后台，都会取消当前倒计时。接受合理的未化简等价答案。Need a hint? 依次显示规则、结构、完整解析。查看教学帮助会作为一次非独立完成记录；输入指南不影响学习记录。
 
-电脑和手机都可点 Math keyboard 打开数学键盘。键盘分两页：Derivatives 页第一行放本题所用变量（x、y、t 或 θ），另有数字、分式、指数、根式、sin/cos/tan/sec/csc、ln 与 eˣ；Functions 页另有 cot、log、arcsin/arccos/arctan、立方根和 π。所有角度均为弧度；`ln` 是自然对数，`log` 为常用对数。答案只输入表达式，不写 `y=`。
+电脑和手机都可点 Math keyboard 打开数学键盘。键盘分两页，每页 4 行 9 列，左右基本占满屏幕：**Main** 页左侧三列是 sin/cos/tan、sec/csc/cot、eˣ/ln 和本题变量（x、t 或 θ，隐函数题为 x），中间是 7-8-9 / 4-5-6 / 1-2-3 / 0 . 的数字块，第 7 列是分式、×、−、+ 运算列，右侧是括号、指数、根式和左右移动键，底行是收起键盘、第二变量（隐函数题为 y，其余为 π）和删除；**More** 页放 arcsin/arccos/arctan、带底数的 log、立方根、π 和 y、t、θ。两页的移动、删除、收起键位置相同；函数不在两页重复。按键没有悬停提示，读屏软件会读出按键名称（如 fraction、square root、sine）。键盘上方不再有撤销／重做／剪贴板工具栏。所有角度均为弧度；`ln` 是自然对数，`log` 为常用对数（键盘上的 log 键带一个可填底数的空格）。答案只输入表达式，不写 `y=`。
 
 网站更新后，本机已有进度的学生下次打开页面时会看到 What’s new 窗口，列出自上次看过以来的所有更新，看过一次后不再自动弹出；第一次使用的新设备（包括用二维码链接首次恢复进度）不弹。页脚的 What’s new 按钮显示当前版本号（如 v1.1.1），可随时重新打开全部更新记录。浏览器禁用站点存储时不自动弹出。“已读”标记只存在本机浏览器，不进入进度、导出代码或备份。
 
@@ -80,7 +80,7 @@ FSRS 目标保持率不是经过校准的数学掌握概率。随机变式的学
 
 ## 在设备之间迁移
 
-1. 原设备点击 Move progress → Export progress。
+1. 原设备点击 Move progress（窗口标题为 Move your progress）→ Export progress。
 2. 复制完整代码，或展示二维码；可点 Save QR image 保存原尺寸图片。
 3. 手机相机扫新版二维码会直接打开网站：新设备恢复并开始练习，已有本机进度则确认替换；链接数据位于 URL fragment，不发送给服务器，读取后从地址栏清除。也可手动打开同一版站点 → Move progress → Import progress。
 4. 粘贴代码、扫描二维码或选择二维码图片。
@@ -113,9 +113,19 @@ npx playwright install chromium webkit firefox
 npm run test:e2e
 ```
 
-`test:math` 生成固定随机种子 corpus 并使用 SymPy 独立求导核对。浏览器测试使用临时测试数据；真机证据与模拟视口证据分别记录在 `docs/acceptance.md`。
+`test:math` 生成固定随机种子 corpus 并使用 SymPy 独立求导核对。`node --import tsx scripts/key-usage.ts` 统计题库答案里各运算和函数出现的比例，数学键盘的布局依据它来取舍。浏览器测试使用临时测试数据；真机证据与模拟视口证据分别记录在 `docs/acceptance.md`。
 
 `tests/fixtures/dsp1.txt`、`dsp2-profile1.txt`、`local-state-v1.json`、`generator-1.1.0.json` 是旧格式的冻结样本；`dsp2-profile2.txt` 与 `local-state-v1-q2.json` 是 Phase 2 迁移基线。所有文件一经提交都不得重新生成或手工编辑；`tests/legacy-fixtures.test.ts` 用当前代码解码／校验它们。只需生成新增的两份时，运行 `node --import tsx scripts/capture-fixtures.ts --phase2-only`；该选项只写 profile 2 与 q2 本机状态，退出前不会运行原有四份样本的捕获代码。捕获脚本不在测试或构建中运行。
+
+## 设计规范与发布前设计审核
+
+界面规则（令牌、组件、数学键盘、动效、无障碍、文案）写在 `docs/design/DESIGN.md`。凡是要提升版本号的改动，发布前按 `docs/design/review-workflow.md` 审核：先启动开发服务器，再运行
+
+```sh
+npm run design:capture
+```
+
+在 `artifacts/design/<版本>/` 生成 390 px（WebKit iPhone 仿真）与 1280 px（Chromium）、浅色与深色的截图矩阵和键盘几何数据，然后做三套视角的独立评审，P0 / P1 问题清零后才发布。
 
 ## Cloudflare Pages
 

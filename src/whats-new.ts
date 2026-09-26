@@ -7,6 +7,17 @@ export type WhatsNewEntry = {
 // Newest first. Add an entry (and bump package.json) only for changes students can see.
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    version: "1.2.0",
+    date: "2026-09-26",
+    title: "A tidier math keyboard",
+    items: [
+      "The math keyboard is laid out like a calculator: numbers in one block, operations in one column, and keys that fill the width of your phone.",
+      "<strong>Main</strong> has everything most answers need; <strong>More</strong> has inverse trig, log, cube root, and extra variables. No more repeated keys or “Type …” bubbles.",
+      "On a phone, “Not quite” and new hints now stay visible above the keyboard.",
+      "After a correct answer, <strong>Next question</strong> is the one button to press.",
+    ],
+  },
+  {
     version: "1.1.1",
     date: "2026-09-26",
     title: "See what changed",

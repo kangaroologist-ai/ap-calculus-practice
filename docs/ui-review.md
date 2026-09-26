@@ -15,8 +15,8 @@ Method: programmatic probes in Playwright (target sizes, focus style, landmarks,
 | 5 | Formula `aria-label` held raw LaTeX. | 1.1.1 / 4.1.2 | Major | Fixed in U2: MathLive speakable text, `role="math"`. |
 | 6 | Feedback state relied on colour alone. | 1.4.1 Use of colour | Major | Fixed in U3: ✓ / ! / i icons plus tint. |
 | 7 | Text below 11 pt (8–10 px). | 1.4.4 Resize text (and HIG) | Major | Fixed in U3: rem type scale, 12 px floor. |
-| 8 | The practice page has no `h1`; headings start at `h2`. | 1.3.1 Info and relationships | Minor | Open. Suggest making the site title an `h1`, or a visually hidden `h1`. |
-| 9 | "How to use" sits a few pixels above the other footer links. | — (visual polish) | Minor | Open (pre-existing). |
+| 8 | The practice page has no `h1`; headings start at `h2`. | 1.3.1 Info and relationships | Minor | Fixed in v1.2.0: the site title is the page `h1` (`h1.brand-heading`). |
+| 9 | "How to use" sits a few pixels above the other footer links. | — (visual polish) | Minor | Fixed in v1.2.0: footer links share one baseline (`tests/motion.spec.ts`). |
 
 Verified passing: `lang="en"`; `header`/`main`/`footer` landmarks; visible 2 px focus outline on the answer field; all text/background token pairs ≥ 4.5:1 in both themes; touch targets ≥ 44 px except the brand link (31 px tall, above the 24 px AA minimum).
 
@@ -35,7 +35,7 @@ Today every correct answer from a 10-streak onward plays full-screen confetti. H
 2. Every 10th in a row (10, 20, 30, …).
 3. Keep current behaviour, but always honour `prefers-reduced-motion` (already respected) and add a setting to turn it off.
 
-Recommendation: option 1. Not implemented until the owner decides.
+Recommendation: option 1. **Decided 2026-09-26: keep the current behaviour** (the owner chose not to change it). Recorded in `docs/design/DESIGN.md` §7.
 
 ## Remaining manual checks
 

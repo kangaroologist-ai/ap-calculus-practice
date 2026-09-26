@@ -17,7 +17,7 @@
 
 | # | 原则 | 含义 | 落实位置 |
 |---|---|---|---|
-| P1 | 每个状态只有一个主操作 | 任何时刻最多一个 `.button.primary`；禁用的控件不保留主按钮样式 | 欢迎页、题目页已满足；答对状态**待实现：D-1** |
+| P1 | 每个状态只有一个主操作 | 任何时刻最多一个 `.button.primary`；禁用的控件不保留主按钮样式 | `src/main.ts:398` 的 `updateControls()`；`tests/app.spec.ts` 答对状态用例 |
 | P2 | 高频操作不做动画 | 按键、输入、提交这类每次练习重复成百上千次的操作，反馈必须即时，不加过渡 | 第 7 节 |
 | P3 | 位置稳定 | 同一个功能在不同页面、不同状态下出现在同一位置（例如键盘的导航键在两页位置相同） | 第 6 节；`tests/math-keyboard-layout.test.ts` |
 | P4 | 触屏不依赖悬停 | 悬停只能增强，不能承载信息；触屏上不出现悬停气泡或残留的高亮 | 第 6、7 节 |
@@ -125,7 +125,7 @@ rem 刻度，最小 12 px（`--t-caption`），由 `tests/visual-tokens.spec.ts`
 
 深色模式在深色令牌块中重新定义这三个值（已移入深色令牌块）。一个元素只用阴影或描边中的一种表示层级。
 
-### 3.6 动效（**待实现：D-2**）
+### 3.6 动效（已实现，`src/style.css:57` 起）
 
 | 令牌 | 值 | 用于 |
 |---|---|---|
@@ -162,10 +162,10 @@ rem 刻度，最小 12 px（`--t-caption`），由 `tests/visual-tokens.spec.ts`
 | 状态 | 规则 | 落实位置 |
 |---|---|---|
 | 默认 | 最小高度 44 px；圆角 `--radius-md` | `src/style.css:464`；圆角 `var(--radius-md)` |
-| 悬停 | 只在 `@media (hover: hover) and (pointer: fine)` 下生效 | **待实现：D-2**（现为无条件 `:hover`，`src/style.css:446、484、487`） |
-| 按下 | `transform: scale(0.97)`，`--dur-press`；< 32 px 的图标按钮只变背景 | **待实现：D-2** |
+| 悬停 | 只在 `@media (hover: hover) and (pointer: fine)` 下生效 | `src/style.css:528`；`tests/motion.spec.ts` |
+| 按下 | `transform: scale(0.97)`，`--dur-press`；图标按钮只变背景 | `src/style.css:521`；`tests/motion.spec.ts` |
 | 焦点 | 3 px `--focus` 描边，偏移 4 px，只在 `:focus-visible` | `src/style.css:80-99` |
-| 禁用 | 透明度 0.5；**不保留主按钮样式**（P1） | 透明度见 `src/style.css:76`；样式规则**待实现：D-1** |
+| 禁用 | 透明度 0.5；**不保留主按钮样式**（P1） | 透明度见 `src/style.css` 的 `button:disabled`；答对后 Check answer 直接隐藏、Next 成为主按钮（`src/main.ts:398`） |
 
 ### 5.2 答题框
 
@@ -180,9 +180,9 @@ MathLive `math-field`，边框 `--control-border`，聚焦时 3 px `--focus` 外
 | invalid | `--fill` | `--label-2` | i | 否 |
 | inconclusive | `--fill` | `--label-2` | i | 否 |
 
-颜色之外必有图标（不单靠颜色区分，WCAG 1.4.1）。落实位置：`src/style.css:631-676`。颜色切换过渡**待实现：D-2**。
+颜色之外必有图标（不单靠颜色区分，WCAG 1.4.1）。落实位置：`src/style.css:631-676`。颜色切换过渡见 `src/style.css:681`。
 
-答对之后：`Check answer` 与 `Need a hint?` 隐藏，`Next question →` 显示为主按钮并获得焦点；3 秒自动前进与 Enter 继续保持不变（**待实现：D-1**）。
+答对之后：`Check answer` 与 `Need a hint?` 隐藏，`Next question →` 显示为主按钮并获得焦点；3 秒自动前进与 Enter 继续保持不变。落实位置：`src/main.ts:398` 的 `updateControls()`；`tests/app.spec.ts`。
 
 手机键盘打开时：判分后答题框保留焦点、键盘重新打开，页面必须滚动到让反馈框完整位于固定操作栏上方；新出现的提示面板也要滚进视野。落实位置：`src/main.ts` 的 `keepAnswerVisible` 与 `revealNewHint`；`tests/app.spec.ts` “phone keyboard keeps feedback and new hints above the action bar”。（v1.1.1 及之前两者都被操作栏遮住，见审查记录 U-R15、U-R16。）
 
@@ -190,9 +190,9 @@ MathLive `math-field`，边框 `--control-border`，聚焦时 3 px `--focus` 外
 
 原生 `<dialog>`，圆角 `--radius-lg`，阴影 `--shadow-dialog`，遮罩为 `--label` 32% 加 3 px 模糊（`src/style.css:939-956`）。
 
-- 打开时焦点落在标题（`tabindex="-1"`），不自动聚焦 ×；Tab 可到达 ×（**待实现：D-3**）。
-- 长内容时，头部（标题与 ×）固定，内容区滚动（**待实现：D-2**）。
-- 标题与触发按钮用同一个动词：Move progress 对话框的标题为 “Move your progress”（**待实现：D-3**）。
+- 打开时焦点落在标题（`tabindex="-1"`），不自动聚焦 ×；Tab 可到达 ×（Safari 为 Option+Tab）。落实位置：`src/main.ts:565` 的 `modal()`；`tests/app.spec.ts` “opens with heading focus”。
+- 长内容时，头部（标题与 ×）固定，内容区滚动（`.modal-heading` 为 `position: sticky`）。
+- 标题与触发按钮用同一个动词：Move progress 对话框的标题为 “Move your progress”。
 - 进出动画见第 7 节。
 
 ### 5.5 学习路径
@@ -201,7 +201,7 @@ MathLive `math-field`，边框 `--control-border`，聚焦时 3 px `--focus` 外
 
 ### 5.6 图标
 
-一律使用内联 SVG，与文字同色（`currentColor`），不用 emoji 充当图标。“Math keyboard” 按钮目前仍是 emoji ⌨（**待实现：D-3**）。
+一律使用内联 SVG，与文字同色（`currentColor`），不用 emoji 充当图标。“Math keyboard” 按钮使用内联 SVG 键盘图标（`src/main.ts` 的 `questionView()`）。
 
 ## 6. 数学键盘
 
@@ -288,7 +288,7 @@ MathLive 把键帽的 `tooltip` 优先用作 `aria-label`，所以 `tooltip` 只
 
 ## 7. 动效
 
-**待实现：D-2**（现状：只有连对跳动和彩纸两处动画，其余状态切换都是瞬变）。
+已实现：`src/style.css:57`（令牌）、`989`（对话框）、`1373`（减少动态）；`tests/motion.spec.ts`。
 
 | 频率 | 例子 | 规则 |
 |---|---|---|
@@ -301,7 +301,7 @@ MathLive 把键帽的 `tooltip` 优先用作 `aria-label`，所以 `tooltip` 只
 - 只对 `transform`、`opacity`、颜色类属性做动画，写明属性名，不用 `transition: all`。
 - 不做动画：连对数字本身（不做滚动计数）、学习路径的展开收起、自动前进进度条（已经是每 50 ms 线性更新）。
 - 连对庆祝：连对达到 10 以后，每答对一题放一次满屏彩纸（1.6 秒）；连对数字跳动加火花。这是用户明确保留的设计（2026-09-26）。
-- **减少动态**（`prefers-reduced-motion: reduce`）：去掉位移、缩放和彩纸，保留颜色和透明度过渡；不再使用“所有 transition 一律关闭”的通配规则（**待实现：D-2**，现为 `src/style.css` 末尾的通配规则）。
+- **减少动态**（`prefers-reduced-motion: reduce`）：去掉位移、缩放和彩纸，保留颜色和透明度过渡；不再使用“所有 transition 一律关闭”的通配规则。MathLive 不检查这项设置，所以另有一条规则关闭键盘的滑入动画（`src/style.css:1373` 起）。
 
 ## 8. 无障碍底线
 
@@ -315,7 +315,7 @@ MathLive 把键帽的 `tooltip` 优先用作 `aria-label`，所以 `tooltip` 只
 | 焦点 | `:focus-visible` 下 3 px `--focus` 描边 | `src/style.css:80-99` |
 | 公式 | `role="math"`，`aria-label` 为 MathLive 的朗读文本，不暴露 LaTeX | `src/main.ts` 的 `math()` |
 | 反馈 | `aria-live="polite"`，颜色之外有图标 | `src/main.ts`、5.3 |
-| 标题层级 | 每页一个 `h1` | 帮助页已满足；练习页**待实现：D-3** |
+| 标题层级 | 每页一个 `h1` | 练习页为页眉中的站点标题 `h1.brand-heading`；帮助页为页面标题；`tests/app.spec.ts`、`tests/motion.spec.ts` |
 | 键盘读屏 | 每个键有读音名称 | 6.4；`tests/math-keyboard-layout.test.ts` |
 
 ## 9. 文案
