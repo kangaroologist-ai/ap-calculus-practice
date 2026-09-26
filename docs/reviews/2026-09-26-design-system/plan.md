@@ -228,7 +228,11 @@ Codex 沙盒不能起服务器，所有浏览器测试和截图都由 Claude 运
 
 ### 阶段 K · 数学键盘
 
-- [ ] **K-1 · K2/K3/K5 · Claude**（需要摸清 MathLive 内部行为）— 验证 MathLive 能否被覆盖：`--keycap-width` / 容器宽度、`.MLK__keycap::after` 气泡、`svg-glyph` 对齐、`editToolbar`。在 scratchpad 写最小实验页，记录可行的写法。验证：实验截图，并把结论写回本文件 Research。
+- [x] **K-1 · K2/K3/K5 · Claude**（需要摸清 MathLive 内部行为）— 验证 MathLive 能否被覆盖：`--keycap-width` / 容器宽度、`.MLK__keycap::after` 气泡、`svg-glyph` 对齐、`editToolbar`。在 scratchpad 写最小实验页，记录可行的写法。验证：实验截图，并把结论写回本文件 Research。 **结果**（在现有布局上注入 CSS，用 WebKit 390 与 Chromium 1280 实测；截图见 `k1-experiment-390.png`）：
+  - **宽度**：在 `.ML__keyboard` 上设 `--keyboard-padding-horizontal: 4px; --keycap-gap: 4px; --keycap-width: min(calc((100cqw + 4px) / 9), 84px)` 可以生效；`cqw` 按键盘 plate 容器解析。n 格键宽为 n × 单位 − 间距，所以只要每行合计 9 格，各列就自然对齐。390 px 时 9 格行从 4 排到 386 px，键宽 39 px；1280 px 时键宽 80 px，整块 752 px。
+  - **气泡**：`.ML__keyboard [data-tooltip]::after { display: none !important }` 可以去掉气泡（计算样式 `display: none`）。注意功能键没有 `MLK__keycap` 类，所以选择器要用 `[data-tooltip]`。
+  - **图标居中**：功能键是 `.MLK__row > div.action`，退格键自带 `bottom right` 类（`align-items / justify-content: flex-end`、右内边距 12 px），SVG 有 `margin: 8px 0`。改为 `display: flex; align-items: center; justify-content: center; padding: 0`，SVG 设 `margin: 0`，四个功能键在两种宽度下的偏移都是 0 px。
+  - **新发现（影响 K-2 / K-3）**：MathLive 只为 0.5 / 1.5 / 2 / 5 格提供宽度类（`w5`、`w15`、`w20`、`w50`，`mathlive.mjs:28371-28372`）；没有 3 格的类。More 页的 3 格键需要在 class 里写 `w30`（写了 `wN` 类后，MathLive 不再按 `width` 自动添加宽度类），并由 K-3 在样式表中补上 `.w30` 的宽度规则。
 - [ ] **K-2 · K1/K4/K6 · Claude**（小而细，涉及动态变量槽）— 重写 `src/math-keyboard.ts`：Main / More 两页、9 单位行、`[v]` / `[v2]` 动态槽、去掉重复分式键、每个键设含义明确的 `aria-label`、减号字形、变量用 LaTeX 斜体；`src/main.ts` 中 `layoutsFor()` 的调用与 `editToolbar` 设置。验证：`npm test`、`tsc --noEmit`。
 - [ ] **K-3 · K2/K3/K5/K6/K7 · Claude**（需要视觉迭代）— `src/style.css` 的键盘部分：宽度、间距、气泡隐藏、图标居中、页签边距、按压态。验证：390 / 1280 × 浅色 / 深色截图，几何 JSON 偏移 ≤ 1 px。
 - [ ] **K-4 · K1/K4 · Luna max**（纯数据断言，文件范围有限，可在沙盒里跑 vitest）— 新增 `tests/math-keyboard-layout.test.ts`：每行 9 单位、数字块位置、两页不重复、`aria-label` 表；把 `key-usage.ts` 移到 `scripts/key-usage.ts`，加断言“题库答案用到的结构都能在 Main 页找到”。文件：只动这两个新文件。
