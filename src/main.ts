@@ -73,10 +73,31 @@ function keepAnswerVisible() {
   if (!field || !actions) return;
   const bounds = field.getBoundingClientRect();
   const bottom = actions.getBoundingClientRect().top - 16;
-  if (bounds.bottom > bottom)
-    window.scrollBy({ top: bounds.bottom - bottom, behavior: "instant" });
+  // After a check the answer keeps focus and the keyboard reopens; the feedback
+  // below the field must stay above the fixed action bar, or the student never sees it.
+  const feedback = document.getElementById("feedback");
+  const needed =
+    feedback && !feedback.hidden
+      ? Math.max(bounds.bottom, feedback.getBoundingClientRect().bottom)
+      : bounds.bottom;
+  if (needed > bottom)
+    window.scrollBy({ top: needed - bottom, behavior: "instant" });
   else if (bounds.top < 16)
     window.scrollBy({ top: bounds.top - 16, behavior: "instant" });
+}
+// A new hint renders below the action bar, which is fixed above the phone keyboard.
+function revealNewHint() {
+  if (
+    !window.mathVirtualKeyboard.visible ||
+    !matchMedia("(max-width: 700px)").matches
+  )
+    return;
+  const panel = document.querySelector("#hints .hint-panel");
+  const actions = document.querySelector(".actions");
+  if (!panel || !actions) return;
+  const top = panel.getBoundingClientRect().top;
+  if (top > actions.getBoundingClientRect().top - 48)
+    window.scrollBy({ top: top - 16, behavior: "instant" });
 }
 window.mathVirtualKeyboard.addEventListener("geometrychange", () => {
   const keyboard = window.mathVirtualKeyboard;
@@ -507,6 +528,7 @@ async function hint() {
           : "Show next hint";
     if (c.hintsUsed === 3)
       document.getElementById("next")!.textContent = "Next question →";
+    requestAnimationFrame(revealNewHint);
   } finally {
     busy = false;
     updateControls();

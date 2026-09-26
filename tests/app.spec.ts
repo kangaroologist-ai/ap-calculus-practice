@@ -859,6 +859,42 @@ test('mobile keyboard keeps submit above keys, hides, and grades', async ({ page
   await expect(page.locator('#feedback')).toContainText('Correct');
 });
 
+test('phone keyboard keeps feedback and new hints above the action bar', async ({ browser, browserName }) => {
+  test.skip(browserName !== 'chromium', 'Mobile keyboard geometry is verified once in Chromium.');
+  // Spec D8: after a check the answer keeps focus and the keyboard reopens; the feedback and
+  // any new hint render below the field and must not end up behind the fixed action bar.
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true });
+  try {
+    const page = await context.newPage();
+    await openApp(page, onlySkill('constant', 1, 3));
+    await page.getByRole('button', { name: /Start practicing|Continue practicing/ }).click();
+    const field = page.locator('math-field').first();
+    await field.focus();
+    await page.evaluate(() => window.mathVirtualKeyboard.show());
+    await expect.poll(() => page.evaluate(() => window.mathVirtualKeyboard.visible)).toBe(true);
+    await setMathfield(field, '5');
+    await page.locator('#submit').tap();
+    await expect(page.locator('#feedback.incorrect')).toBeVisible();
+    await expect.poll(() => page.evaluate(() => window.mathVirtualKeyboard.visible)).toBe(true);
+    const actionsTop = () => page.evaluate(() => document.querySelector('.actions')!.getBoundingClientRect().top);
+    await expect.poll(async () => {
+      const feedback = (await page.locator('#feedback').boundingBox())!;
+      return feedback.y + feedback.height <= (await actionsTop());
+    }).toBe(true);
+    await screenshot(page, 'mobile-keyboard-incorrect-feedback-visible');
+
+    await page.locator('#hint').tap();
+    await expect(page.locator('#hints .hint-panel')).toBeVisible();
+    await expect.poll(async () => {
+      const panel = (await page.locator('#hints .hint-panel').boundingBox())!;
+      return panel.y < (await actionsTop()) - 24;
+    }).toBe(true);
+    await screenshot(page, 'mobile-keyboard-hint-visible');
+  } finally {
+    await context.close();
+  }
+});
+
 test('More math keyboard exposes y and inverse-trig insertion', async ({ page, browserName }) => {
   test.skip(browserName !== 'chromium', 'MathLive keyboard insertion is verified in the Chromium representative.');
   await openApp(page, onlySkill('implicit', 5), { width: 390, height: 844 });
