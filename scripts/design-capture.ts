@@ -208,10 +208,17 @@ async function submitForFeedback(
   for (const [index, value] of values.entries()) {
     await setMathfieldValue(page, index, value);
   }
+  // Focusing a field opens the keyboard asynchronously on touch devices; let that settle
+  // before closing it, so every run submits from the same state. After the check the app
+  // itself decides: correct moves focus to Next (keyboard stays closed), incorrect and
+  // invalid return focus to the answer (keyboard reopens on a phone).
+  await page.waitForTimeout(400);
   await page.locator(".question-body h2").click();
   await hideKeyboard(page, true);
+  await page.waitForFunction(() => !window.mathVirtualKeyboard.visible);
   await page.getByRole("button", { name: "Check answer" }).click();
   await page.locator(`#feedback.${expected}`).waitFor({ state: "visible" });
+  await page.waitForTimeout(600);
 }
 
 async function readKeyboardGeometry(page: Page): Promise<KeyboardGeometry> {
