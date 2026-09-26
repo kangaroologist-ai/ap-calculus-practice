@@ -37,6 +37,26 @@
   --t-subhead: 0.9375rem;
   --t-footnote: 0.8125rem;
   --t-caption: 0.75rem;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 28px;
+  --space-8: 32px;
+  --space-9: 36px;
+  --space-10: 40px;
+  --space-14: 56px;
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-full: 999px;
+  --shadow-card: 0 4px 24px color-mix(in srgb, var(--label) 2%, transparent);
+  --shadow-dialog: 0 24px 90px color-mix(in srgb, var(--label) 20%, transparent);
+  --shadow-bar: 0 -4px 16px color-mix(in srgb, var(--label) 3%, transparent);
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -52,6 +72,9 @@
     --success: #30d158;
     --warning: #ffb340;
     --danger: #ff6961;
+    --shadow-card: 0 4px 24px color-mix(in srgb, var(--bg) 20%, transparent);
+    --shadow-dialog: 0 24px 90px color-mix(in srgb, var(--bg) 75%, transparent);
+    --shadow-bar: 0 -4px 16px color-mix(in srgb, var(--label) 3%, transparent);
   }
 }
 
@@ -112,7 +135,7 @@ h1 {
 summary {
   -webkit-tap-highlight-color: transparent;
   cursor: pointer;
-  padding: 6px 0;
+  padding: var(--space-2) 0;
 }
 body {
   margin: 0;
@@ -130,7 +153,7 @@ body {
   text-decoration: none;
   display: flex;
   align-items: center;
-  gap: 11px;
+  gap: var(--space-3);
   font-size: var(--t-brand);
   font-weight: 750;
   letter-spacing: -0.7px;
@@ -144,13 +167,13 @@ body {
   font-size: var(--t-caption);
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: var(--space-2);
 }
 .status-dot {
   width: 6px;
   height: 6px;
   background: var(--success);
-  border-radius: 50%;
+  border-radius: var(--radius-full);
 }
 .boot {
   padding: 70px;
@@ -166,7 +189,7 @@ body {
 .brand-mark {
   width: 37px;
   height: 37px;
-  border-radius: 11px;
+  border-radius: 11px; /* logo: radius scales with the mark, not a component token */
   display: grid;
   place-items: center;
   color: var(--bg);
@@ -177,18 +200,18 @@ body {
 main {
   margin: auto;
   max-width: 800px;
-  padding: 22px 28px 0;
+  padding: var(--space-6) var(--space-7) 0;
 }
 .workspace {
   grid-template-columns: minmax(0, 1fr) 312px;
   align-items: start;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: var(--space-6);
 }
 footer > div {
   display: flex;
-  gap: 17px;
+  gap: var(--space-4);
   flex-wrap: wrap;
 }
 .help-page {
@@ -196,13 +219,13 @@ footer > div {
   padding-bottom: 64px;
 }
 .help-heading {
-  margin: 28px 0;
+  margin: var(--space-7) 0;
 }
 .help-heading h1 {
   font-size: var(--t-help-title);
   letter-spacing: -1.4px;
   line-height: 1.15;
-  margin: 12px 0;
+  margin: var(--space-3) 0;
 }
 .help-heading > p:last-child {
   color: var(--label-2);
@@ -211,8 +234,8 @@ footer > div {
 .help-nav {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px 24px;
-  margin-bottom: 32px;
+  gap: var(--space-3) var(--space-6);
+  margin-bottom: var(--space-8);
 }
 .help-nav a {
   color: var(--tint);
@@ -221,14 +244,14 @@ footer > div {
   color: var(--tint);
 }
 .help-section {
-  padding: 26px 0;
+  padding: var(--space-7) 0;
   border-top: 1px solid var(--separator);
-  scroll-margin-top: 20px;
+  scroll-margin-top: var(--space-5);
 }
 .help-section h2 {
   font-size: var(--t-title-large);
   letter-spacing: -.5px;
-  margin: 0 0 16px;
+  margin: 0 0 var(--space-4);
 }
 .help-section p {
   font-size: var(--t-subhead);
@@ -243,43 +266,43 @@ footer > div {
   line-height: 1.7;
 }
 .help-section li + li {
-  margin-top: 10px;
+  margin-top: var(--space-3);
 }
 .help-section ul {
-  padding-left: 22px;
+  padding-left: var(--space-6);
 }
 .help-section ol {
-  padding-left: 22px;
+  padding-left: var(--space-6);
 }
 .help-section details {
-  margin: 12px 0;
-  padding: 12px 16px;
-  border-radius: 12px;
+  margin: var(--space-3) 0;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
   background: var(--surface);
 }
 .help-section summary {
   font-size: var(--t-subhead);
   font-weight: 600;
   cursor: pointer;
-  padding: 4px 0;
+  padding: var(--space-1) 0;
 }
 .help-section kbd {
   font-size: var(--t-footnote);
-  padding: 2px 5px;
-  border-radius: 4px;
+  padding: 2px var(--space-1);
+  border-radius: var(--radius-xs);
   background: var(--fill);
 }
 .help-section code {
   font-size: var(--t-footnote);
-  padding: 2px 5px;
-  border-radius: 4px;
+  padding: 2px var(--space-1);
+  border-radius: var(--radius-xs);
   background: var(--fill);
 }
 .help-status > div {
   display: grid;
   grid-template-columns: 90px 1fr;
-  gap: 16px;
-  margin: 14px 0;
+  gap: var(--space-4);
+  margin: var(--space-3) 0;
 }
 .help-status dt {
   font-weight: 600;
@@ -291,28 +314,28 @@ footer > div {
   margin: auto;
   display: flex;
   align-items: center;
-  gap: 25px;
+  gap: var(--space-6);
   max-width: 900px;
   border-bottom: 0;
-  padding: 22px 28px;
+  padding: var(--space-6) var(--space-7);
   flex-wrap: wrap;
-  padding-top: max(22px, env(safe-area-inset-top));
-  padding-left: max(28px, env(safe-area-inset-left));
-  padding-right: max(28px, env(safe-area-inset-right));
+  padding-top: max(var(--space-6), env(safe-area-inset-top));
+  padding-left: max(var(--space-7), env(safe-area-inset-left));
+  padding-right: max(var(--space-7), env(safe-area-inset-right));
 }
 footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 15px;
+  gap: var(--space-4);
   border-top: 1px solid var(--separator);
-  padding: 22px 0;
+  padding: var(--space-6) 0;
   font-size: var(--t-caption);
   color: var(--label-2);
-  margin-top: 24px;
+  margin-top: var(--space-6);
   padding-left: max(0px, env(safe-area-inset-left));
   padding-right: max(0px, env(safe-area-inset-right));
-  padding-bottom: calc(22px + env(safe-area-inset-bottom));
+  padding-bottom: calc(var(--space-6) + env(safe-area-inset-bottom));
 }
 
 /* Components — card */
@@ -320,25 +343,25 @@ footer {
   font-size: var(--t-caption);
   letter-spacing: 1.7px;
   font-weight: 750;
-  margin: 0 0 14px;
+  margin: 0 0 var(--space-4);
   color: var(--tint);
 }
 .muted {
   color: var(--label-2);
 }
 .welcome {
-  padding: 37px 35px 30px;
+  padding: var(--space-9) var(--space-9) var(--space-8);
   text-align: center;
 }
 .welcome-equation {
   color: var(--label);
-  padding: 10px 0 20px;
+  padding: var(--space-3) 0 var(--space-5);
 }
 .welcome > p {
   color: var(--label-2);
   max-width: 390px;
   line-height: 1.7;
-  margin: 0 auto 26px;
+  margin: 0 auto var(--space-7);
   font-size: var(--t-subhead);
 }
 .fine {
@@ -350,14 +373,14 @@ footer {
   font-size: var(--t-caption);
   color: var(--label-2);
   line-height: 1.6;
-  margin: 18px auto 0;
+  margin: var(--space-5) auto 0;
 }
 .summary-symbol {
   display: inline-grid;
   place-items: center;
   width: 52px;
   height: 52px;
-  border-radius: 50%;
+  border-radius: var(--radius-full);
   background: color-mix(in srgb, var(--success) 9%, var(--surface));
   color: var(--success);
   font-size: var(--t-equation);
@@ -365,8 +388,8 @@ footer {
 .stats {
   display: flex;
   justify-content: center;
-  gap: 40px;
-  margin: 30px 0;
+  gap: var(--space-10);
+  margin: var(--space-8) 0;
 }
 .stats strong {
   display: block;
@@ -378,23 +401,23 @@ footer {
   display: block;
   color: var(--label-2);
   font-size: var(--t-caption);
-  margin-top: 5px;
+  margin-top: var(--space-1);
 }
 .practice-card {
   border: 1px solid var(--separator);
   overflow: hidden;
   min-width: 0;
-  scroll-margin-top: 16px;
+  scroll-margin-top: var(--space-4);
   width: 100%;
   background: var(--surface);
   border-color: var(--separator);
-  box-shadow: 0 4px 24px color-mix(in srgb, var(--label) 2%, transparent);
-  border-radius: 20px;
+  box-shadow: var(--shadow-card);
+  border-radius: var(--radius-xl);
 }
 .welcome h2 {
   font-family: inherit;
   font-size: var(--t-welcome);
-  margin: 15px 0;
+  margin: var(--space-4) 0;
   font-weight: 600;
   letter-spacing: -0.7px;
 }
@@ -402,8 +425,8 @@ footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 8px;
-  padding: 22px 27px;
+  gap: var(--space-2);
+  padding: var(--space-6) var(--space-7);
   border-bottom: 1px solid var(--separator);
   font-size: var(--t-caption);
   border-color: var(--separator);
@@ -419,7 +442,7 @@ footer {
   flex-shrink: 0;
 }
 .practice-status {
-  gap: 16px;
+  gap: var(--space-4);
 }
 
 /* Components — button */
@@ -428,7 +451,7 @@ footer {
   color: var(--bg);
 }
 .button.large {
-  padding: 14px 25px;
+  padding: var(--space-4) var(--space-6);
   min-height: 49px;
 }
 .button.danger {
@@ -439,7 +462,7 @@ footer {
   border: 0;
   background: transparent;
   color: var(--tint);
-  padding: 10px 4px;
+  padding: var(--space-2) var(--space-1);
   font-size: var(--t-caption);
   min-height: 44px;
 }
@@ -459,20 +482,20 @@ footer .text-button {
   color: var(--label-2);
 }
 .boot-error button {
-  padding: 12px 20px;
+  padding: var(--space-3) var(--space-5);
 }
 .button {
   border: 1px solid transparent;
-  border-radius: 9px;
+  border-radius: var(--radius-md);
   min-height: 44px;
-  padding: 11px 17px;
+  padding: var(--space-3) var(--space-4);
   font-size: var(--t-footnote);
   font-weight: 600;
   line-height: 1.4;
   display: inline-flex;
   justify-content: center;
   align-items: center;
-  gap: 14px;
+  gap: var(--space-4);
   text-decoration: none;
   background: var(--fill);
   color: var(--label);
@@ -496,7 +519,7 @@ footer .text-button {
   max-width: 100%;
   overflow-x: auto;
   overflow-y: hidden;
-  padding: 12px 3px;
+  padding: var(--space-3) 3px;
   font-size: var(--t-title-large);
   line-height: 1.7;
   scrollbar-width: thin;
@@ -508,14 +531,14 @@ footer .text-button {
   color: var(--label-2);
   font-size: var(--t-caption);
   line-height: 1.6;
-  margin: 12px 0 25px;
+  margin: var(--space-3) 0 var(--space-6);
 }
 .answer-label {
   display: block;
   font-size: var(--t-caption);
   color: var(--label);
   line-height: 1.6;
-  margin: 13px 0;
+  margin: var(--space-3) 0;
 }
 math-field::part(virtual-keyboard-toggle) {
   display: none;
@@ -529,13 +552,13 @@ math-field::part(menu-toggle) {
   align-items: center;
   font-size: var(--t-caption);
   color: var(--label-2);
-  gap: 10px;
+  gap: var(--space-3);
 }
 .actions {
   display: flex;
-  gap: 10px;
+  gap: var(--space-3);
   align-items: center;
-  margin-top: 16px;
+  margin-top: var(--space-4);
   flex-wrap: wrap;
 }
 .actions .next {
@@ -544,8 +567,8 @@ math-field::part(menu-toggle) {
 }
 .hint-panel {
   border-top: 1px solid var(--separator);
-  margin-top: 24px;
-  padding-top: 22px;
+  margin-top: var(--space-6);
+  padding-top: var(--space-6);
   font-size: var(--t-footnote);
   line-height: 1.7;
 }
@@ -556,12 +579,12 @@ math-field::part(menu-toggle) {
   font-size: var(--t-caption);
 }
 .question-body {
-  padding: 32px;
+  padding: var(--space-8);
 }
 .question-body h2 {
   font-family: inherit;
   line-height: 1.25;
-  margin: 0 0 20px;
+  margin: 0 0 var(--space-5);
   font-size: var(--t-title-large);
   font-weight: 600;
   letter-spacing: -0.5px;
@@ -573,10 +596,10 @@ math-field {
   color: var(--label);
   background: var(--surface);
   border: 1.5px solid var(--control-border);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   font-size: var(--t-equation);
-  padding: 10px 12px;
-  margin-top: 7px;
+  padding: var(--space-2) var(--space-3);
+  margin-top: var(--space-2);
   --contains-highlight-background-color: color-mix(in srgb, var(--tint) 10%, var(--surface));
   border-color: var(--control-border);
   --caret-color: var(--focus);
@@ -595,18 +618,18 @@ math-field:focus-within {
   display: block;
   color: var(--label-2);
   font-size: var(--t-caption);
-  padding: 0 3px 6px;
+  padding: 0 3px var(--space-2);
 }
 .auto-next {
-  margin: 12px 0;
+  margin: var(--space-3) 0;
   color: var(--label-2);
   font-size: var(--t-caption);
 }
 .auto-next > div {
   height: 3px;
-  margin-top: 6px;
+  margin-top: var(--space-2);
   background: var(--separator);
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   overflow: hidden;
 }
 .auto-next i {
@@ -620,7 +643,7 @@ math-field:focus-within {
 }
 .answer-equation {
   display: block;
-  margin-bottom: 12px;
+  margin-bottom: var(--space-3);
   font-size: var(--t-equation);
   color: var(--label);
 }
@@ -632,9 +655,9 @@ math-field:focus-within {
 .feedback {
   font-size: var(--t-footnote);
   line-height: 1.6;
-  border-radius: 8px;
-  padding: 14px 16px;
-  margin-top: 15px;
+  border-radius: var(--radius-sm);
+  padding: var(--space-3) var(--space-4);
+  margin-top: var(--space-4);
   background: var(--fill);
   color: var(--label-2);
 }
@@ -677,11 +700,11 @@ math-field:focus-within {
 .notice {
   background: color-mix(in srgb, var(--warning) 9%, var(--surface));
   color: var(--warning);
-  padding: 13px 16px;
-  border-radius: 8px;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
   font-size: var(--t-caption);
   line-height: 1.5;
-  margin: 16px 0;
+  margin: var(--space-4) 0;
 }
 
 /* Components — path */
@@ -696,17 +719,17 @@ math-field:focus-within {
 .level {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 11px;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-3);
   border: 1px solid transparent;
-  border-radius: 11px;
+  border-radius: var(--radius-md);
   color: var(--label-2);
   min-height: 66px;
 }
 .level-number {
   font-size: var(--t-footnote);
   flex-shrink: 0;
-  border-radius: 50%;
+  border-radius: var(--radius-full);
   border: 1px solid var(--separator);
   width: 32px;
   height: 32px;
@@ -721,20 +744,20 @@ math-field:focus-within {
 .level small {
   display: block;
   font-size: var(--t-caption);
-  margin-top: 6px;
+  margin-top: var(--space-2);
   color: var(--label-2);
 }
 .journey {
   width: 100%;
-  padding: 0 4px;
+  padding: 0 var(--space-1);
 }
 .progress-summary {
   display: flex;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-3);
   font-size: var(--t-subhead);
   font-weight: 600;
-  padding: 14px 0;
+  padding: var(--space-4) 0;
 }
 .progress-summary::after {
   content: "+";
@@ -753,7 +776,7 @@ math-field:focus-within {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin: 20px 0 10px;
+  margin: var(--space-5) 0 var(--space-3);
 }
 .level.active {
   background: color-mix(in srgb, var(--tint) 8%, var(--surface));
@@ -770,12 +793,12 @@ math-field:focus-within {
 .level-list {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .path-level {
   min-width: 0;
   border: 1px solid var(--separator);
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   overflow: hidden;
 }
 .path-level > .level {
@@ -809,24 +832,24 @@ math-field:focus-within {
   border-right: 1.5px solid currentColor;
   border-bottom: 1.5px solid currentColor;
   transform: rotate(45deg);
-  margin: 0 8px 4px;
+  margin: 0 var(--space-2) var(--space-1);
 }
 .path-level[open] .path-chevron {
   transform: rotate(225deg);
   margin-bottom: -2px;
 }
 .path-skills {
-  padding: 0 18px 8px 58px;
+  padding: 0 var(--space-5) var(--space-2) var(--space-14);
 }
 .path-skill {
-  padding: 13px 0;
+  padding: var(--space-3) 0;
   border-top: 1px solid var(--separator);
   font-size: var(--t-footnote);
 }
 .path-skill > div {
   display: flex;
   align-items: baseline;
-  gap: 12px;
+  gap: var(--space-3);
   justify-content: space-between;
 }
 .path-skill strong {
@@ -835,7 +858,7 @@ math-field:focus-within {
 .path-skill small {
   display: block;
   color: var(--label-2);
-  margin-top: 5px;
+  margin-top: var(--space-1);
   font-size: var(--t-caption);
 }
 .skill-status {
@@ -856,7 +879,7 @@ math-field:focus-within {
 
 /* Components — dialog */
 .modal-body {
-  padding: 20px 24px 27px;
+  padding: var(--space-5) var(--space-6) var(--space-7);
   line-height: 1.7;
   font-size: var(--t-footnote);
 }
@@ -864,12 +887,12 @@ math-field:focus-within {
   margin-top: 0;
 }
 .modal-body li {
-  margin-bottom: 9px;
+  margin-bottom: var(--space-2);
 }
 .whats-new-entry + .whats-new-entry {
   border-top: 1px solid var(--separator);
-  margin-top: 18px;
-  padding-top: 18px;
+  margin-top: var(--space-5);
+  padding-top: var(--space-5);
 }
 .whats-new-entry h3 {
   margin: 0;
@@ -877,32 +900,32 @@ math-field:focus-within {
   line-height: 1.4;
 }
 .whats-new-entry .fine {
-  margin: 2px 0 10px;
+  margin: 2px 0 var(--space-3);
 }
 .whats-new-entry ul {
   margin: 0;
-  padding-left: 20px;
+  padding-left: var(--space-5);
 }
 .whats-new .modal-body > .button {
-  margin-top: 12px;
+  margin-top: var(--space-3);
 }
 .transfer-options {
   display: flex;
-  gap: 12px;
+  gap: var(--space-3);
   flex-wrap: wrap;
-  margin: 20px 0;
+  margin: var(--space-5) 0;
 }
 .scan-actions {
   display: flex;
-  gap: 12px;
+  gap: var(--space-3);
   flex-wrap: wrap;
-  margin: 20px 0;
+  margin: var(--space-5) 0;
 }
 .modal-body textarea {
   width: 100%;
-  padding: 12px;
+  padding: var(--space-3);
   border: 1px solid var(--separator);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   resize: vertical;
   color: var(--label);
   background: var(--surface);
@@ -913,9 +936,9 @@ math-field:focus-within {
 }
 .qr-controls {
   display: flex;
-  gap: 12px;
+  gap: var(--space-3);
   flex-wrap: wrap;
-  margin: 20px 0;
+  margin: var(--space-5) 0;
   justify-content: center;
 }
 .file-label {
@@ -934,14 +957,14 @@ video {
   width: 100%;
   max-height: 240px;
   background: var(--fill);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
 }
 dialog {
   border: 1px solid var(--separator);
-  border-radius: 17px;
+  border-radius: var(--radius-lg);
   width: min(550px, calc(100vw - 28px));
   padding: 0;
-  box-shadow: 0 24px 90px color-mix(in srgb, var(--label) 20%, transparent);
+  box-shadow: var(--shadow-dialog);
   background: var(--surface);
   color: var(--label);
   border-color: var(--separator);
@@ -958,12 +981,12 @@ dialog::backdrop {
   justify-content: space-between;
   align-items: center;
   border-bottom: 1px solid var(--separator);
-  gap: 15px;
+  gap: var(--space-4);
   position: sticky;
   top: 0;
   background: var(--surface);
   z-index: 1;
-  padding: 12px 22px;
+  padding: var(--space-3) var(--space-6);
 }
 .modal-heading h2 {
   font-family: inherit;
@@ -973,8 +996,8 @@ dialog::backdrop {
 }
 .qr-wrap {
   text-align: center;
-  margin-top: 22px;
-  padding-bottom: 16px;
+  margin-top: var(--space-6);
+  padding-bottom: var(--space-4);
 }
 .qr-wrap canvas {
   height: auto;
@@ -1039,24 +1062,24 @@ dialog::backdrop {
     grid-template-columns: minmax(0, 1fr) 260px;
   }
   main {
-    padding-left: 25px;
-    padding-right: 25px;
+    padding-left: var(--space-6);
+    padding-right: var(--space-6);
   }
   .card-top {
-    padding: 18px 22px;
+    padding: var(--space-5) var(--space-6);
   }
 }
 
 @media (max-width: 700px) {
   .brand {
     font-size: var(--t-callout);
-    gap: 8px;
+    gap: var(--space-2);
   }
   .brand-mark {
     width: 31px;
     height: 31px;
     font-size: var(--t-title-large);
-    border-radius: 9px;
+    border-radius: 9px; /* logo: radius scales with the mark, not a component token */
   }
   .private-label {
     display: none;
@@ -1064,16 +1087,16 @@ dialog::backdrop {
   .site-header > .button {
     margin-left: auto;
     font-size: var(--t-caption);
-    padding: 9px 11px;
+    padding: var(--space-2) var(--space-3);
   }
   .eyebrow {
     letter-spacing: 1.25px;
   }
   .card-top {
-    padding: 18px;
+    padding: var(--space-5);
   }
   .welcome {
-    padding: 28px 22px;
+    padding: var(--space-7) var(--space-6);
   }
   .welcome h2 {
     font-size: var(--t-title1);
@@ -1085,11 +1108,11 @@ dialog::backdrop {
     font-size: var(--t-title2);
   }
   .actions {
-    gap: 8px;
+    gap: var(--space-2);
   }
   .actions .button {
     font-size: var(--t-caption);
-    padding: 11px 13px;
+    padding: var(--space-3) var(--space-3);
   }
   .input-caption .text-button {
     font-size: var(--t-caption);
@@ -1098,8 +1121,8 @@ dialog::backdrop {
     font-size: var(--t-title-large);
   }
   .level {
-    gap: 7px;
-    padding: 10px 7px;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-2);
   }
   .level-number {
     width: 27px;
@@ -1107,25 +1130,25 @@ dialog::backdrop {
     font-size: var(--t-caption);
   }
   footer > div {
-    gap: 0 18px;
+    gap: 0 var(--space-5);
   }
   .stats {
-    gap: 28px;
+    gap: var(--space-7);
   }
   .modal-body {
-    padding: 18px;
+    padding: var(--space-4);
   }
   .qr-wrap canvas {
     max-width: 100%;
   }
   main {
-    padding: 12px 16px 0;
+    padding: var(--space-3) var(--space-4) 0;
   }
   .question-body {
-    padding: 24px 20px;
+    padding: var(--space-6) var(--space-5);
   }
   .practice-card {
-    border-radius: 16px;
+    border-radius: var(--radius-lg);
   }
   .progress-summary {
     font-size: var(--t-footnote);
@@ -1134,19 +1157,19 @@ dialog::backdrop {
     padding-bottom: calc(var(--practice-keyboard-height, 0px) + 80px);
   }
   .site-header {
-    gap: 12px;
-    padding: 14px 18px;
-    padding-top: max(14px, env(safe-area-inset-top));
-    padding-left: max(18px, env(safe-area-inset-left));
-    padding-right: max(18px, env(safe-area-inset-right));
+    gap: var(--space-3);
+    padding: var(--space-4) var(--space-5);
+    padding-top: max(var(--space-4), env(safe-area-inset-top));
+    padding-left: max(var(--space-5), env(safe-area-inset-left));
+    padding-right: max(var(--space-5), env(safe-area-inset-right));
   }
   footer {
     align-items: flex-start;
     flex-direction: column;
     gap: 0;
-    padding: 20px 0;
-    padding-top: 20px;
-    padding-bottom: calc(20px + env(safe-area-inset-bottom));
+    padding: var(--space-5) 0;
+    padding-top: var(--space-5);
+    padding-bottom: calc(var(--space-5) + env(safe-area-inset-bottom));
   }
   .keyboard-open .actions {
     position: fixed;
@@ -1155,30 +1178,30 @@ dialog::backdrop {
     bottom: var(--practice-keyboard-height, 0px);
     z-index: 999;
     margin: 0;
-    padding: 10px 14px;
+    padding: var(--space-3) var(--space-4);
     background: var(--surface);
     border-top: 1px solid var(--separator);
-    box-shadow: 0 -4px 16px color-mix(in srgb, var(--label) 3%, transparent);
-    padding-left: max(14px, env(safe-area-inset-left));
-    padding-right: max(14px, env(safe-area-inset-right));
-    padding-bottom: calc(10px + env(safe-area-inset-bottom));
+    box-shadow: var(--shadow-bar);
+    padding-left: max(var(--space-4), env(safe-area-inset-left));
+    padding-right: max(var(--space-4), env(safe-area-inset-right));
+    padding-bottom: calc(var(--space-3) + env(safe-area-inset-bottom));
   }
 }
 
 @media (max-width: 430px) {
   .practice-status {
-    padding: 16px 20px;
-    gap: 10px;
+    padding: var(--space-4) var(--space-5);
+    gap: var(--space-3);
   }
   #today-count {
     font-size: var(--t-caption);
   }
   .path-skills {
-    padding-left: 22px;
+    padding-left: var(--space-6);
   }
   .path-skill > div {
     flex-wrap: wrap;
-    gap: 4px 12px;
+    gap: var(--space-1) var(--space-3);
   }
   .help-status > div {
     grid-template-columns: 1fr;
@@ -1191,15 +1214,15 @@ dialog::backdrop {
     margin-left: 0;
   }
   main {
-    padding-left: 8px;
-    padding-right: 8px;
+    padding-left: var(--space-2);
+    padding-right: var(--space-2);
   }
   .question-body {
-    padding: 18px 12px;
+    padding: var(--space-5) var(--space-3);
   }
   .card-top {
     flex-wrap: wrap;
-    padding: 14px 12px;
+    padding: var(--space-4) var(--space-3);
   }
   .input-caption {
     flex-wrap: wrap;
@@ -1211,21 +1234,15 @@ dialog::backdrop {
     margin-left: 0;
   }
   .site-header {
-    gap: 8px;
-    padding: 10px 12px;
-    padding-top: max(10px, env(safe-area-inset-top));
-    padding-left: max(12px, env(safe-area-inset-left));
-    padding-right: max(12px, env(safe-area-inset-right));
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    padding-top: max(var(--space-2), env(safe-area-inset-top));
+    padding-left: max(var(--space-3), env(safe-area-inset-left));
+    padding-right: max(var(--space-3), env(safe-area-inset-right));
   }
 }
 
 @media (prefers-color-scheme: dark) {
-  .practice-card {
-    box-shadow: 0 4px 24px color-mix(in srgb, var(--bg) 20%, transparent);
-  }
-  dialog {
-    box-shadow: 0 24px 90px color-mix(in srgb, var(--bg) 75%, transparent);
-  }
   dialog::backdrop {
     background: color-mix(in srgb, var(--bg) 55%, transparent);
   }
@@ -1236,7 +1253,7 @@ dialog::backdrop {
   position: relative;
   display: inline-flex;
   align-items: baseline;
-  gap: 7px;
+  gap: var(--space-2);
   color: var(--label);
   font-size: var(--t-subhead);
 }
@@ -1252,8 +1269,8 @@ dialog::backdrop {
 }
 .sparks {
   position: absolute;
-  left: 12px;
-  top: 14px;
+  left: var(--space-3);
+  top: var(--space-4);
   pointer-events: none;
 }
 .sparks i {
@@ -1261,7 +1278,7 @@ dialog::backdrop {
   width: 5px;
   height: 5px;
   background: var(--tint);
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   animation: streak-spark 800ms ease-out forwards;
   transform: rotate(var(--angle));
 }
