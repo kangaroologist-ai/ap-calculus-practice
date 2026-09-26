@@ -1121,22 +1121,24 @@ test('phone keyboard tab-row controls preserve focus and skip to another questio
     await expect(page.locator('.MLK__layer.is-visible .kb-tool[data-act="skip"]')).toHaveText('Skip');
     await expect(page.locator('.MLK__layer.is-visible .kb-tool[data-act="hide"]')).toHaveAttribute('aria-label', 'Hide keyboard');
 
-    for (let hint = 0; hint < 3; hint += 1) {
-      await page.locator('.MLK__layer.is-visible .kb-tool[data-act="hint"]:visible').tap();
-      await expect(page.locator('#hints .hint-panel')).toBeVisible();
-      await expect.poll(() => page.evaluate(() => window.mathVirtualKeyboard.visible)).toBe(true);
-      await expect(field).toBeFocused();
-    }
-    await expect(page.locator('.MLK__layer.is-visible .kb-tool[data-act="hint"]')).toBeHidden();
-
+    // Skip first: this configuration has only two questions due, so skipping after the
+    // second would end the session (which rightly closes the keyboard).
     const previousQuestion = (await readStoredState(page)).session?.current?.question.signature;
     await page.locator('.MLK__layer.is-visible .kb-tool[data-act="skip"]:visible').tap();
     await expect.poll(async () => (await readStoredState(page)).session?.current?.question.signature)
       .not.toBe(previousQuestion);
+    expect((await readStoredState(page)).session?.finished).toBe(false);
     await expect.poll(() => page.evaluate(() => window.mathVirtualKeyboard.visible)).toBe(true);
     const nextField = page.locator('math-field').first();
     await expect(nextField).toBeFocused();
-    expect((await readStoredState(page)).session?.finished).toBe(false);
+
+    for (let hint = 0; hint < 3; hint += 1) {
+      await page.locator('.MLK__layer.is-visible .kb-tool[data-act="hint"]:visible').tap();
+      await expect(page.locator('#hints .hint-panel')).toBeVisible();
+      await expect.poll(() => page.evaluate(() => window.mathVirtualKeyboard.visible)).toBe(true);
+      await expect(nextField).toBeFocused();
+    }
+    await expect(page.locator('.MLK__layer.is-visible .kb-tool[data-act="hint"]')).toBeHidden();
 
     await setMathfield(nextField, await currentAnswer(page));
     await nextField.press('Enter');
