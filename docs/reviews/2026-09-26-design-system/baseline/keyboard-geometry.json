@@ -1,0 +1,1182 @@
+{
+ "390-light-derivatives": {
+  "viewport": 390,
+  "plate": {
+   "x": 0,
+   "w": 390,
+   "h": 226
+  },
+  "rows": [
+   [
+    {
+     "label": "Type x",
+     "x": 40,
+     "w": 37,
+     "h": 44
+    },
+    {
+     "label": "Type 7",
+     "x": 79,
+     "w": 37,
+     "h": 44
+    },
+    {
+     "label": "Type 8",
+     "x": 118,
+     "w": 37,
+     "h": 44
+    },
+    {
+     "label": "Type 9",
+     "x": 157,
+     "w": 37,
+     "h": 44
+    },
+    {
+     "label": "Type +",
+     "x": 196,
+     "w": 37,
+     "h": 44
+    },
+    {
+     "label": "Type -",
+     "x": 235,
+     "w": 37,
+     "h": 44
+    },
+    {
+     "label": "Type (",
+     "x": 274,
+     "w": 37,
+     "h": 44
+    },
+    {
+     "label": "Type )",
+     "x": 313,
+     "w": 37,
+     "h": 44
+    }
+   ],
+   [
+    {
+     "label": "Type /",
+     "x": 40,
+     "w": 37,
+     "h": 44
+    },
+    {
+     "label": "Type ^",
+     "x": 79,
+     "w": 37,
+     "h": 44
+    },
+    {
+     "label": "Type sqrt",
+     "x": 118,
+     "w": 37,
+     "h": 44
+    },
+    {
+     "label": "Type 4",
+     "x": 157,
+     "w": 37,
+     "h": 44
+    },
+    {
+     "label": "Type 5",
+     "x": 196,
+     "w": 37,
+     "h": 44
+    },
+    {
+     "label": "Type 6",
+     "x": 235,
+     "w": 37,
+     "h": 44
+    },
+    {
+     "label": "Type *",
+     "x": 274,
+     "w": 37,
+     "h": 44
+    },
+    {
+     "label": "Type /",
+     "x": 313,
+     "w": 37,
+     "h": 44
+    }
+   ],
+   [
+    {
+     "label": "Type sin",
+     "x": 40,
+     "w": 37,
+     "h": 44
+    },
+    {
+     "label": "Type cos",
+     "x": 79,
+     "w": 37,
+     "h": 44
+    },
+    {
+     "label": "Type tan",
+     "x": 118,
+     "w": 37,
+     "h": 44
+    },
+    {
+     "label": "Type sec",
+     "x": 157,
+     "w": 37,
+     "h": 44
+    },
+    {
+     "label": "Type csc",
+     "x": 196,
+     "w": 37,
+     "h": 44
+    },
+    {
+     "label": "Type 1",
+     "x": 235,
+     "w": 37,
+     "h": 44
+    },
+    {
+     "label": "Type 2",
+     "x": 274,
+     "w": 37,
+     "h": 44
+    },
+    {
+     "label": "Type 3",
+     "x": 313,
+     "w": 37,
+     "h": 44
+    }
+   ],
+   [
+    {
+     "label": "Type ln",
+     "x": 21,
+     "w": 37,
+     "h": 44
+    },
+    {
+     "label": "Type e^",
+     "x": 60,
+     "w": 37,
+     "h": 44
+    },
+    {
+     "label": "",
+     "x": 99,
+     "w": 57,
+     "h": 44,
+     "iconOffsetX": 0,
+     "iconOffsetY": 6
+    },
+    {
+     "label": "Type 0",
+     "x": 157,
+     "w": 37,
+     "h": 44
+    },
+    {
+     "label": "Type .",
+     "x": 196,
+     "w": 37,
+     "h": 44
+    },
+    {
+     "label": "",
+     "x": 235,
+     "w": 37,
+     "h": 44,
+     "iconOffsetX": 0,
+     "iconOffsetY": 4
+    },
+    {
+     "label": "",
+     "x": 274,
+     "w": 37,
+     "h": 44,
+     "iconOffsetX": 0,
+     "iconOffsetY": 4
+    },
+    {
+     "label": "",
+     "x": 313,
+     "w": 57,
+     "h": 44,
+     "iconOffsetX": 6,
+     "iconOffsetY": -4
+    }
+   ]
+  ]
+ },
+ "390-light-functions": {
+  "viewport": 390,
+  "plate": {
+   "x": 0,
+   "w": 390,
+   "h": 272
+  },
+  "rows": [
+   [
+    {
+     "label": "Type x",
+     "x": 40,
+     "w": 76,
+     "h": 44
+    },
+    {
+     "label": "Type y",
+     "x": 118,
+     "w": 76,
+     "h": 44
+    },
+    {
+     "label": "Type t",
+     "x": 196,
+     "w": 76,
+     "h": 44
+    },
+    {
+     "label": "Type theta",
+     "x": 274,
+     "w": 76,
+     "h": 44
+    }
+   ],
+   [
+    {
+     "label": "Type sin",
+     "x": 40,
+     "w": 76,
+     "h": 44
+    },
+    {
+     "label": "Type cos",
+     "x": 118,
+     "w": 76,
+     "h": 44
+    },
+    {
+     "label": "Type tan",
+     "x": 196,
+     "w": 76,
+     "h": 44
+    },
+    {
+     "label": "Type ln",
+     "x": 274,
+     "w": 76,
+     "h": 44
+    }
+   ],
+   [
+    {
+     "label": "Type sec",
+     "x": 40,
+     "w": 76,
+     "h": 44
+    },
+    {
+     "label": "Type csc",
+     "x": 118,
+     "w": 76,
+     "h": 44
+    },
+    {
+     "label": "Type cot",
+     "x": 196,
+     "w": 76,
+     "h": 44
+    },
+    {
+     "label": "Type log",
+     "x": 274,
+     "w": 76,
+     "h": 44
+    }
+   ],
+   [
+    {
+     "label": "Type arcsin",
+     "x": 40,
+     "w": 76,
+     "h": 44
+    },
+    {
+     "label": "Type arccos",
+     "x": 118,
+     "w": 76,
+     "h": 44
+    },
+    {
+     "label": "Type arctan",
+     "x": 196,
+     "w": 76,
+     "h": 44
+    },
+    {
+     "label": "Type cbrt",
+     "x": 274,
+     "w": 76,
+     "h": 44
+    }
+   ],
+   [
+    {
+     "label": "Type pi",
+     "x": 79,
+     "w": 37,
+     "h": 44
+    },
+    {
+     "label": "",
+     "x": 118,
+     "w": 37,
+     "h": 44,
+     "iconOffsetX": 0,
+     "iconOffsetY": 4
+    },
+    {
+     "label": "",
+     "x": 157,
+     "w": 37,
+     "h": 44,
+     "iconOffsetX": 0,
+     "iconOffsetY": 4
+    },
+    {
+     "label": "",
+     "x": 196,
+     "w": 57,
+     "h": 44,
+     "iconOffsetX": 6,
+     "iconOffsetY": -4
+    },
+    {
+     "label": "",
+     "x": 255,
+     "w": 57,
+     "h": 44,
+     "iconOffsetX": 0,
+     "iconOffsetY": 6
+    }
+   ]
+  ]
+ },
+ "390-dark-derivatives": {
+  "viewport": 390,
+  "plate": {
+   "x": 0,
+   "w": 390,
+   "h": 226
+  },
+  "rows": [
+   [
+    {
+     "label": "Type x",
+     "x": 40,
+     "w": 37,
+     "h": 44
+    },
+    {
+     "label": "Type 7",
+     "x": 79,
+     "w": 37,
+     "h": 44
+    },
+    {
+     "label": "Type 8",
+     "x": 118,
+     "w": 37,
+     "h": 44
+    },
+    {
+     "label": "Type 9",
+     "x": 157,
+     "w": 37,
+     "h": 44
+    },
+    {
+     "label": "Type +",
+     "x": 196,
+     "w": 37,
+     "h": 44
+    },
+    {
+     "label": "Type -",
+     "x": 235,
+     "w": 37,
+     "h": 44
+    },
+    {
+     "label": "Type (",
+     "x": 274,
+     "w": 37,
+     "h": 44
+    },
+    {
+     "label": "Type )",
+     "x": 313,
+     "w": 37,
+     "h": 44
+    }
+   ],
+   [
+    {
+     "label": "Type /",
+     "x": 40,
+     "w": 37,
+     "h": 44
+    },
+    {
+     "label": "Type ^",
+     "x": 79,
+     "w": 37,
+     "h": 44
+    },
+    {
+     "label": "Type sqrt",
+     "x": 118,
+     "w": 37,
+     "h": 44
+    },
+    {
+     "label": "Type 4",
+     "x": 157,
+     "w": 37,
+     "h": 44
+    },
+    {
+     "label": "Type 5",
+     "x": 196,
+     "w": 37,
+     "h": 44
+    },
+    {
+     "label": "Type 6",
+     "x": 235,
+     "w": 37,
+     "h": 44
+    },
+    {
+     "label": "Type *",
+     "x": 274,
+     "w": 37,
+     "h": 44
+    },
+    {
+     "label": "Type /",
+     "x": 313,
+     "w": 37,
+     "h": 44
+    }
+   ],
+   [
+    {
+     "label": "Type sin",
+     "x": 40,
+     "w": 37,
+     "h": 44
+    },
+    {
+     "label": "Type cos",
+     "x": 79,
+     "w": 37,
+     "h": 44
+    },
+    {
+     "label": "Type tan",
+     "x": 118,
+     "w": 37,
+     "h": 44
+    },
+    {
+     "label": "Type sec",
+     "x": 157,
+     "w": 37,
+     "h": 44
+    },
+    {
+     "label": "Type csc",
+     "x": 196,
+     "w": 37,
+     "h": 44
+    },
+    {
+     "label": "Type 1",
+     "x": 235,
+     "w": 37,
+     "h": 44
+    },
+    {
+     "label": "Type 2",
+     "x": 274,
+     "w": 37,
+     "h": 44
+    },
+    {
+     "label": "Type 3",
+     "x": 313,
+     "w": 37,
+     "h": 44
+    }
+   ],
+   [
+    {
+     "label": "Type ln",
+     "x": 21,
+     "w": 37,
+     "h": 44
+    },
+    {
+     "label": "Type e^",
+     "x": 60,
+     "w": 37,
+     "h": 44
+    },
+    {
+     "label": "",
+     "x": 99,
+     "w": 57,
+     "h": 44,
+     "iconOffsetX": 0,
+     "iconOffsetY": 6
+    },
+    {
+     "label": "Type 0",
+     "x": 157,
+     "w": 37,
+     "h": 44
+    },
+    {
+     "label": "Type .",
+     "x": 196,
+     "w": 37,
+     "h": 44
+    },
+    {
+     "label": "",
+     "x": 235,
+     "w": 37,
+     "h": 44,
+     "iconOffsetX": 0,
+     "iconOffsetY": 4
+    },
+    {
+     "label": "",
+     "x": 274,
+     "w": 37,
+     "h": 44,
+     "iconOffsetX": 0,
+     "iconOffsetY": 4
+    },
+    {
+     "label": "",
+     "x": 313,
+     "w": 57,
+     "h": 44,
+     "iconOffsetX": 6,
+     "iconOffsetY": -4
+    }
+   ]
+  ]
+ },
+ "390-dark-functions": {
+  "viewport": 390,
+  "plate": {
+   "x": 0,
+   "w": 390,
+   "h": 272
+  },
+  "rows": [
+   [
+    {
+     "label": "Type x",
+     "x": 40,
+     "w": 76,
+     "h": 44
+    },
+    {
+     "label": "Type y",
+     "x": 118,
+     "w": 76,
+     "h": 44
+    },
+    {
+     "label": "Type t",
+     "x": 196,
+     "w": 76,
+     "h": 44
+    },
+    {
+     "label": "Type theta",
+     "x": 274,
+     "w": 76,
+     "h": 44
+    }
+   ],
+   [
+    {
+     "label": "Type sin",
+     "x": 40,
+     "w": 76,
+     "h": 44
+    },
+    {
+     "label": "Type cos",
+     "x": 118,
+     "w": 76,
+     "h": 44
+    },
+    {
+     "label": "Type tan",
+     "x": 196,
+     "w": 76,
+     "h": 44
+    },
+    {
+     "label": "Type ln",
+     "x": 274,
+     "w": 76,
+     "h": 44
+    }
+   ],
+   [
+    {
+     "label": "Type sec",
+     "x": 40,
+     "w": 76,
+     "h": 44
+    },
+    {
+     "label": "Type csc",
+     "x": 118,
+     "w": 76,
+     "h": 44
+    },
+    {
+     "label": "Type cot",
+     "x": 196,
+     "w": 76,
+     "h": 44
+    },
+    {
+     "label": "Type log",
+     "x": 274,
+     "w": 76,
+     "h": 44
+    }
+   ],
+   [
+    {
+     "label": "Type arcsin",
+     "x": 40,
+     "w": 76,
+     "h": 44
+    },
+    {
+     "label": "Type arccos",
+     "x": 118,
+     "w": 76,
+     "h": 44
+    },
+    {
+     "label": "Type arctan",
+     "x": 196,
+     "w": 76,
+     "h": 44
+    },
+    {
+     "label": "Type cbrt",
+     "x": 274,
+     "w": 76,
+     "h": 44
+    }
+   ],
+   [
+    {
+     "label": "Type pi",
+     "x": 79,
+     "w": 37,
+     "h": 44
+    },
+    {
+     "label": "",
+     "x": 118,
+     "w": 37,
+     "h": 44,
+     "iconOffsetX": 0,
+     "iconOffsetY": 4
+    },
+    {
+     "label": "",
+     "x": 157,
+     "w": 37,
+     "h": 44,
+     "iconOffsetX": 0,
+     "iconOffsetY": 4
+    },
+    {
+     "label": "",
+     "x": 196,
+     "w": 57,
+     "h": 44,
+     "iconOffsetX": 6,
+     "iconOffsetY": -4
+    },
+    {
+     "label": "",
+     "x": 255,
+     "w": 57,
+     "h": 44,
+     "iconOffsetX": 0,
+     "iconOffsetY": 6
+    }
+   ]
+  ]
+ },
+ "1280-light-derivatives": {
+  "viewport": 1280,
+  "plate": {
+   "x": 0,
+   "w": 1280,
+   "h": 250
+  },
+  "rows": [
+   [
+    {
+     "label": "Type x",
+     "x": 244,
+     "w": 92,
+     "h": 44
+    },
+    {
+     "label": "Type 7",
+     "x": 344,
+     "w": 92,
+     "h": 44
+    },
+    {
+     "label": "Type 8",
+     "x": 444,
+     "w": 92,
+     "h": 44
+    },
+    {
+     "label": "Type 9",
+     "x": 544,
+     "w": 92,
+     "h": 44
+    },
+    {
+     "label": "Type +",
+     "x": 644,
+     "w": 92,
+     "h": 44
+    },
+    {
+     "label": "Type -",
+     "x": 744,
+     "w": 92,
+     "h": 44
+    },
+    {
+     "label": "Type (",
+     "x": 844,
+     "w": 92,
+     "h": 44
+    },
+    {
+     "label": "Type )",
+     "x": 944,
+     "w": 92,
+     "h": 44
+    }
+   ],
+   [
+    {
+     "label": "Type /",
+     "x": 244,
+     "w": 92,
+     "h": 44
+    },
+    {
+     "label": "Type ^",
+     "x": 344,
+     "w": 92,
+     "h": 44
+    },
+    {
+     "label": "Type sqrt",
+     "x": 444,
+     "w": 92,
+     "h": 44
+    },
+    {
+     "label": "Type 4",
+     "x": 544,
+     "w": 92,
+     "h": 44
+    },
+    {
+     "label": "Type 5",
+     "x": 644,
+     "w": 92,
+     "h": 44
+    },
+    {
+     "label": "Type 6",
+     "x": 744,
+     "w": 92,
+     "h": 44
+    },
+    {
+     "label": "Type *",
+     "x": 844,
+     "w": 92,
+     "h": 44
+    },
+    {
+     "label": "Type /",
+     "x": 944,
+     "w": 92,
+     "h": 44
+    }
+   ],
+   [
+    {
+     "label": "Type sin",
+     "x": 244,
+     "w": 92,
+     "h": 44
+    },
+    {
+     "label": "Type cos",
+     "x": 344,
+     "w": 92,
+     "h": 44
+    },
+    {
+     "label": "Type tan",
+     "x": 444,
+     "w": 92,
+     "h": 44
+    },
+    {
+     "label": "Type sec",
+     "x": 544,
+     "w": 92,
+     "h": 44
+    },
+    {
+     "label": "Type csc",
+     "x": 644,
+     "w": 92,
+     "h": 44
+    },
+    {
+     "label": "Type 1",
+     "x": 744,
+     "w": 92,
+     "h": 44
+    },
+    {
+     "label": "Type 2",
+     "x": 844,
+     "w": 92,
+     "h": 44
+    },
+    {
+     "label": "Type 3",
+     "x": 944,
+     "w": 92,
+     "h": 44
+    }
+   ],
+   [
+    {
+     "label": "Type ln",
+     "x": 194,
+     "w": 92,
+     "h": 44
+    },
+    {
+     "label": "Type e^",
+     "x": 294,
+     "w": 92,
+     "h": 44
+    },
+    {
+     "label": "",
+     "x": 394,
+     "w": 142,
+     "h": 44,
+     "iconOffsetX": 0,
+     "iconOffsetY": 6
+    },
+    {
+     "label": "Type 0",
+     "x": 544,
+     "w": 92,
+     "h": 44
+    },
+    {
+     "label": "Type .",
+     "x": 644,
+     "w": 92,
+     "h": 44
+    },
+    {
+     "label": "",
+     "x": 744,
+     "w": 92,
+     "h": 44,
+     "iconOffsetX": 0,
+     "iconOffsetY": 4
+    },
+    {
+     "label": "",
+     "x": 844,
+     "w": 92,
+     "h": 44,
+     "iconOffsetX": 0,
+     "iconOffsetY": 4
+    },
+    {
+     "label": "",
+     "x": 944,
+     "w": 142,
+     "h": 44,
+     "iconOffsetX": 49,
+     "iconOffsetY": -4
+    }
+   ]
+  ]
+ },
+ "1280-dark-derivatives": {
+  "viewport": 1280,
+  "plate": {
+   "x": 0,
+   "w": 1280,
+   "h": 250
+  },
+  "rows": [
+   [
+    {
+     "label": "Type x",
+     "x": 244,
+     "w": 92,
+     "h": 44
+    },
+    {
+     "label": "Type 7",
+     "x": 344,
+     "w": 92,
+     "h": 44
+    },
+    {
+     "label": "Type 8",
+     "x": 444,
+     "w": 92,
+     "h": 44
+    },
+    {
+     "label": "Type 9",
+     "x": 544,
+     "w": 92,
+     "h": 44
+    },
+    {
+     "label": "Type +",
+     "x": 644,
+     "w": 92,
+     "h": 44
+    },
+    {
+     "label": "Type -",
+     "x": 744,
+     "w": 92,
+     "h": 44
+    },
+    {
+     "label": "Type (",
+     "x": 844,
+     "w": 92,
+     "h": 44
+    },
+    {
+     "label": "Type )",
+     "x": 944,
+     "w": 92,
+     "h": 44
+    }
+   ],
+   [
+    {
+     "label": "Type /",
+     "x": 244,
+     "w": 92,
+     "h": 44
+    },
+    {
+     "label": "Type ^",
+     "x": 344,
+     "w": 92,
+     "h": 44
+    },
+    {
+     "label": "Type sqrt",
+     "x": 444,
+     "w": 92,
+     "h": 44
+    },
+    {
+     "label": "Type 4",
+     "x": 544,
+     "w": 92,
+     "h": 44
+    },
+    {
+     "label": "Type 5",
+     "x": 644,
+     "w": 92,
+     "h": 44
+    },
+    {
+     "label": "Type 6",
+     "x": 744,
+     "w": 92,
+     "h": 44
+    },
+    {
+     "label": "Type *",
+     "x": 844,
+     "w": 92,
+     "h": 44
+    },
+    {
+     "label": "Type /",
+     "x": 944,
+     "w": 92,
+     "h": 44
+    }
+   ],
+   [
+    {
+     "label": "Type sin",
+     "x": 244,
+     "w": 92,
+     "h": 44
+    },
+    {
+     "label": "Type cos",
+     "x": 344,
+     "w": 92,
+     "h": 44
+    },
+    {
+     "label": "Type tan",
+     "x": 444,
+     "w": 92,
+     "h": 44
+    },
+    {
+     "label": "Type sec",
+     "x": 544,
+     "w": 92,
+     "h": 44
+    },
+    {
+     "label": "Type csc",
+     "x": 644,
+     "w": 92,
+     "h": 44
+    },
+    {
+     "label": "Type 1",
+     "x": 744,
+     "w": 92,
+     "h": 44
+    },
+    {
+     "label": "Type 2",
+     "x": 844,
+     "w": 92,
+     "h": 44
+    },
+    {
+     "label": "Type 3",
+     "x": 944,
+     "w": 92,
+     "h": 44
+    }
+   ],
+   [
+    {
+     "label": "Type ln",
+     "x": 194,
+     "w": 92,
+     "h": 44
+    },
+    {
+     "label": "Type e^",
+     "x": 294,
+     "w": 92,
+     "h": 44
+    },
+    {
+     "label": "",
+     "x": 394,
+     "w": 142,
+     "h": 44,
+     "iconOffsetX": 0,
+     "iconOffsetY": 6
+    },
+    {
+     "label": "Type 0",
+     "x": 544,
+     "w": 92,
+     "h": 44
+    },
+    {
+     "label": "Type .",
+     "x": 644,
+     "w": 92,
+     "h": 44
+    },
+    {
+     "label": "",
+     "x": 744,
+     "w": 92,
+     "h": 44,
+     "iconOffsetX": 0,
+     "iconOffsetY": 4
+    },
+    {
+     "label": "",
+     "x": 844,
+     "w": 92,
+     "h": 44,
+     "iconOffsetX": 0,
+     "iconOffsetY": 4
+    },
+    {
+     "label": "",
+     "x": 944,
+     "w": 142,
+     "h": 44,
+     "iconOffsetX": 49,
+     "iconOffsetY": -4
+    }
+   ]
+  ]
+ }
+}
