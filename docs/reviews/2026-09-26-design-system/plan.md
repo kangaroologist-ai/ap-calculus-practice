@@ -297,7 +297,7 @@ Codex 沙盒不能起服务器，所有浏览器测试和截图都由 Claude 运
 ### 阶段 R · 发布（本身就是 S4 的第一次演练）
 
 - [x] **R-1 · Claude** — `package.json` 升到 1.2.0；`src/whats-new.ts` 新增条目；`README.md` 与 `help.html` 中键盘两页的描述改为 Main / More 的新布局（现有描述在 README 第 38 行和 help “Typing formulas”），并核对其他相关说法。 另外：把 `docs/design/DESIGN.md` 中所有“待实现”标记改为实际的代码或测试位置（发布时不应留下已实现却仍标“待实现”的条目）；`docs/ui-review.md` 的 U-R12 标为“已决定：保持现状”，#8（`h1`）、#9（页脚）按 D-3 的结果更新。 **结果**（由我撰写，提交 `4d646ff`）：版本 1.2.0；What's new 新增 4 条（英文）；README 更新“学生操作”“数学键盘”“迁移”三处，并新增“设计规范与发布前设计审核”一节；help 更新 Correct 一条和 Typing formulas 的键盘说明，旧的 Derivatives / Functions 说法已全部删除；DESIGN.md 的 18 处“待实现”全部换成实际位置（只剩开头说明约定的那一处）；`docs/ui-review.md` 更新 #8、#9、U-R12。What's new 单元测试 6 项通过。
-- [ ] **R-2 · Claude** — 完整单元测试、数学核验、构建、三引擎浏览器测试。
+- [x] **R-2 · Claude** — 完整单元测试、数学核验、构建、三引擎浏览器测试。 **结果**：Vitest 24 个文件 352 项通过；`npm run test:math` 核验 10,100 条，0 失败；`npm run build` 成功；Playwright 三引擎 161 项通过、40 项按设计跳过、0 失败（Playwright 自身退出码 0，用时 3.8 分钟）。**说明**：此前一次完整运行只有 86 项通过，而且最后几项 WebKit 用例没有通过。那次运行期间我正在修改 `help.html` 和 `src/whats-new.ts`，开发服务器热更新干扰了正在运行的测试；这些用例单独重跑 17 项全部通过，在文件不再变动时重跑完整套件，结果如上。
 - [ ] **R-3 · S4 · Sonnet ×3 → Claude** — 按 W-2 流程做发布前设计审核，结论存到本目录 `release-review.md`；P0 / P1 清零。
 - [ ] **R-4 · Claude** — 提交、推送、部署 Cloudflare Pages，确认线上 `/` 与 `/help` 已是新版；在本文件记录提交哈希、测试数量和线上核对结果。
 
