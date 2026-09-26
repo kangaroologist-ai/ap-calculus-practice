@@ -202,6 +202,7 @@ More 页（只放低频键，不与 Main 重复；导航键与 Main 页位置完
 - **S2 · 令牌落地**：`src/style.css` 中写死的间距、圆角、阴影、时长全部改用 S-1 决定的令牌。**（实施前修订：原写“逐像素差异为 0”。实际统计显示 10/14/18/22 px 等值共 50 多处，吸附到 4 px 网格必然产生 ≤ 2 px 的变化，“差异为 0”做不到，也不是目标。）** 验收：每处数值变化 ≤ 2 px（超出的必须逐条列出理由）；改前改后截图矩阵的差异图由 Sonnet 检查，没有破版、换行变化或裁切；不属于节奏的尺寸（0、1–3 px 的细线、≥ 64 px 的布局尺寸）允许保留字面值。
 - **S3 · 截图矩阵脚本**：`npm run design:capture` 生成固定状态集（欢迎、题目、键盘两页、键盘点按后 1.5 s、答对、答错、无效、提示、完整解析、路径、Move progress、What's new、帮助页、reduced-motion）× 390 / 1280 × 浅色 / 深色，加上键盘几何 JSON，输出到 `artifacts/design/<version>/`。390 px 用 WebKit iPhone 仿真，1280 px 用 Chromium。截图一律用视口截图，不用整页截图（整页截图会把固定定位的键盘画到页面中间）。
 - **S4 · 上线前设计审核工作流**（写在 `docs/design/review-workflow.md`，并在 AGENTS.md 中登记为发布步骤）：凡是版本号要提升的用户可见改动，发布前都要 ① 运行 S3；② 并行派 Sonnet 做只读评审（固定三套视角：Claude design 插件、Emil 动效 / 手感、impeccable critique 与 polish），与上一版本截图对比；③ Claude 综合评审并按 P0–P3 定级，P0 / P1 阻塞发布；④ 结论与截图存进 `docs/reviews/<date>-<topic>/`。验收：本次发布本身就按这个流程走一遍（R-3）。
+  - **（用户修订，2026-09-26，实施 R-3 时）**：“这次已经跑过这仨 skill 了，是不是可以省掉？感觉有点重，之后的 design review 是不是也只审查 design 相关的 diff，有必要再调用 skill。”S4 改为两级：**常规审核**（每次提升版本号都做）只审查本次与设计相关的改动。Claude 运行截图脚本，只比对受改动影响的界面状态与上一版本，并对照 DESIGN.md 中相关的条目，不调用评审技能。**完整审核**（三套技能各派一个评审者）只在以下情况做：新增界面或组件、修改 DESIGN.md 的原则或令牌、较大改版，或用户要求。验收改为：`review-workflow.md`、DESIGN.md 第 10 节、AGENTS.md、README 都写明两级规则，且内容一致。
 
 ---
 
@@ -299,6 +300,8 @@ Codex 沙盒不能起服务器，所有浏览器测试和截图都由 Claude 运
 - [x] **R-1 · Claude** — `package.json` 升到 1.2.0；`src/whats-new.ts` 新增条目；`README.md` 与 `help.html` 中键盘两页的描述改为 Main / More 的新布局（现有描述在 README 第 38 行和 help “Typing formulas”），并核对其他相关说法。 另外：把 `docs/design/DESIGN.md` 中所有“待实现”标记改为实际的代码或测试位置（发布时不应留下已实现却仍标“待实现”的条目）；`docs/ui-review.md` 的 U-R12 标为“已决定：保持现状”，#8（`h1`）、#9（页脚）按 D-3 的结果更新。 **结果**（由我撰写，提交 `4d646ff`）：版本 1.2.0；What's new 新增 4 条（英文）；README 更新“学生操作”“数学键盘”“迁移”三处，并新增“设计规范与发布前设计审核”一节；help 更新 Correct 一条和 Typing formulas 的键盘说明，旧的 Derivatives / Functions 说法已全部删除；DESIGN.md 的 18 处“待实现”全部换成实际位置（只剩开头说明约定的那一处）；`docs/ui-review.md` 更新 #8、#9、U-R12。What's new 单元测试 6 项通过。
 - [x] **R-2 · Claude** — 完整单元测试、数学核验、构建、三引擎浏览器测试。 **结果**：Vitest 24 个文件 352 项通过；`npm run test:math` 核验 10,100 条，0 失败；`npm run build` 成功；Playwright 三引擎 161 项通过、40 项按设计跳过、0 失败（Playwright 自身退出码 0，用时 3.8 分钟）。**说明**：此前一次完整运行只有 86 项通过，而且最后几项 WebKit 用例没有通过。那次运行期间我正在修改 `help.html` 和 `src/whats-new.ts`，开发服务器热更新干扰了正在运行的测试；这些用例单独重跑 17 项全部通过，在文件不再变动时重跑完整套件，结果如上。
 - [ ] **R-3 · S4 · Sonnet ×3 → Claude** — 按 W-2 流程做发布前设计审核，结论存到本目录 `release-review.md`；P0 / P1 清零。
+  - **修订（用户决定后）**：已经启动的三个技能评审者当即停止，没有采用它们的中间输出。本次改做**常规审核**：本任务开始时已经做过一次完整的三视角评审（`reviews/`），发布前只需按改动范围复核。由 Claude 进行，不另派 Sonnet：改动涉及的界面状态已经大多截图看过，剩下的状态由我直接比对，比再派一个评审者更省；K-7、D-6 这两项视觉检查也并入这一步。
+- [ ] **W-5 · S4（修订） · Claude**（流程文档，按用户要求不委派）— 修改 `docs/design/review-workflow.md`（改为两级，并说明如何确定改动范围）、`docs/design/DESIGN.md` 第 10 节、`../AGENTS.md` 的审核条目、`README.md` 的审核一节。验证：四处重新读取，说法一致；不再写“每次都做三视角评审”。
 - [ ] **R-4 · Claude** — 提交、推送、部署 Cloudflare Pages，确认线上 `/` 与 `/help` 已是新版；在本文件记录提交哈希、测试数量和线上核对结果。
 
 ### Spec → To Do 覆盖检查
@@ -317,7 +320,7 @@ Codex 沙盒不能起服务器，所有浏览器测试和截图都由 Claude 运
 | S1 | S-1、S-2 | S-4 |
 | S2 | S-3 | S-4 |
 | S3 | W-1 | W-4 |
-| S4 | W-2、W-3 | R-3 |
+| S4 | W-2、W-3、W-5 | R-3 |
 
 ---
 
