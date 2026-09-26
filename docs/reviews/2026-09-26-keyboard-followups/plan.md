@@ -122,7 +122,7 @@
 - [x] **F-3 · D10 · Claude**（设计：字形绘制与光学居中）— SVG 图标替换 `src/main.ts` 中的 `icon`（及 `help.html` 中的同款图标）；`public/favicon.svg`；`index.html` / `help.html` 的 `<link rel="icon">`。 **结果**（提交 `deb0af1`）：用路径画出斜体 f 与撇号，按字形的可见包围盒居中；在 app 中实测字形中心偏差：WebKit 390 px 为 0 px（主页和帮助页），Chromium 1280 px 深色为 0.33 px。新增 `public/favicon.svg`，`index.html` 与 `help.html` 都引用它。截图：`logo-after.png`。
 - [ ] **F-4 · K8/K9/D9/D10 · Luna max**（浏览器测试改写，范围明确，在 F-1 到 F-3 完成之后）— `tests/app.spec.ts`、`tests/visual-tokens.spec.ts`：确认键两步、页签行按钮、键盘打开时的答题框结果、图标居中；Claude 运行。
 - [ ] **F-5 · 复核 · Claude** — 读 diff；运行全部测试；新测试放到旧代码上确认会失败。
-- [ ] **F-6 · 文档 · Claude** — DESIGN.md、README、`help.html`、`src/whats-new.ts` 的 1.2.0 条目。
+- [x] **F-6 · 文档 · Claude** — DESIGN.md、README、`help.html`、`src/whats-new.ts` 的 1.2.0 条目。 **结果**（Claude 撰写，提交 `ddf2f07`）：DESIGN.md 更新第 5.3 节（手机上键盘打开时的形态）、第 6.1 节布局表与规则（确认键、页签行按钮、÷、键盘上没有收起键）、6.3、6.4 读屏名称、6.5 MathLive 焦点记录的注意事项，删除已不用的 `--shadow-bar`、`--dur-chrome`；`review-workflow.md` 的清单项；README 的“学生操作”和“数学键盘”两段；`help.html` 的 Correct 一条和 Typing formulas；What's new 1.2.0 改为 5 条。检索确认 README 与 help 中没有 Derivatives、hide keys 等旧说法。What's new 单元测试 6 项通过。另：从样式表删除已不用的 `--dur-chrome` 与减少动态模式里针对旧操作栏的规则（单独提交，属于 F-2 的收尾）。
 - [ ] **F-7 · 常规设计审核 · Claude** — 按 `review-workflow.md` 做常规审核：键盘两页、作答前 / 答对 / 答错 / 长答案、提示、页眉图标，390 浅色 / 深色与 1280。
 - [ ] **F-8 · 发布 · Claude + 用户** — 重新部署预览；用户在 iPhone 上确认；然后合并到 `main`、推送、部署正式站点，确认线上 `/` 和 `/help` 已是新版（接续上一份计划的 K-8 与 R-4）。
 
