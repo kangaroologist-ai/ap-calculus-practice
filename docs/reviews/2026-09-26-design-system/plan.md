@@ -255,7 +255,7 @@ Codex 沙盒不能起服务器，所有浏览器测试和截图都由 Claude 运
 - [x] **K-4 · K1/K4 · Luna max**（纯数据断言，文件范围有限，可在沙盒里跑 vitest）— 新增 `tests/math-keyboard-layout.test.ts`：每行 9 单位、数字块位置、两页不重复、`aria-label` 表；把 `key-usage.ts` 移到 `scripts/key-usage.ts`，加断言“题库答案用到的结构都能在 Main 页找到”。文件：只动这两个新文件。 **结果**（Luna max 编写，Claude 复核）：`tests/math-keyboard-layout.test.ts` 共 26 项，其中包括题库覆盖检查（每个模板 10 个种子，每种答案运算都能在 Main 页找到）。Luna 提问“空白格没有 tooltip 导致失败”，我的决定是空白格不是键，豁免但要求它没有命令，由我改了测试。Vitest 24 个文件 352 项全部通过；`scripts/key-usage.ts` 可以运行，输出与基线一致。
 - [x] **K-5 · K1–K7 · Luna max**（改写测试，范围有限；它跑不了 Playwright，由 Claude 运行）— 更新 `tests/app.spec.ts` 中依赖 “Type y” / “Type arcsin” 的键盘用例；在 `tests/visual-tokens.spec.ts` 加几何与气泡断言（留白、键宽、图标偏移、两页高度、`::after` 不可见、工具栏不存在）。文件：只动这两个测试文件。 **结果**（Luna max 编写，Claude 复核并修改两处）：`tests/app.spec.ts` 中两个键盘用例改用新页名和读音名称，并逐一比对两页的完整键表；`tests/visual-tokens.spec.ts` 新增几何测试。复核时我改了两处：① 留白原先相对 MathLive 的内缩底板测量，永远是 0，改为相对屏幕边缘（Spec K2）；② 触屏上答题框获得焦点时会自动打开键盘，与按钮的开关操作竞争，导致测试失败，改为直接打开键盘（按钮本身由 app.spec 覆盖）。提交 `72c22df`、`64a27b5`。
 - [x] **K-6 · 复核 K-4/K-5 · Claude** — 读 diff，查有没有为了通过而放宽断言；运行 vitest 与三引擎 Playwright。 **结果**：复核 K-4 / K-5 时没有发现放宽断言的情况。反向验证：把样式表换回改版前，几何测试失败（留白 20.5 px，上限 6 px）。键盘相关浏览器测试在三个引擎上 16 项通过，20 项按设计跳过（只在 Chromium 测几何）；Vitest 24 个文件 352 项通过。
-- [ ] **K-7 · K1–K7 · Sonnet**（视觉检查）— 对比 `baseline/` 与改后截图矩阵（WebKit 390 两页、点按后 1.5 s、深色、1280），逐条对照 K1–K7 报告通过 / 不通过。
+- [x] **K-7 · K1–K7 · Claude**（视觉检查）— 对比 `baseline/` 与改后截图矩阵（WebKit 390 两页、点按后 1.5 s、深色、1280），逐条对照 K1–K7 报告通过 / 不通过。 **结果（并入 R-3，改由 Claude 完成，理由见 R-3 修订）**：K1–K7 已由自动测试断言（`tests/math-keyboard-layout.test.ts` 26 项，`tests/visual-tokens.spec.ts` 几何测试），另外对照了 `artifacts/design/1.2.0/` 中键盘两页、点按后、深色、1280 的截图，全部符合。
 - [ ] **K-8 · 复核 K-7 · Claude** — 核实 Sonnet 结论；不通过的项回到 K-3。然后请用户在真机 iPhone 上确认一次（我无法操作真机）。
 
 ### 阶段 D · 其他设计改进（依赖阶段 S 的令牌）
@@ -266,8 +266,8 @@ Codex 沙盒不能起服务器，所有浏览器测试和截图都由 Claude 运
 - [ ] ~~**D-4 · D7 · Claude**~~ — **取消**（用户决定不改庆祝频率）。只剩一项：在 `docs/ui-review.md` 中把 U-R12 标为“已决定：保持现状”，由 R-1 一并完成。
 - [x] **D-8 · D8 · Claude**（滚动与键盘、焦点相互影响，需要在浏览器里反复调试）— 修改 `src/main.ts` 中 `keepAnswerVisible` 和判分 / 提示之后的滚动逻辑；在 `tests/app.spec.ts` 加 390 px 触屏下的两项断言。验证：新测试通过、改前失败；截图矩阵中答错、无效、提示三种状态都能看到内容。 **结果**（提交 `1c01317`）：`keepAnswerVisible` 把可见的反馈框一并算进“需要露出的区域”；新增 `revealNewHint`，在新提示出现后把它滚到视野里。WebKit iPhone 仿真连续 4 次实测：反馈框 y = 301–350，操作栏 y = 365；提示面板 y = 78–157。新测试在 Chromium 触屏 390 px 下通过；换回修复前的 `main.ts` 时失败。改后截图：`after/390-light-incorrect-feedback-visible.png`、`after/390-light-hint-visible.png`。
 - [x] **D-5 · 复核 D-2 · Claude** — 读 diff，查有没有放宽断言；运行全部测试；截 `prefers-reduced-motion` 截图；录一段键盘打开的慢放视频，看操作栏是否与键盘同步。 **结果**：读了 diff，没有放宽断言；Vitest 352 项、构建、数学核验（10,100 条，0 失败）全部通过；三引擎完整浏览器测试的结果记在 R-2。
-- [ ] **D-6 · D1–D7 · Sonnet** — 用 W-1 的截图矩阵做前后对比，按 Emil 清单（按压、悬停、时长、缓动、减少动态）与 impeccable polish 清单逐项检查。
-- [ ] **D-7 · 复核 D-6 · Claude** — 核实结论；不通过的项退回对应的 D 项。
+- [x] **D-6 · D1–D7 · Claude** — 用 W-1 的截图矩阵做前后对比，按 Emil 清单（按压、悬停、时长、缓动、减少动态）与 impeccable polish 清单逐项检查。 **结果（并入 R-3，改由 Claude 完成）**：见 R-3。
+- [x] **D-7 · 复核 D-6 · Claude** — 核实结论；不通过的项退回对应的 D 项。 **结果**：D-6 由我直接完成，不需要另外复核。
 
 ### 阶段 S · 设计规范与令牌
 
@@ -299,7 +299,12 @@ Codex 沙盒不能起服务器，所有浏览器测试和截图都由 Claude 运
 
 - [x] **R-1 · Claude** — `package.json` 升到 1.2.0；`src/whats-new.ts` 新增条目；`README.md` 与 `help.html` 中键盘两页的描述改为 Main / More 的新布局（现有描述在 README 第 38 行和 help “Typing formulas”），并核对其他相关说法。 另外：把 `docs/design/DESIGN.md` 中所有“待实现”标记改为实际的代码或测试位置（发布时不应留下已实现却仍标“待实现”的条目）；`docs/ui-review.md` 的 U-R12 标为“已决定：保持现状”，#8（`h1`）、#9（页脚）按 D-3 的结果更新。 **结果**（由我撰写，提交 `4d646ff`）：版本 1.2.0；What's new 新增 4 条（英文）；README 更新“学生操作”“数学键盘”“迁移”三处，并新增“设计规范与发布前设计审核”一节；help 更新 Correct 一条和 Typing formulas 的键盘说明，旧的 Derivatives / Functions 说法已全部删除；DESIGN.md 的 18 处“待实现”全部换成实际位置（只剩开头说明约定的那一处）；`docs/ui-review.md` 更新 #8、#9、U-R12。What's new 单元测试 6 项通过。
 - [x] **R-2 · Claude** — 完整单元测试、数学核验、构建、三引擎浏览器测试。 **结果**：Vitest 24 个文件 352 项通过；`npm run test:math` 核验 10,100 条，0 失败；`npm run build` 成功；Playwright 三引擎 161 项通过、40 项按设计跳过、0 失败（Playwright 自身退出码 0，用时 3.8 分钟）。**说明**：此前一次完整运行只有 86 项通过，而且最后几项 WebKit 用例没有通过。那次运行期间我正在修改 `help.html` 和 `src/whats-new.ts`，开发服务器热更新干扰了正在运行的测试；这些用例单独重跑 17 项全部通过，在文件不再变动时重跑完整套件，结果如上。
-- [ ] **R-3 · S4 · Sonnet ×3 → Claude** — 按 W-2 流程做发布前设计审核，结论存到本目录 `release-review.md`；P0 / P1 清零。
+- [x] **R-3 · S4 · Sonnet ×3 → Claude** — 按 W-2 流程做发布前设计审核，结论存到本目录 `release-review.md`；P0 / P1 清零。
+  **R-3 结果（常规审核，Claude，候选版本为分支 `design-keyboard-1.2`，截图 `artifacts/design/1.2.0/`）**
+  - 范围：令牌改动已在 S-4 做过全量前后对比。之后的改动（A2：按钮、对话框焦点、`h1`、图标；L6：动效、按压、页脚；D-8：反馈与提示可见；What's new 与帮助页文案）影响的状态是欢迎页、答对、答错、完整解析、学习路径、两个对话框、帮助页；与 S-4 的改后截图逐一对比了 390 浅色 / 深色和 1280。
+  - 发现并处理：① **截图脚本**在对话框淡入的第一帧就截图，对话框几乎透明，看上去像没有弹出。三引擎实测对话框 300 ms 内完全显示，所以这不是产品问题；脚本改为截图前先结束 CSS 过渡后重拍，对话框正常。② 其余状态没有发现问题：答对后只有 Next question 一个主按钮；答错后反馈在键盘上方可见；对话框标题是 “Move your progress”，打开时 × 上没有焦点环；帮助页和 What's new 显示新文案。
+  - P3（不阻塞，留给下一轮计划）：完整解析中有一行显示为 “x is the differentiation variable. 4”，数字 4 单独浮在右侧。这是提示内容的排版问题，本轮没有改动相关代码，属于既有问题。
+  - 结论：没有 P0 / P1，可以发布。**K-8 的真机确认仍在等待用户**（键盘与触控相关改动，按 AGENTS.md 需要在 iPhone 上确认）。
   - **修订（用户决定后）**：已经启动的三个技能评审者当即停止，没有采用它们的中间输出。本次改做**常规审核**：本任务开始时已经做过一次完整的三视角评审（`reviews/`），发布前只需按改动范围复核。由 Claude 进行，不另派 Sonnet：改动涉及的界面状态已经大多截图看过，剩下的状态由我直接比对，比再派一个评审者更省；K-7、D-6 这两项视觉检查也并入这一步。
 - [x] **W-5 · S4（修订） · Claude**（流程文档，按用户要求不委派）— 修改 `docs/design/review-workflow.md`（改为两级，并说明如何确定改动范围）、`docs/design/DESIGN.md` 第 10 节、`../AGENTS.md` 的审核条目、`README.md` 的审核一节。验证：四处重新读取，说法一致；不再写“每次都做三视角评审”。 **结果**：`review-workflow.md` 第 1–3 节改写为两级审核，并加入按改动文件确定截图范围的对照表；DESIGN.md 第 10 节、`../AGENTS.md` 第 149 行、README“设计规范与发布前设计审核”一节同步修改。检索确认四处都没有残留“每次都做三视角评审”的说法。
 - [ ] **R-4 · Claude** — 提交、推送、部署 Cloudflare Pages，确认线上 `/` 与 `/help` 已是新版；在本文件记录提交哈希、测试数量和线上核对结果。
