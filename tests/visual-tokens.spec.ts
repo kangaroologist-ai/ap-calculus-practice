@@ -54,6 +54,8 @@ for (const width of [390, 1280]) {
         await page.getByRole("button", { name: /Start practicing|Continue practicing/ }).click();
         await page.locator("math-field").first().waitFor({ state: "visible" });
         await page.screenshot({ path: `${output}/after-${width}-${scheme}-question.png` });
+        const heading = page.locator(".question-body h2");
+        const headingBefore = await heading.screenshot();
         await page.getByRole("button", { name: "Math keyboard" }).click();
         await expect(page.locator(".ML__keyboard")).toBeVisible();
         // MathLive's root covers the whole viewport. Only its bottom panel
@@ -61,6 +63,9 @@ for (const width of [390, 1280]) {
         await expect(page.locator(".ML__keyboard")).toHaveCSS(
           "background-color", "rgba(0, 0, 0, 0)",
         );
+        // The root ignores pointer events, so hit tests miss an overlay.
+        // Compare pixels to catch any way of painting over the question.
+        expect(await heading.screenshot()).toEqual(headingBefore);
         await page.screenshot({ path: `${output}/after-${width}-${scheme}-keyboard.png` });
       },
     );

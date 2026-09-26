@@ -129,3 +129,43 @@ A 保证 K1 的根因修复；B 用实际视觉和交互证据确认 K2/K3，避
 ## 完成核对
 
 19 项 To Do 均已完成并有对应证据。K1 的透明根容器回归、K2 的主题/视口实际截图、K3 的键盘及判分流程、D1 的当前/历史/未验证区分均满足本次明确的验收条件；线上资源与本地构建一致，运行时提交的远端 CI 成功。新增文档提交只保存记录，不改变已上线的运行时代码。此结论不扩大为真机摄像头、真实课堂效果或形式化数学等价证明。
+
+---
+
+# 第二轮复核：Claude 审查 Codex 的修复与记录（2026-09-26，事前记录）
+
+本节在任何新改动之前写入。复核对象：`c14b709`（运行时修复）与 `e3c6ed2`、`70c0ceb`、`dccf857`（记录）。用户确认上线目标为 Cloudflare Pages（先前口误说 Railway，Railway 上不存在本项目）。
+
+## Research
+
+- **R1 · 事实 · 修复本身正确。** `c14b709` 只删除 `.ML__keyboard { background: var(--fill) }` 一行；before 截图显示整屏不透明，after/生产截图显示题目、输入框、操作栏可见。复核时本地重跑：`npm test` 22 文件 320 项通过；`npm run build` 成功。已查看 `artifacts/ux-refresh/after-{390,1280}-{light,dark}-keyboard.png`，四张题目与操作栏均可见（390 dark 截图见下方 C2-1 复制后的文件）。
+- **R2 · 事实 · 回归防护只覆盖这一个根因（测试缺口，P3）。** 新断言只检查根容器 `background-color` 为透明。若将来以 `background-image`、`backdrop-filter`、MathLive 升级后的子层等其他方式遮挡，断言仍会通过；K2 的“题目实际可见”只靠人工看截图。推断：原有几何/点击断言没有抓到 F1，是因为 MathLive 根容器不拦截指针事件，因此 `elementFromPoint` 类命中测试同样抓不到，需要像素级比对。影响：同类回归可能再次只在人工视觉检查时才被发现。
+- **R3 · 事实 · 本记录引用的主题/宽度矩阵截图不在仓库内。** B1/B3 引用 `artifacts/ux-refresh/*` 与 `artifacts/e2e/*`，但 `.gitignore` 忽略 `artifacts/`；仓库里只有 390 light 的 before/after 与生产截图。影响：K2 dark/1280 的证据在别的机器上无法审计。
+- **R4 · 事实 · 缺少 progress-log。** 工作契约要求提交时写入“提交哈希 + 关键结果”的进度日志；本文件只在正文散记哈希，没有按时间排列的日志。
+- **R5 · 观察 · 非本次回归，不修改。** 390px 下 MathLive 工具栏的 “Derivatives” 标签距左边缘约 2px（未裁切），修复前截图同样如此，是 MathLive 默认布局；深色模式下工具栏选中标签为蓝字配深灰底，未单独测对比度。均为既有问题，记录不修。
+- **R6 · 事实 · 线上状态。** 线上 `ap-calculus-practice.pages.dev` 已是 `c14b709` 构建（`live-asset-check.json`）。本轮只改测试与文档，不改运行时；因此预期 `dist` 与线上一致，是否需要重新部署以哈希比对决定。
+
+## Spec
+
+课程、判分、调度、数据格式与运行时样式均不变。K1、K3、D1 不变。
+
+| 编号 | 性质 | 可观察行为与验收条件 |
+|---|---|---|
+| K2′ | 修订 K2（加强，不放宽） | 在 390/1280 × light/dark 四种组合中，打开数学键盘前后，题目标题 `.question-body h2` 区域的实际渲染像素逐字节相同；任何遮挡方式都会让测试失败。人工截图检查继续保留。 |
+| D2 | 新增证据契约 | 本记录作为验收依据引用的截图须提交在本目录；每次提交在 progress-log 记一行（哈希、测试数量/结果）。 |
+
+## To Do
+
+- [x] **C2-1 · Spec D2** — 将 4 张键盘矩阵截图复制到本目录 `keyboard-matrix-{390,1280}-{light,dark}.png`（来源：本轮重新运行测试所产出的文件）。验证：`git ls-files` 可见，并实际查看。**结果：** 已复制（取自 C2-4 的那次运行，已包含新的像素断言）；逐张查看 390/1280 light 截图，题目、输入框、操作栏可见；dark 两张在复核开始时查看过，与本次渲染一致。是否被 git 跟踪以 C2-6 的提交为准。
+- [x] **C2-2 · Spec K2′** — `tests/visual-tokens.spec.ts`：打开键盘前后分别截取 `.question-body h2`，断言两次图像 Buffer 相等。验证：4 项组合通过。**结果：** Chromium 4/4 通过。补充核实：MathLive 根容器自带 `pointer-events: none`（`node_modules/mathlive/mathlive.mjs:13740`），证实 R2 的推断，测试注释据此写成。
+- [x] **C2-3 · Spec K2′** — 反向验证：临时恢复 `background: var(--fill)`，确认新的像素断言失败（且不是只靠透明断言失败——先暂时注释透明断言）；随后还原，并用 `git diff src/style.css` 确认为空。**结果：** 只在 `.ML__keyboard` 里恢复该行、并注释掉透明断言后，4/4 都在像素断言（第 66 行）失败；还原后 `git diff src/style.css` 为空。（第一次尝试时 sed 误把背景加到所有含 `color: var(--label)` 的规则，结果也是 4/4 失败，但不作为证据，已按上述方式精确重做。）
+- [x] **C2-4 · Spec K1/K2′/K3** — 重跑 visual-tokens 与 app.spec 中的键盘相关项（Playwright 自带开发服务）。验证：全部通过。**结果：** `visual-tokens.spec.ts` 共 6 项通过，12 项因按设计只在 Chromium 运行而跳过；`app.spec.ts -g keyboard` 3 项通过（360/390 键盘/430/横屏/200% 缩放、提交按钮在键盘上方且可收起并判分、Functions 键盘），6 项按设计跳过。
+- [x] **C2-5 · Spec D2** — 新增 progress-log，并补记既有提交与本轮提交。**结果：** 见文末 Progress log；本轮提交的条目在 C2-6 推送后补上。
+- [ ] **C2-6 · Spec K1/D2** — 提交、推送；比对本地 `dist` 与线上 8 文件 SHA-256。若一致则记录“运行时未变、无需重新部署”；若不一致则 `wrangler pages deploy` 后重新比对。等 CI 结果后记录。
+
+## Progress log
+
+按时间排列。`e3c6ed2` 之前的条目为事后补记。
+
+- `c14b709` — 删除键盘根容器背景；定向浏览器 6 项与对比度 2 项通过；CI `36202654874` 成功；部署 Cloudflare `912748f2`，8 个文件 SHA-256 与线上一致。
+- `e3c6ed2` / `70c0ceb` / `dccf857` — 首轮记录、截图、CI 证据与 To Do→Spec 链接（`[skip ci]`，只改文档）。
