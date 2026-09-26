@@ -60,6 +60,13 @@ let config: Config,
 let modalCleanup: () => void = () => {};
 const grader = new Grader();
 let activeMathfield: MathfieldElement | undefined;
+// On phones the keyboard-open layout has no action bar; content must stay above the keyboard.
+function visibleBottom() {
+  const actions = document.querySelector(".actions")?.getBoundingClientRect();
+  return (actions && actions.height > 0
+    ? actions.top
+    : window.mathVirtualKeyboard.boundingRect.top) - 16;
+}
 function keepAnswerVisible() {
   if (
     !window.mathVirtualKeyboard.visible ||
@@ -69,10 +76,9 @@ function keepAnswerVisible() {
   const field = activeMathfield?.isConnected
     ? activeMathfield
     : document.querySelector<MathfieldElement>("math-field");
-  const actions = document.querySelector(".actions");
-  if (!field || !actions) return;
+  if (!field) return;
   const bounds = field.getBoundingClientRect();
-  const bottom = actions.getBoundingClientRect().top - 16;
+  const bottom = visibleBottom();
   // After a check the answer keeps focus and the keyboard reopens; the feedback
   // below the field must stay above the fixed action bar, or the student never sees it.
   const feedback = document.getElementById("feedback");
@@ -85,7 +91,8 @@ function keepAnswerVisible() {
   else if (bounds.top < 16)
     window.scrollBy({ top: bounds.top - 16, behavior: "instant" });
 }
-// A new hint renders below the action bar, which is fixed above the phone keyboard.
+// A new hint renders below the answer, near or under the phone keyboard. Scroll just
+// enough to show its start, so the answer field stays in view where possible.
 function revealNewHint() {
   if (
     !window.mathVirtualKeyboard.visible ||
@@ -93,11 +100,10 @@ function revealNewHint() {
   )
     return;
   const panel = document.querySelector("#hints .hint-panel");
-  const actions = document.querySelector(".actions");
-  if (!panel || !actions) return;
+  if (!panel) return;
   const top = panel.getBoundingClientRect().top;
-  if (top > actions.getBoundingClientRect().top - 48)
-    window.scrollBy({ top: top - 16, behavior: "instant" });
+  const limit = visibleBottom() - 120;
+  if (top > limit) window.scrollBy({ top: top - limit, behavior: "instant" });
 }
 window.mathVirtualKeyboard.addEventListener("geometrychange", () => {
   const keyboard = window.mathVirtualKeyboard;
@@ -153,6 +159,8 @@ function startAutoNext() {
       `Next in ${Math.ceil(remaining / 1000)}s`;
     (panel.querySelector("i") as HTMLElement).style.width =
       `${remaining / 30}%`;
+    const meter = document.querySelector<HTMLElement>(".answer-meter i");
+    if (meter) meter.style.width = `${remaining / 30}%`;
     if (remaining === 0) {
       cancelAutoNext();
       void next();
@@ -334,7 +342,7 @@ function questionView() {
   const s = state.session!,
     c = s.current!,
     q = c.question;
-  return `<div class="card-top practice-status" aria-label="Practice activity"><span class="streak" id="streak" aria-live="polite"><strong>${state.progress.streak ?? 0}</strong> in a row</span><span id="today-count" class="muted">${todayCount(state.progress)} practiced today</span></div><div class="question-body"><h2>${esc(q.title)}</h2>${math(q.prompt)}${q.domainText.startsWith("Use radians.") ? "" : `<p class="domain">${esc(q.domainText)}</p>`}<div id="answer-fields">${q.labels.map((label, i) => `<label class="answer-label" for="answer-${i}"><span class="answer-equation">${answerLabel(label, i)}</span><math-field id="answer-${i}" aria-label="${esc(label)}"></math-field></label>`).join("")}</div><div class="input-caption"><span>Equivalent forms are welcome.</span>${button("keyboard", '<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="vertical-align:-3px"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M5 9h2m2 0h2m2 0h2m2 0h2M5 12h2m2 0h2m2 0h2m2 0h2M7 15h10"/></svg> Math keyboard', "text-button")}</div><div id="feedback" class="feedback${c.verdict ? ` ${c.verdict.status}` : ""}" aria-live="polite" ${c.verdict ? "" : "hidden"}>${c.verdict ? feedback(c.verdict, q) : ""}</div><div id="auto-next" class="auto-next" hidden><span>Next in 3s</span><div><i></i></div></div><div class="actions">${button("submit", "Check answer", "button primary")}${button("hint", c.hintsUsed >= 3 ? "Solution shown" : c.hintsUsed === 2 ? "Show solution" : c.hintsUsed === 1 ? "Show next hint" : "Need a hint?", "button subtle")}${button("next", c.verdict?.status === "correct" || c.hintsUsed >= 3 ? "Next question →" : "Skip", "text-button next")}</div><div id="hints">${hintContent()}</div>${state.progress.skills[q.primarySkill]?.failureStreak >= 3 ? '<p class="notice">Let’s rebuild the idea. Review the rule, then try the quick checks that come next.</p>' : ""}</div>`;
+  return `<div class="card-top practice-status" aria-label="Practice activity"><span class="streak" id="streak" aria-live="polite"><strong>${state.progress.streak ?? 0}</strong> in a row</span><span id="today-count" class="muted">${todayCount(state.progress)} practiced today</span></div><div class="question-body"><h2>${esc(q.title)}</h2>${math(q.prompt)}${q.domainText.startsWith("Use radians.") ? "" : `<p class="domain">${esc(q.domainText)}</p>`}<div id="answer-fields">${q.labels.map((label, i) => `<label class="answer-label" for="answer-${i}"><span class="answer-equation">${answerLabel(label, i)}</span><span class="answer-box"><math-field id="answer-${i}" aria-label="${esc(label)}"></math-field>${i === 0 ? '<span class="answer-verdict" aria-hidden="true"></span><span class="answer-meter" aria-hidden="true"><i></i></span>' : ""}</span></label>`).join("")}</div><div class="input-caption"><span>Equivalent forms are welcome.</span>${button("keyboard", '<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="vertical-align:-3px"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M5 9h2m2 0h2m2 0h2m2 0h2M5 12h2m2 0h2m2 0h2m2 0h2M7 15h10"/></svg> Math keyboard', "text-button")}</div><div id="feedback" class="feedback${c.verdict ? ` ${c.verdict.status}` : ""}" aria-live="polite" ${c.verdict ? "" : "hidden"}>${c.verdict ? feedback(c.verdict, q) : ""}</div><div id="auto-next" class="auto-next" hidden><span>Next in 3s</span><div><i></i></div></div><div class="actions">${button("submit", "Check answer", "button primary")}${button("hint", c.hintsUsed >= 3 ? "Solution shown" : c.hintsUsed === 2 ? "Show solution" : c.hintsUsed === 1 ? "Show next hint" : "Need a hint?", "button subtle")}${button("next", c.verdict?.status === "correct" || c.hintsUsed >= 3 ? "Next question →" : "Skip", "text-button next")}</div><div id="hints">${hintContent()}</div>${state.progress.skills[q.primarySkill]?.failureStreak >= 3 ? '<p class="notice">Let’s rebuild the idea. Review the rule, then try the quick checks that come next.</p>' : ""}</div>`;
 }
 function feedback(v: Verdict, q: Question) {
   switch (v.status) {
@@ -362,11 +370,17 @@ function mountInputs() {
     mf.value = c.draft[i] ?? "";
     mf.addEventListener("input", () => {
       if (c.verdict?.status === "correct") cancelAutoNext();
+      // An edited answer is no longer the one that was checked (a correct one still leads to Next).
+      else renderAnswerVerdict(true);
       activeMathfield = mf;
       c.draft[i] = mf.value;
       scheduleSave();
     });
     mf.addEventListener("beforeinput", (e) => {
+      if (busy || replacing) {
+        e.preventDefault();
+        return;
+      }
       if ((e as InputEvent).inputType === "insertLineBreak") {
         e.preventDefault();
         if (c.verdict?.status === "correct") void next();
@@ -387,6 +401,7 @@ function mountInputs() {
   window.mathVirtualKeyboard.editToolbar = "none";
   // App layouts allow width 3 via w30 CSS; MathLive types only list built-in widths.
   window.mathVirtualKeyboard.layouts = layoutsFor(vars) as import("mathlive").VirtualKeyboardLayout[];
+  renderAnswerVerdict();
   on("keyboard", () => {
     if (window.mathVirtualKeyboard.visible) window.mathVirtualKeyboard.hide();
     else {
@@ -397,11 +412,19 @@ function mountInputs() {
   updateControls();
 }
 function updateControls() {
+  syncKeyboardControls();
   const c = state.session?.current;
   const correct = c?.verdict?.status === "correct";
   document
     .querySelectorAll<MathfieldElement>("math-field")
-    .forEach((mf) => (mf.readonly = busy || replacing));
+    // A focused field made read-only while the keyboard is up makes MathLive close the
+    // keyboard and update it a frame later, which throws if the field is gone by then.
+    // Keep that field editable; its beforeinput guard blocks edits while busy.
+    .forEach((mf) => {
+      mf.readonly =
+        (busy || replacing) &&
+        !(window.mathVirtualKeyboard.visible && mf.hasFocus());
+    });
   const s = document.querySelector<HTMLButtonElement>("#submit");
   if (s) {
     s.hidden = correct;
@@ -503,6 +526,7 @@ async function submit() {
     f.hidden = false;
     f.className = `feedback ${v.status}`;
     f.innerHTML = feedback(v, c.question);
+    renderAnswerVerdict();
   } finally {
     busy = false;
     updateControls();
@@ -520,6 +544,7 @@ async function hint() {
     c = s.current!;
   if (busy || replacing || c.hintsUsed >= 3) return;
   cancelAutoNext();
+  const keepKeyboard = window.mathVirtualKeyboard.visible;
   busy = true;
   updateControls();
   try {
@@ -535,10 +560,15 @@ async function hint() {
         : c.hintsUsed === 2
           ? "Show solution"
           : "Show next hint";
-    requestAnimationFrame(revealNewHint);
   } finally {
     busy = false;
     updateControls();
+    // Keep typing where the student was, with the keyboard up, as Check does.
+    if (keepKeyboard) {
+      activeMathfield?.focus();
+      window.mathVirtualKeyboard.show();
+    }
+    requestAnimationFrame(revealNewHint);
   }
 }
 async function next() {
@@ -552,6 +582,11 @@ async function next() {
     finishQuestion(state, true);
     if (!state.session!.finished) setNext();
     await persist();
+    // MathLive clears its focused-field record only when real focus moves to another element
+    // (its own blur() does not), and focusing the next field fails if the recorded one is gone.
+    // In-keyboard Skip leaves the answer focused, so move focus to Next before replacing it.
+    if (activeMathfield?.hasFocus())
+      document.getElementById("next")?.focus({ preventScroll: true });
     render();
     document
       .querySelector(".practice-card")
@@ -562,6 +597,110 @@ async function next() {
     focusAnswer(keepKeyboard);
   }
 }
+
+// The in-field result for the phone keyboard layout (Spec D9). Only the first field
+// shows it: verdicts are for the whole answer, not per component.
+const VERDICT_TEXT: Record<Verdict["status"], string> = {
+  correct: "✓ Correct",
+  incorrect: "! Not quite",
+  invalid: "i Couldn’t check",
+  inconclusive: "i Couldn’t check",
+};
+function renderAnswerVerdict(clear = false) {
+  const box = document.querySelector<HTMLElement>(".answer-box");
+  const text = box?.querySelector(".answer-verdict");
+  if (!box || !text) return;
+  const v = clear ? undefined : state.session?.current?.verdict;
+  if (v) box.dataset.verdict = v.status;
+  else delete box.dataset.verdict;
+  text.textContent = v ? VERDICT_TEXT[v.status] : "";
+}
+// Check / Next and the Hint?, Skip and hide buttons live in the math keyboard (Spec K8, K9).
+const HIDE_KEYBOARD_ICON =
+  '<svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="11" rx="2"/><path d="M6.5 8h1m3 0h1m3 0h1m3 0h1M8.5 11.5h7M9 18.5l3 3 3-3"/></svg>';
+const KEYBOARD_TOOLS = `<button type="button" class="kb-tool" data-act="hint">Hint?</button><button type="button" class="kb-tool" data-act="skip">Skip</button><button type="button" class="kb-tool kb-hide" data-act="hide" aria-label="Hide keyboard">${HIDE_KEYBOARD_ICON}</button>`;
+function syncKeyboardControls() {
+  const c = state.session?.current;
+  const correct = c?.verdict?.status === "correct";
+  document.querySelectorAll<HTMLElement>(".ML__keyboard .practice-enter").forEach((key) => {
+    key.textContent = correct ? "Next" : "Check";
+    key.setAttribute("aria-label", correct ? "next question" : "check answer");
+  });
+  document.querySelectorAll<HTMLElement>('.kb-tool[data-act="hint"]').forEach((b) => {
+    b.hidden = !c || correct || c.hintsUsed >= 3;
+  });
+  document.querySelectorAll<HTMLElement>('.kb-tool[data-act="skip"]').forEach((b) => {
+    b.hidden = !c || correct;
+  });
+}
+// MathLive rebuilds the keyboard for every question and every show, dropping the buttons.
+new MutationObserver(() => {
+  const bars = document.querySelectorAll(".ML__keyboard .ML__edit-toolbar");
+  let added = false;
+  bars.forEach((bar) => {
+    if (bar.querySelector(".kb-tool")) return;
+    bar.innerHTML = KEYBOARD_TOOLS;
+    added = true;
+  });
+  if (added) syncKeyboardControls();
+}).observe(document.body, { childList: true, subtree: true });
+// Our keys and buttons in the math keyboard are handled here, in the capture phase, and
+// hidden from MathLive: when MathLive also processes the tap it runs a command on the
+// answer field and updates the keyboard a frame later, which threw once the tap had
+// replaced that field (Skip on the last question). Cancelling pointerdown keeps the
+// answer focused, as MathLive does for its own keys; a keyboard-initiated click still works.
+const KEYBOARD_CONTROL = ".ML__keyboard .practice-enter, .ML__keyboard .kb-tool";
+function keyboardControl(event: Event) {
+  return (event.target as Element | null)?.closest?.<HTMLElement>(KEYBOARD_CONTROL) ?? null;
+}
+function runKeyboardControl(target: HTMLElement) {
+  const c = state.session?.current;
+  if (target.classList.contains("practice-enter")) {
+    if (c?.verdict?.status === "correct") void next();
+    else void submit();
+  } else if (target.dataset.act === "hint") void hint();
+  else if (target.dataset.act === "skip") void next();
+  else window.mathVirtualKeyboard.hide();
+}
+let pressedControl: HTMLElement | null = null;
+window.addEventListener(
+  "pointerdown",
+  (event) => {
+    const target = keyboardControl(event);
+    if (!target) return;
+    event.preventDefault();
+    event.stopPropagation();
+    pressedControl = target;
+    target.classList.add("is-pressed");
+  },
+  true,
+);
+window.addEventListener(
+  "pointerup",
+  (event) => {
+    const target = keyboardControl(event);
+    if (!pressedControl && !target) return;
+    event.stopPropagation();
+    pressedControl?.classList.remove("is-pressed");
+    const pressed = pressedControl;
+    pressedControl = null;
+    if (target && target === pressed) runKeyboardControl(target);
+  },
+  true,
+);
+window.addEventListener(
+  "pointercancel",
+  () => {
+    pressedControl?.classList.remove("is-pressed");
+    pressedControl = null;
+  },
+  true,
+);
+document.addEventListener("click", (event) => {
+  const target = keyboardControl(event);
+  // Pointer taps were handled on pointerup; only a keyboard-activated button click remains.
+  if (target && (event as MouseEvent).detail === 0) runKeyboardControl(target);
+});
 
 function modal(title: string, body: string) {
   cancelAutoNext();

@@ -62,7 +62,6 @@
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
   --shadow-card: 0 4px 24px color-mix(in srgb, var(--label) 2%, transparent);
   --shadow-dialog: 0 24px 90px color-mix(in srgb, var(--label) 20%, transparent);
-  --shadow-bar: 0 -4px 16px color-mix(in srgb, var(--label) 3%, transparent);
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -80,7 +79,6 @@
     --danger: #ff6961;
     --shadow-card: 0 4px 24px color-mix(in srgb, var(--bg) 20%, transparent);
     --shadow-dialog: 0 24px 90px color-mix(in srgb, var(--bg) 75%, transparent);
-    --shadow-bar: 0 -4px 16px color-mix(in srgb, var(--label) 3%, transparent);
   }
 }
 
@@ -618,6 +616,57 @@ math-field::part(menu-toggle) {
   font-weight: 600;
   letter-spacing: -0.5px;
 }
+/* Wraps each answer field so an in-field result can sit over its right end. */
+.answer-box {
+  display: block;
+  position: relative;
+  margin-top: var(--space-2);
+}
+.answer-box math-field {
+  margin-top: 0;
+}
+.answer-verdict {
+  display: none;
+  position: absolute;
+  top: 1.5px;
+  right: 1.5px;
+  bottom: 1.5px;
+  align-items: center;
+  padding: 0 var(--space-4) 0 var(--space-10);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  /* Solid behind the words, fading out to the left so a long answer shows through. */
+  background: linear-gradient(to right, transparent, var(--surface) var(--space-8));
+  font-size: var(--t-subhead);
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  pointer-events: none;
+  color: var(--label-2);
+}
+.answer-box[data-verdict="correct"] .answer-verdict {
+  color: var(--success);
+}
+.answer-box[data-verdict="incorrect"] .answer-verdict {
+  color: var(--warning);
+}
+.answer-meter {
+  display: none;
+  position: absolute;
+  left: var(--space-3);
+  right: var(--space-3);
+  bottom: var(--space-1);
+  height: 3px;
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--success) 18%, transparent);
+  pointer-events: none;
+}
+.answer-meter i {
+  display: block;
+  height: 100%;
+  width: 100%;
+  border-radius: inherit;
+  background: var(--success);
+}
 math-field {
   display: block;
   width: 100%;
@@ -1084,6 +1133,47 @@ dialog h2[tabindex="-1"]:focus {
   --keycap-background-pressed: var(--separator);
   --keycap-background-active: var(--separator);
 }
+/* Check / Next: the one primary action while the keyboard is open. */
+.ML__keyboard .MLK__rows > .MLK__row > div.practice-enter {
+  background: var(--tint);
+  color: var(--bg);
+  font-size: var(--t-callout);
+  font-weight: 600;
+}
+/* MathLive does not see taps on our controls, so we draw their pressed state. */
+.ML__keyboard .MLK__rows > .MLK__row > div.practice-enter.is-pressed {
+  background: color-mix(in srgb, var(--tint) 80%, var(--label));
+}
+.ML__keyboard .kb-tool.is-pressed {
+  opacity: 0.55;
+}
+/* Hint?, Skip and hide keyboard, in MathLive's empty edit-toolbar slot beside the page tabs. */
+.ML__keyboard .ML__edit-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding-right: var(--space-2);
+}
+.ML__keyboard .kb-tool {
+  min-height: 40px;
+  padding: 0 var(--space-2);
+  border: 0;
+  background: transparent;
+  color: var(--tint);
+  font: inherit;
+  font-size: var(--t-callout);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.ML__keyboard .kb-tool[hidden] {
+  display: none;
+}
+.ML__keyboard .kb-hide {
+  display: grid;
+  place-items: center;
+  min-width: 40px;
+  color: var(--label-2);
+}
 /* MathLive has width classes for 0.5, 1.5, 2 and 5 units only. */
 .ML__keyboard .MLK__rows > .MLK__row .w30 {
   width: calc(3 * var(--_keycap-width) - var(--_keycap-gap));
@@ -1213,7 +1303,7 @@ dialog h2[tabindex="-1"]:focus {
     font-size: var(--t-footnote);
   }
   body.keyboard-open {
-    padding-bottom: calc(var(--practice-keyboard-height, 0px) + 80px);
+    padding-bottom: calc(var(--practice-keyboard-height, 0px) + var(--space-4));
   }
   .site-header {
     gap: var(--space-3);
@@ -1230,21 +1320,32 @@ dialog h2[tabindex="-1"]:focus {
     padding-top: var(--space-5);
     padding-bottom: calc(var(--space-5) + env(safe-area-inset-bottom));
   }
-  .keyboard-open .actions {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: var(--practice-keyboard-height, 0px);
-    z-index: 999;
-    margin: 0;
-    padding: var(--space-3) var(--space-4);
-    background: var(--surface);
-    border-top: 1px solid var(--separator);
-    box-shadow: var(--shadow-bar);
-    padding-left: max(var(--space-4), env(safe-area-inset-left));
-    padding-right: max(var(--space-4), env(safe-area-inset-right));
-    padding-bottom: calc(var(--space-3) + env(safe-area-inset-bottom));
-    transition: bottom var(--dur-chrome) var(--ease-out);
+  /* With the keyboard open, Check / Next, Hint? and Skip live in the keyboard (Spec K8, K9),
+     and the result shows in the answer field (Spec D9). The page feedback stays readable
+     to screen readers through its live region. */
+  /* Visually hidden, not display: none: Next must stay focusable, because moving focus
+     there is what makes MathLive release the answer field before it is replaced. */
+  .keyboard-open .actions,
+  .keyboard-open #feedback,
+  .keyboard-open #auto-next {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .keyboard-open .answer-box[data-verdict] .answer-verdict {
+    display: flex;
+  }
+  .keyboard-open .answer-box[data-verdict="correct"] .answer-meter {
+    display: block;
+  }
+  .keyboard-open .answer-box[data-verdict="correct"] math-field {
+    border-color: var(--success);
+  }
+  .keyboard-open .answer-box[data-verdict="incorrect"] math-field {
+    border-color: var(--warning);
   }
 }
 
