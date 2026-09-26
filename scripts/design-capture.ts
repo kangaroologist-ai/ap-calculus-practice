@@ -396,6 +396,15 @@ async function captureFeedback(
   });
 }
 
+// With the phone keyboard open, the page's action bar is visually hidden and the hint
+// control is Hint? in the keyboard's tab row; use whichever one the student would see.
+async function pressHint(page: Page): Promise<void> {
+  const inKeyboard = page.locator('.MLK__layer.is-visible .kb-tool[data-act="hint"]:visible');
+  if ((await page.evaluate(() => window.mathVirtualKeyboard.visible)) && (await inKeyboard.count()))
+    await inKeyboard.tap();
+  else await page.locator("#hint").click();
+}
+
 async function captureHint(
   browser: Browser,
   options: BrowserContextOptions,
@@ -411,7 +420,7 @@ async function captureHint(
     if (workedSolution) {
       const labels = ["Show next hint", "Show solution", "Solution shown"];
       for (const label of labels) {
-        await page.locator("#hint").click();
+        await pressHint(page);
         await page.waitForFunction(
           (expected) => document.querySelector("#hint")?.textContent === expected,
           label,
@@ -423,7 +432,7 @@ async function captureHint(
         .waitFor({ state: "visible" });
       await saveImage(page, out, width, scheme, 10, "worked-solution");
     } else {
-      await page.getByRole("button", { name: "Need a hint?" }).click();
+      await pressHint(page);
       await page.locator("#hints .hint-panel").waitFor({ state: "visible" });
       await saveImage(page, out, width, scheme, 9, "first-hint");
     }
