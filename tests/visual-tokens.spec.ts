@@ -91,7 +91,11 @@ test("math keyboard geometry and tooltips match on Main and More", async ({ brow
       await page.goto("/");
       await page.getByRole("button", { name: /Start practicing|Continue practicing/ }).click();
       await page.locator("math-field").first().waitFor({ state: "visible" });
-      await page.getByRole("button", { name: "Math keyboard" }).click();
+      // This test is about geometry; the toggle button is covered in app.spec.ts. On a touch
+      // screen the answer's focus handler also opens the keyboard, so a click could race it.
+      await page.locator("math-field").first().focus();
+      await page.evaluate(() => window.mathVirtualKeyboard.show());
+      await expect.poll(() => page.evaluate(() => window.mathVirtualKeyboard.visible)).toBe(true);
       await expect(page.locator(".ML__keyboard")).toBeVisible();
 
       const plateHeights: number[] = [];
