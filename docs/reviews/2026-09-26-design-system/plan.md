@@ -211,6 +211,8 @@ Codex 沙盒不能起服务器，所有浏览器测试和截图都由 Claude 运
 | R-1 版本号、What's new、README / help 同步 | Claude | **Luna max**，Claude 对照代码复核 | 文档撰写；AGENTS.md 规定了要核对的内容 |
 | K-1、K-3、S-1、W-3、所有复核、R-2 / R-4 | Claude | 不变 | 需要浏览器迭代、设计决策、指令文件或发布权限 |
 
+**负责人再调整（用户，2026-09-26）**：“写文档（README、DESIGN.md 之类）都自己来，不要委派。”因此所有文档类工作改由 Claude 完成：S-2 `DESIGN.md`、W-2 `review-workflow.md`、R-1 中的 README / help / What's new 文案；`docs/ui-review.md` 的更新也由 Claude 完成。已经启动的 Luna 步骤 L4（DESIGN.md）当即停止，没有保留任何产出；步骤 L2 只保留 `scripts/design-capture.ts` 和 `package.json`，它写的 `review-workflow.md` 丢弃不用。代码和测试仍按上表委派。
+
 **第 4 节问题的答复（用户，2026-09-26）**：① 不改庆祝频率（D7、D-4 取消）；② 用 9 列版本；③ 取消工具栏；④ 安装技能（新增 T-1）。
 
 **分支**：在 `design-keyboard-1.2` 分支上实施，发布时合并到 `main`。
