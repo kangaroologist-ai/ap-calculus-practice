@@ -992,6 +992,44 @@ dialog::backdrop {
   --keycap-background: var(--surface);
   --keycap-text: var(--label);
   --keycap-height: 44px;
+  /* Nine equal columns that fill the phone width; capped on desktop.
+     A key n columns wide is n × width − gap, so 9-unit rows line up. */
+  --keyboard-padding-horizontal: 4px;
+  --keycap-gap: 4px;
+  --keycap-width: min(calc((100cqw + 4px) / 9), 84px);
+  /* Pressed keys darken like a system keyboard instead of turning blue. */
+  --keycap-background-pressed: var(--separator);
+  --keycap-background-active: var(--separator);
+}
+/* MathLive has width classes for 0.5, 1.5, 2 and 5 units only. */
+.ML__keyboard .MLK__rows > .MLK__row .w30 {
+  width: calc(3 * var(--_keycap-width) - var(--_keycap-gap));
+}
+/* Tooltips double as accessible names; the hover bubble sticks after a tap on iOS. */
+.ML__keyboard [data-tooltip]::after {
+  display: none !important;
+}
+/* Centre the icons on the action keys (MathLive pins backspace to a corner). */
+.ML__keyboard .MLK__rows > .MLK__row > div.action {
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.ML__keyboard .MLK__rows > .MLK__row > div.action > svg {
+  display: block;
+  margin: 0;
+}
+.ML__keyboard .MLK__toolbar > .left {
+  padding-left: 8px;
+}
+.ML__keyboard .MLK__toolbar > .left > div {
+  padding: 4px 12px;
+}
+@media (hover: none) {
+  .ML__keyboard {
+    --keycap-background-hover: var(--_keycap-background);
+    --keycap-secondary-background-hover: var(--_keycap-secondary-background);
+  }
 }
 
 /* Responsive */
