@@ -204,9 +204,12 @@ body {
   display: grid;
   place-items: center;
   color: var(--bg);
-  font-family: inherit;
-  font-size: var(--t-equation-large);
   background: var(--label);
+}
+.brand-mark svg {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 main {
   margin: auto;
@@ -1135,7 +1138,6 @@ dialog h2[tabindex="-1"]:focus {
   .brand-mark {
     width: 31px;
     height: 31px;
-    font-size: var(--t-title-large);
     border-radius: 9px; /* logo: radius scales with the mark, not a component token */
   }
   .private-label {

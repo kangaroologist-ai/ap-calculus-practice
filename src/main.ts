@@ -197,7 +197,8 @@ function observeFormulas() {
   requestAnimationFrame(refreshFormulaCues);
   void document.fonts.ready.then(refreshFormulaCues);
 }
-const icon = '<span class="brand-mark" aria-hidden="true">ƒ′</span>';
+// f′ drawn as paths and centred on its visible shape; the font glyph sat about 2 px low.
+const icon = '<span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 32 32" focusable="false"><g transform="translate(16 16) scale(0.86) translate(-16.55 -16.5)" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 7.4C19.7 6 17.3 6 16.5 7.9L13.3 24.1C12.7 26.6 10.5 27.3 9 26.2"/><path d="M11.4 13.6H19.2"/><path d="M24.2 6.6 22.8 11.6"/></g></svg></span>';
 function button(id: string, label: string, cls = "button") {
   return `<button id="${id}" class="${cls}">${label}</button>`;
 }
