@@ -84,6 +84,19 @@
 
 说明：第 1、2 张里页面滚动位置和统计栏位置不对，是上面说的样机问题；第 3 张的键盘又变回了旧布局，因为新题目重置了键盘，而样机没有改 app 的布局代码。
 
+### R8 · 实施 F-2 时的新发现（事后补记：本节在部分修复尝试之后才写，顺序见下）
+
+**真实顺序**：F-2 实现后浏览器实测，发现换题时控制台报错。之后我没有先记录，就连续试了三种修法（在捕获阶段处理键盘按钮，焦点在答题框上时不设只读，换题前先 blur 答题框），都没有解决。用户问起流程后，才补写本节。
+
+**事实（实测与源码）**
+1. **Hint / Skip 会关键盘（R7）的真正原因**：判分、提示、换题期间，`updateControls()` 会把答题框设为只读。MathLive 规定：答题框有焦点且键盘打开时，一旦被设为只读，就执行 `hideVirtualKeyboard` 收起键盘（`mathlive.mjs` 的 `readOnly` 分支，约 39507 行），并在下一帧更新键盘。Check 之后 app 会重新 `show()`，所以看不出来；Hint 和 Skip 之后没有重新打开，键盘就关了。
+2. **MathLive 有自己的“当前输入框”标记**（`blurred`），只有在浏览器焦点真正移到另一个元素时才会被清掉。MathLive 自己的 `blur()` 在让答题框失焦前先把 `blurInProgress` 设为真，于是它自己的失焦处理直接跳过（`mathlive.mjs` 约 33329 行与 33303 行），标记保持“已聚焦”。实测：调用 `blur()` 后浏览器焦点已经到了 BODY，但 MathLive 仍认为答题框在输入。
+3. **旧流程为什么没问题**：答对后，app 把焦点移到页面上可见的 Next 按钮，这是一次真实的焦点转移，MathLive 的标记被正常清掉。实测：旧代码答对后，`hasFocus()` 为 false，换题不报错。
+4. **新流程为什么出错**：键盘打开时，我把操作栏设成了 `display: none`，Next 按钮无法获得焦点，`focus()` 什么也没做，焦点留在答题框里，MathLive 标记仍为“已聚焦”。按键盘上的 Next 换题时，旧答题框被整体删除；新答题框获得焦点时，MathLive 先去让“上一个已聚焦的答题框”失焦，而那个答题框已经被删除，于是报 `this.mathfield.options` 未定义，新答题框也没拿到焦点。
+5. 在“最后一题按 Skip”的场景下还有同类的第二条路径：答题框被设为只读、触发了收起键盘，MathLive 预定下一帧更新键盘，而此时答题框已经被删除。
+
+**推断**：只要让焦点在换题前真正离开答题框、落到一个真实可聚焦的元素上，MathLive 的标记就会正常清除（与旧流程相同）。做法：键盘打开时不把操作栏设为 `display: none`，而是和反馈框一样“视觉隐藏”（元素仍在页面中、可以获得焦点、读屏软件也能读到）。这样答对后焦点照旧移到 Next 按钮。这个思路是用户提出的，与第 3 条事实一致。
+
 ## 2. Spec（按用户决定定稿）
 
 课程、判分、进度数据都不变。以下均为 v1.2.0 发布前的修改。
@@ -103,7 +116,7 @@
 
 负责人：代码可以委派，文档由 Claude 写。`src/main.ts` 这一轮集中由 Claude 修改，避免多人同时改同一个文件。
 
-- [ ] **F-1 · K8/K10 · Astra medium**（布局数据；需要读 MathLive 源码确认 2 格确认键的写法，以及“不带命令的按键”该怎么写）— `src/math-keyboard.ts` 两页新布局（确认键带 `practice-enter` 类、收起键移除、⌫ 与 ← → 换位、÷ 标签）；`tests/math-keyboard-layout.test.ts` 同步更新。验证：vitest、tsc。
+- [x] **F-1 · K8/K10 · Astra medium**（布局数据；需要读 MathLive 源码确认 2 格确认键的写法，以及“不带命令的按键”该怎么写）— `src/math-keyboard.ts` 两页新布局（确认键带 `practice-enter` 类、收起键移除、⌫ 与 ← → 换位、÷ 标签）；`tests/math-keyboard-layout.test.ts` 同步更新。验证：vitest、tsc。 **结果（补记：合并时漏勾，用户询问后补上）**：Astra medium 实施，Claude 复核并合并（`5aaad62`）。Astra 发现 MathLive 中没有命令的按键会把自己的标签当文字输入（`mathlive.mjs:28850–28854`），所以给确认键设了一个空插入命令 `insert "" insertAfter`，按下不改变答案。Vitest 24 个文件 360 项通过，其中布局测试 34 项。
 - [ ] **F-2 · K8/K9/D9 · Claude**（跨模块的交互逻辑和视觉细节，需要在浏览器里反复调试）— `src/main.ts`：确认键与页签行按钮的 `pointerup` 委托、按钮自动补回、Check / Next 文字切换、Hint / Skip 后保持键盘打开、答题框内的结果显示与倒计时；`src/style.css`：键盘打开时隐藏操作栏、底部留白、答题框状态、渐变底、页签行按钮样式。
 - [x] **F-3 · D10 · Claude**（设计：字形绘制与光学居中）— SVG 图标替换 `src/main.ts` 中的 `icon`（及 `help.html` 中的同款图标）；`public/favicon.svg`；`index.html` / `help.html` 的 `<link rel="icon">`。 **结果**（提交 `deb0af1`）：用路径画出斜体 f 与撇号，按字形的可见包围盒居中；在 app 中实测字形中心偏差：WebKit 390 px 为 0 px（主页和帮助页），Chromium 1280 px 深色为 0.33 px。新增 `public/favicon.svg`，`index.html` 与 `help.html` 都引用它。截图：`logo-after.png`。
 - [ ] **F-4 · K8/K9/D9/D10 · Luna max**（浏览器测试改写，范围明确，在 F-1 到 F-3 完成之后）— `tests/app.spec.ts`、`tests/visual-tokens.spec.ts`：确认键两步、页签行按钮、键盘打开时的答题框结果、图标居中；Claude 运行。
