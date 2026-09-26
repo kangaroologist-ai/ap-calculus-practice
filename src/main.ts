@@ -245,7 +245,7 @@ function render() {
   const p = state.progress,
     ses = state.session,
     cur = ses?.current;
-  app.innerHTML = `<header class="site-header"><a class="brand" href="/">${icon}<span>AP Calculus<span class="brand-light"> Practice</span></span></a><span class="private-label"><span class="status-dot"></span> On your device</span>${button("transfer", "Move progress", "button subtle")}</header>
+  app.innerHTML = `<header class="site-header"><h1 class="brand-heading" style="font:inherit;letter-spacing:inherit;margin:0"><a class="brand" href="/">${icon}<span>AP Calculus<span class="brand-light"> Practice</span></span></a></h1><span class="private-label"><span class="status-dot"></span> On your device</span>${button("transfer", "Move progress", "button subtle")}</header>
  <main>${location.hostname === "ap-derivative-practice.pages.dev" ? '<p class="notice">We’ve moved to <a href="https://ap-calculus-practice.pages.dev/">AP Calculus Practice</a>. Use Move progress to export here, then import at the new address.</p>' : ""}<div id="notice" class="notice" role="status" ${temporary ? "" : "hidden"}>${temporary ? "Temporary session: export progress before leaving." : ""}</div>
  <div class="workspace"><section class="practice-card" aria-label="Practice">${!ses ? welcome() : ses.finished ? summary() : questionView()}</section>
  <details class="journey" ${journeyOpen ? "open" : ""}><summary class="progress-summary">Progress <span>Level ${p.unlockedLevel} · ${readyCount()} skills ready</span></summary><div class="aside-heading"><span class="eyebrow">YOUR LEARNING PATH</span><span class="count">${readyCount()} / ${SKILLS.filter((s) => !config.disabledFamilies.includes(s.id)).length}</span></div><div class="level-list">${Array.from({ length: 6 }, (_, i) => levelView(i + 1, expandedLevels.has(i + 1))).join("")}</div></details></div>
@@ -333,7 +333,7 @@ function questionView() {
   const s = state.session!,
     c = s.current!,
     q = c.question;
-  return `<div class="card-top practice-status" aria-label="Practice activity"><span class="streak" id="streak" aria-live="polite"><strong>${state.progress.streak ?? 0}</strong> in a row</span><span id="today-count" class="muted">${todayCount(state.progress)} practiced today</span></div><div class="question-body"><h2>${esc(q.title)}</h2>${math(q.prompt)}${q.domainText.startsWith("Use radians.") ? "" : `<p class="domain">${esc(q.domainText)}</p>`}<div id="answer-fields">${q.labels.map((label, i) => `<label class="answer-label" for="answer-${i}"><span class="answer-equation">${answerLabel(label, i)}</span><math-field id="answer-${i}" aria-label="${esc(label)}"></math-field></label>`).join("")}</div><div class="input-caption"><span>Equivalent forms are welcome.</span>${button("keyboard", "⌨ Math keyboard", "text-button")}</div><div id="feedback" class="feedback${c.verdict ? ` ${c.verdict.status}` : ""}" aria-live="polite" ${c.verdict ? "" : "hidden"}>${c.verdict ? feedback(c.verdict, q) : ""}</div><div id="auto-next" class="auto-next" hidden><span>Next in 3s</span><div><i></i></div></div><div class="actions">${button("submit", "Check answer", "button primary")}${button("hint", c.hintsUsed >= 3 ? "Solution shown" : c.hintsUsed === 2 ? "Show solution" : c.hintsUsed === 1 ? "Show next hint" : "Need a hint?", "button subtle")}${button("next", c.verdict?.status === "correct" || c.hintsUsed >= 3 ? "Next question →" : "Skip", "text-button next")}</div><div id="hints">${hintContent()}</div>${state.progress.skills[q.primarySkill]?.failureStreak >= 3 ? '<p class="notice">Let’s rebuild the idea. Review the rule, then try the quick checks that come next.</p>' : ""}</div>`;
+  return `<div class="card-top practice-status" aria-label="Practice activity"><span class="streak" id="streak" aria-live="polite"><strong>${state.progress.streak ?? 0}</strong> in a row</span><span id="today-count" class="muted">${todayCount(state.progress)} practiced today</span></div><div class="question-body"><h2>${esc(q.title)}</h2>${math(q.prompt)}${q.domainText.startsWith("Use radians.") ? "" : `<p class="domain">${esc(q.domainText)}</p>`}<div id="answer-fields">${q.labels.map((label, i) => `<label class="answer-label" for="answer-${i}"><span class="answer-equation">${answerLabel(label, i)}</span><math-field id="answer-${i}" aria-label="${esc(label)}"></math-field></label>`).join("")}</div><div class="input-caption"><span>Equivalent forms are welcome.</span>${button("keyboard", '<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="vertical-align:-3px"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M5 9h2m2 0h2m2 0h2m2 0h2M5 12h2m2 0h2m2 0h2m2 0h2M7 15h10"/></svg> Math keyboard', "text-button")}</div><div id="feedback" class="feedback${c.verdict ? ` ${c.verdict.status}` : ""}" aria-live="polite" ${c.verdict ? "" : "hidden"}>${c.verdict ? feedback(c.verdict, q) : ""}</div><div id="auto-next" class="auto-next" hidden><span>Next in 3s</span><div><i></i></div></div><div class="actions">${button("submit", "Check answer", "button primary")}${button("hint", c.hintsUsed >= 3 ? "Solution shown" : c.hintsUsed === 2 ? "Show solution" : c.hintsUsed === 1 ? "Show next hint" : "Need a hint?", "button subtle")}${button("next", c.verdict?.status === "correct" || c.hintsUsed >= 3 ? "Next question →" : "Skip", "text-button next")}</div><div id="hints">${hintContent()}</div>${state.progress.skills[q.primarySkill]?.failureStreak >= 3 ? '<p class="notice">Let’s rebuild the idea. Review the rule, then try the quick checks that come next.</p>' : ""}</div>`;
 }
 function feedback(v: Verdict, q: Question) {
   switch (v.status) {
@@ -397,13 +397,23 @@ function mountInputs() {
 }
 function updateControls() {
   const c = state.session?.current;
+  const correct = c?.verdict?.status === "correct";
   document
     .querySelectorAll<MathfieldElement>("math-field")
     .forEach((mf) => (mf.readonly = busy || replacing));
   const s = document.querySelector<HTMLButtonElement>("#submit");
   if (s) {
-    s.disabled = busy || replacing || c?.verdict?.status === "correct";
+    s.hidden = correct;
+    s.className = correct ? "button" : "button primary";
+    s.disabled = busy || replacing || correct;
     s.textContent = busy ? "Checking…" : "Check answer";
+  }
+  const h = document.getElementById("hint");
+  if (h) h.hidden = correct;
+  const n = document.getElementById("next");
+  if (n) {
+    n.className = correct ? "button primary" : "text-button next";
+    n.textContent = correct || (c?.hintsUsed ?? 0) >= 3 ? "Next question →" : "Skip";
   }
   for (const id of [
     "start",
@@ -492,8 +502,6 @@ async function submit() {
     f.hidden = false;
     f.className = `feedback ${v.status}`;
     f.innerHTML = feedback(v, c.question);
-    const n = document.getElementById("next");
-    if (n && v.status === "correct") n.textContent = "Next question →";
   } finally {
     busy = false;
     updateControls();
@@ -526,8 +534,6 @@ async function hint() {
         : c.hintsUsed === 2
           ? "Show solution"
           : "Show next hint";
-    if (c.hintsUsed === 3)
-      document.getElementById("next")!.textContent = "Next question →";
     requestAnimationFrame(revealNewHint);
   } finally {
     busy = false;
@@ -561,9 +567,10 @@ function modal(title: string, body: string) {
   window.mathVirtualKeyboard.hide();
   modalCleanup();
   document.getElementById("modal-root")!.innerHTML =
-    `<dialog id="dialog"><div class="modal-heading"><h2>${esc(title)}</h2><button id="close-modal" class="icon-button" aria-label="Close">✕</button></div><div class="modal-body">${body}<p id="modal-error" class="notice" role="status" hidden></p></div></dialog>`;
+    `<dialog id="dialog"><div class="modal-heading"><h2 tabindex="-1">${esc(title)}</h2><button id="close-modal" class="icon-button" aria-label="Close">✕</button></div><div class="modal-body">${body}<p id="modal-error" class="notice" role="status" hidden></p></div></dialog>`;
   const d = document.querySelector<HTMLDialogElement>("#dialog")!;
   d.showModal();
+  d.querySelector("h2")?.focus();
   const close = () => {
     modalCleanup();
     modalCleanup = () => {};
@@ -621,7 +628,7 @@ function whatsNew(entries: WhatsNewEntry[]) {
 function openTransfer() {
   if (busy || replacing) return;
   modal(
-    "Take your progress with you",
+    "Move your progress",
     `<p>No account needed. Move a snapshot of your learning and review schedule to another device.</p><div class="transfer-options">${button("export", "Export progress", "button primary")}${button("import", "Import progress", "button subtle")}</div><p class="fine">Your current question and draft stay on this device. Imported progress starts with a new question.</p>`,
   );
   on("export", exportView);

@@ -203,6 +203,100 @@ async function scrollDialogToBottom(page: Page): Promise<void> {
 
 const test = base;
 
+test('practice has one site heading and an accessible SVG keyboard button', async ({ page }) => {
+  await openApp(page, onlySkill('constant', 1));
+  await expect(page.locator('h1')).toHaveCount(1);
+  await expect(page.locator('h1')).toHaveAccessibleName(/^AP Calculus/);
+  await page.getByRole('button', { name: /Start practicing|Continue practicing/ }).click();
+  await expect(page.locator('h1')).toHaveCount(1);
+  await expect(page.locator('h1')).toHaveAccessibleName(/^AP Calculus/);
+  const keyboard = page.getByRole('button', { name: 'Math keyboard', exact: true });
+  await expect(keyboard).toHaveAccessibleName('Math keyboard');
+  await expect(keyboard.locator('svg')).toHaveCount(1);
+  await expect(keyboard.locator('svg')).toHaveAttribute('aria-hidden', 'true');
+});
+
+test('correct answers make Next the sole primary action and Enter continues', async ({ page }) => {
+  await page.clock.install();
+  await openApp(page, onlySkill('constant', 1));
+  await page.getByRole('button', { name: /Start practicing|Continue practicing/ }).click();
+  await expect(page.locator('math-field').first()).toBeFocused();
+  await page.clock.pauseAt(new Date(Date.now() + 1000));
+  await setMathfield(page.locator('math-field').first(), '0');
+  await page.locator('#submit').click();
+  await expect(page.locator('#feedback.correct')).toBeVisible();
+  await expect(page.locator('#submit')).toBeHidden();
+  await expect(page.locator('#hint')).toBeHidden();
+  await expect(page.locator('#next')).toBeVisible();
+  await expect(page.locator('#next')).toHaveClass('button primary');
+  await expect(page.locator('.actions .button.primary')).toHaveCount(1);
+  await expect(page.locator('#next')).toHaveText('Next question →');
+  await expect(page.locator('#next')).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect.poll(async () => (await readStoredState(page)).session?.completed).toBe(1);
+  await expect(page.locator('#submit')).toBeVisible();
+  await expect(page.locator('#hint')).toBeVisible();
+  await expect(page.locator('#next')).toHaveClass('text-button next');
+  await expect(page.locator('#next')).toHaveText('Skip');
+});
+
+for (const [status, answer] of [['incorrect', '5'], ['invalid', '']] as const) {
+  test(`${status} answers retain Check, hint, and Skip controls`, async ({ page }) => {
+    await openApp(page, onlySkill('constant', 1));
+    await page.getByRole('button', { name: /Start practicing|Continue practicing/ }).click();
+    const field = page.locator('math-field').first();
+    await setMathfield(field, answer);
+    await page.locator('#submit').click();
+    await expect(page.locator(`#feedback.${status}`)).toBeVisible();
+    await expect(page.locator('#submit')).toBeVisible();
+    await expect(page.locator('#submit')).toBeEnabled();
+    await expect(page.locator('#submit')).toHaveClass('button primary');
+    await expect(page.locator('#hint')).toBeVisible();
+    await expect(page.locator('#hint')).toBeEnabled();
+    await expect(page.locator('#next')).toBeVisible();
+    await expect(page.locator('#next')).toHaveClass('text-button next');
+    await expect(page.locator('#next')).toHaveText('Skip');
+    await expect(field).toBeFocused();
+  });
+}
+
+test('worked solution keeps Check and the text-button Next action', async ({ page }) => {
+  await openApp(page, onlySkill('constant', 1));
+  await page.getByRole('button', { name: /Start practicing|Continue practicing/ }).click();
+  await page.locator('#hint').click();
+  await expect(page.locator('#hints')).toContainText('HINT');
+  await screenshot(page, 'constant-03-hint');
+  await page.locator('#hint').click();
+  await page.locator('#hint').click();
+  await expect(page.locator('#hints')).toContainText('WORKED SOLUTION');
+  await expect(page.locator('#submit')).toBeVisible();
+  await expect(page.locator('#submit')).toHaveClass('button primary');
+  await expect(page.locator('#hint')).toBeVisible();
+  await expect(page.locator('#hint')).toBeDisabled();
+  await expect(page.locator('#next')).toHaveText('Next question →');
+  await expect(page.locator('#next')).toHaveClass('text-button next');
+});
+
+for (const [trigger, title] of [['#transfer', 'Move your progress'], ['#whats-new', 'What’s new']]) {
+  test(`${title} opens with heading focus and Tab reaches Close`, async ({ page, browserName }) => {
+    await openApp(page, onlySkill('constant', 1));
+    // Open from the keyboard: focus restoration matters to keyboard users, and Safari does not
+    // focus a button on click, so a mouse click would leave nothing to restore in WebKit.
+    await page.locator(trigger).focus();
+    await page.keyboard.press('Enter');
+    const heading = page.locator('#dialog h2');
+    await expect(heading).toHaveText(title);
+    await expect(heading).toHaveAttribute('tabindex', '-1');
+    await expect(heading).toBeFocused();
+    // Safari moves focus to buttons with Option+Tab; plain Tab skips them by default.
+    await page.keyboard.press(browserName === 'webkit' ? 'Alt+Tab' : 'Tab');
+    await expect(page.getByRole('button', { name: 'Close', exact: true })).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#dialog')).toHaveCount(0);
+    await expect(page.locator(trigger)).toBeFocused();
+  });
+}
+
 test('formula aria labels use speakable text', async ({ page }) => {
   await openApp(page, configFor());
   const formulas = page.locator('.formula[aria-label]');
@@ -267,7 +361,7 @@ test('boots with a frozen v1 state, migrates it, and retains the original before
 });
 
 test.describe('Derivative Studio browser flows', () => {
-  test('constant first question: zero, blur, hint, export/import, restore, and damaged code', async ({ page }) => {
+  test('constant first question: zero, blur, export/import, restore, and damaged code', async ({ page }) => {
     const config = onlySkill('constant', 1);
     await openApp(page, config);
     await screenshot(page, 'constant-01-welcome');
@@ -293,11 +387,9 @@ test.describe('Derivative Studio browser flows', () => {
     await expect(page.locator('#feedback')).toContainText('Correct');
     await expect(page.locator('#next')).toHaveText('Next question →');
 
-    // Help remains available after a submitted answer; this keeps the test's
-    // zero submission independent while still exercising the hint rendering.
-    await page.getByRole('button', { name: 'Need a hint?' }).click();
-    await expect(page.locator('#hints')).toContainText(/A NUDGE IN THE RIGHT DIRECTION|HINT/);
-    await screenshot(page, 'constant-03-hint');
+    await expect(page.locator('#submit')).toBeHidden();
+    await expect(page.locator('#hint')).toBeHidden();
+    await expect(page.locator('#next')).toHaveClass('button primary');
 
     await page.getByRole('button', { name: 'Move progress' }).click();
     await page.getByRole('button', { name: 'Export progress' }).click();
@@ -322,6 +414,10 @@ test.describe('Derivative Studio browser flows', () => {
     await expect(page.locator('#confirm-restore')).toBeVisible();
     await page.locator('#confirm-restore').click();
     await expect(page.locator('#feedback')).toContainText('Correct');
+    await expect(page.locator('#submit')).toBeHidden();
+    await expect(page.locator('#hint')).toBeHidden();
+    await expect(page.locator('#next')).toHaveClass('button primary');
+    await expect(page.locator('#next')).toHaveText('Next question →');
     await screenshot(page, 'constant-05-restored');
 
     // Reset again so the imported snapshot visibly replaces a fresh state.
