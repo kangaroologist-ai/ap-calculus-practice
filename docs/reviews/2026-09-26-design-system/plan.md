@@ -284,15 +284,15 @@ Codex 沙盒不能起服务器，所有浏览器测试和截图都由 Claude 运
 
 ### 阶段 W · 审核工作流
 
-- [ ] **W-1 · S3 · Luna max**（扩展脚本，范围有限）— 把 `baseline` 截图脚本整理为 `scripts/design-capture.ts`，并在 `package.json` 加 `design:capture`。文件：这两个。由 Claude 运行验证。
-- [ ] **W-2 · S4 · Claude**（流程设计）— 撰写 `docs/design/review-workflow.md`：触发条件、三套评审视角的固定提示词（以本次的 `reviews/context.md` 为底稿，并写明子代理只能以文字返回报告、不能写文件）、P0–P3 定级与阻塞规则、证据存放位置、负责人分工。
+- [x] **W-1 · S3 · Luna max**（扩展脚本，范围有限）— 把 `baseline` 截图脚本整理为 `scripts/design-capture.ts`，并在 `package.json` 加 `design:capture`。文件：这两个。由 Claude 运行验证。 **结果**（Luna max 编写，Claude 复核并修复两处，提交 `f072197` 和随后的修复提交）：第一次运行有两处失败：① 触屏上点按钮打开键盘时，与答题框获得焦点时自动打开键盘相互竞争；② `page.evaluate` 里的具名箭头函数被 tsx 包进 `__name()`，页面里没有这个函数。修复后一次生成 41 张截图和 8 组键盘几何数据，输出到 `artifacts/design/1.1.1/`。答对 / 答错 / 无效三种状态由脚本读取当前题目并用 `grade()` 预先检验答案，结果是确定的。这次运行发现了 U-R15 / U-R16。Luna 写的 `review-workflow.md` 按用户要求丢弃，W-2 由我撰写。
+- [x] **W-2 · S4 · Claude**（流程设计）— 撰写 `docs/design/review-workflow.md`：触发条件、三套评审视角的固定提示词（以本次的 `reviews/context.md` 为底稿，并写明子代理只能以文字返回报告、不能写文件）、P0–P3 定级与阻塞规则、证据存放位置、负责人分工。 **结果**：由我撰写（`a9ccc50`），包括适用范围、步骤与负责人、定级标准、三套视角（直接调用已安装的技能）、提示词模板（含本次的教训：子代理只能以文字返回报告、不共享浏览器窗格、不运行第三方可执行文件、只用视口截图）、审核清单与记录格式。
 - [ ] **W-3 · S4 · Claude** — 在 `AGENTS.md` 的发布检查中加入设计审核一步，指向 W-2。
 - [ ] **W-4 · 复核 W-1 · Claude** — 在干净的工作区运行 `npm run design:capture`，确认输出完整、可重复。
 
 ### 阶段 T · 安装设计技能（用户答复问题 4 后新增）
 
 - [x] **T-1 · S4 · Claude**（在用户目录安装，属于环境配置）— 把 `emilkowalski/skills` 中的 `apple-design`、`emil-design-eng`，以及 `pbakaus/impeccable` 的 `impeccable` 技能目录复制到 `~/.claude/skills/`。impeccable 的启动器会在首次运行时下载可执行文件：**只安装文件，不运行启动器**；是否运行它的检测器由用户自己决定。验证：技能目录存在且 `SKILL.md` 可读；记录来源提交哈希。 **结果**：已安装到 `~/.claude/skills/apple-design`、`emil-design-eng`（来自 `emilkowalski/skills@d16ebe6`）和 `impeccable`（来自 `pbakaus/impeccable@9d715cc`，v4.4.0）；三个 `SKILL.md` 的 `name` 字段均能读到。impeccable 的 `scripts/impeccable` 启动器已随目录复制，但没有运行。新会话才会加载新技能。
-- [ ] **T-2 · 复核 · Claude** — 确认 W-2 的审核流程改为直接调用已安装的技能，而不是读取 SKILL.md 文本。
+- [x] **T-2 · 复核 · Claude** — 确认 W-2 的审核流程改为直接调用已安装的技能，而不是读取 SKILL.md 文本。 **结果**：`review-workflow.md` 第 3 节写明通过 Skill 工具调用 `design:*`、`emil-design-eng`、`apple-design`、`impeccable`。
 
 ### 阶段 R · 发布（本身就是 S4 的第一次演练）
 
