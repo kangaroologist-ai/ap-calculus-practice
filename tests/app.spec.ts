@@ -580,6 +580,12 @@ async function readStoredState(page: Page): Promise<AppState> {
   }));
 }
 
+async function currentAnswer(page: Page, fieldIndex = 0): Promise<string> {
+  const answer = (await readStoredState(page)).session?.current?.question.answers[fieldIndex];
+  if (answer === undefined) throw new Error('The current question has no expected answer.');
+  return latex(answer);
+}
+
 async function readStoredProgress(page: Page): Promise<Progress> {
   return (await readStoredState(page)).progress;
 }
@@ -922,43 +928,63 @@ test('mobile visual representatives: 360, 390 keyboard, 430, landscape, and 200%
   await renderState('mobile-200-percent-zoom', { width: 390, height: 844 }, 'zoom');
 });
 
-test('mobile keyboard keeps submit above keys, hides, and grades', async ({ page, browserName }) => {
+test('mobile keyboard keeps the answer above keys, hides, and grades', async ({ browser, browserName }) => {
   test.skip(browserName !== 'chromium', 'Mobile keyboard geometry is verified once in Chromium.');
-  await openApp(page, onlySkill('constant', 1), { width: 390, height: 844 });
-  await page.getByRole('button', { name: /Start practicing|Continue practicing/ }).click();
-  await setMathfield(page.locator('math-field').first(), '0');
-  await page.locator('.question-body h2').click();
-  await page.evaluate(() => window.mathVirtualKeyboard.hide());
-  await page.getByRole('button', { name: 'Math keyboard' }).click();
-  await expect(page.locator('.ML__keyboard')).toBeVisible();
-
-  // Both custom layouts expose the primary hide action; use the active layer
-  // so this remains stable if MathLive restores the last selected tab.
-  const hideKey = page.locator('.MLK__layer.is-visible [aria-label="hide keyboard"]:visible');
-  await expect(hideKey).toHaveCount(1);
-  const geometry = await page.evaluate(() => {
-    const keyboard = window.mathVirtualKeyboard.boundingRect;
-    const submit = document.querySelector('#submit')!.getBoundingClientRect();
-    return { keyboardTop: keyboard.top, submitBottom: submit.bottom, viewportHeight: innerHeight };
+  const context = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    hasTouch: true,
   });
-  expect(geometry.submitBottom).toBeLessThanOrEqual(geometry.keyboardTop + 1);
-  expect(geometry.keyboardTop).toBeLessThanOrEqual(geometry.viewportHeight + 1);
-  await screenshot(page, 'mobile-keyboard-submit-above-keyboard');
+  try {
+    const page = await context.newPage();
+    await openApp(page, onlySkill('constant', 1));
+    await page.getByRole('button', { name: /Start practicing|Continue practicing/ }).click();
+    const field = page.locator('math-field').first();
+    await field.focus();
+    await setMathfield(field, await currentAnswer(page));
+    await page.evaluate(() => window.mathVirtualKeyboard.show());
+    await expect.poll(() => page.evaluate(() => window.mathVirtualKeyboard.visible)).toBe(true);
+    await expect(page.locator('.ML__keyboard')).toBeVisible();
 
-  await hideKey.click();
-  await expect.poll(() => page.evaluate(() => window.mathVirtualKeyboard.visible)).toBe(false);
-  await expect(page.locator('.MLK__layer.is-visible [aria-label="hide keyboard"]:visible')).toHaveCount(0);
+    const activeLayer = page.locator('.MLK__layer.is-visible');
+    const enterKey = activeLayer.locator('.practice-enter:visible');
+    const hideKey = activeLayer.locator('.kb-tool[data-act="hide"]:visible');
+    await expect(enterKey).toHaveText('Check');
+    await expect(hideKey).toHaveCount(1);
+    const geometry = await page.evaluate(() => {
+      const keyboardTop = window.mathVirtualKeyboard.boundingRect.top;
+      const field = document.querySelector('math-field')!.getBoundingClientRect();
+      const actions = document.querySelector('.actions')!.getBoundingClientRect();
+      return {
+        keyboardTop,
+        fieldTop: field.top,
+        fieldBottom: field.bottom,
+        actionsWidth: actions.width,
+        actionsHeight: actions.height,
+        viewportHeight: innerHeight,
+      };
+    });
+    expect(geometry.fieldTop).toBeGreaterThanOrEqual(0);
+    expect(geometry.fieldBottom).toBeLessThanOrEqual(geometry.keyboardTop + 1);
+    expect(geometry.actionsWidth).toBeLessThanOrEqual(1);
+    expect(geometry.actionsHeight).toBeLessThanOrEqual(1);
+    expect(geometry.keyboardTop).toBeLessThanOrEqual(geometry.viewportHeight + 1);
+    await screenshot(page, 'mobile-keyboard-submit-above-keyboard');
 
-  await page.getByRole('button', { name: 'Math keyboard' }).click();
-  await expect.poll(() => page.evaluate(() => window.mathVirtualKeyboard.visible)).toBe(true);
-  await page.getByRole('button', { name: 'Check answer' }).click();
-  await expect(page.locator('#feedback')).toContainText('Correct');
+    await hideKey.tap();
+    await expect.poll(() => page.evaluate(() => window.mathVirtualKeyboard.visible)).toBe(false);
+    await expect(page.locator('.MLK__layer.is-visible .kb-tool[data-act="hide"]:visible')).toHaveCount(0);
+
+    await page.getByRole('button', { name: 'Math keyboard' }).click();
+    await expect.poll(() => page.evaluate(() => window.mathVirtualKeyboard.visible)).toBe(true);
+    await page.locator('.MLK__layer.is-visible .practice-enter:visible').tap();
+    await expect(page.locator('#feedback')).toContainText('Correct');
+  } finally {
+    await context.close();
+  }
 });
 
-test('phone keyboard keeps feedback and new hints above the action bar', async ({ browser, browserName }) => {
+test('phone keyboard keeps the in-field verdict and new hints above the keyboard', async ({ browser, browserName }) => {
   test.skip(browserName !== 'chromium', 'Mobile keyboard geometry is verified once in Chromium.');
-  // Spec D8: after a check the answer keeps focus and the keyboard reopens; the feedback and
-  // any new hint render below the field and must not end up behind the fixed action bar.
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true });
   try {
     const page = await context.newPage();
@@ -969,23 +995,192 @@ test('phone keyboard keeps feedback and new hints above the action bar', async (
     await page.evaluate(() => window.mathVirtualKeyboard.show());
     await expect.poll(() => page.evaluate(() => window.mathVirtualKeyboard.visible)).toBe(true);
     await setMathfield(field, '5');
-    await page.locator('#submit').tap();
-    await expect(page.locator('#feedback.incorrect')).toBeVisible();
+    await page.locator('.MLK__layer.is-visible .practice-enter:visible').tap();
+    const verdict = page.locator('.answer-box[data-verdict="incorrect"] .answer-verdict');
+    await expect(verdict).toBeVisible();
+    await expect(verdict).toHaveText('! Not quite');
     await expect.poll(() => page.evaluate(() => window.mathVirtualKeyboard.visible)).toBe(true);
-    const actionsTop = () => page.evaluate(() => document.querySelector('.actions')!.getBoundingClientRect().top);
-    await expect.poll(async () => {
-      const feedback = (await page.locator('#feedback').boundingBox())!;
-      return feedback.y + feedback.height <= (await actionsTop());
-    }).toBe(true);
+    const verdictBottom = (await verdict.boundingBox())!.y + (await verdict.boundingBox())!.height;
+    const keyboardTop = await page.evaluate(() => window.mathVirtualKeyboard.boundingRect.top);
+    expect(verdictBottom).toBeLessThanOrEqual(keyboardTop);
+
+    const feedback = page.locator('#feedback');
+    await expect(feedback).toBeAttached();
+    await expect(feedback).toHaveJSProperty('hidden', false);
+    await expect(feedback).not.toHaveAttribute('aria-hidden', 'true');
+    await expect(feedback).toContainText('Not quite.');
+    expect((await feedback.innerText()).trim().length).toBeGreaterThan('Not quite.'.length);
     await screenshot(page, 'mobile-keyboard-incorrect-feedback-visible');
 
-    await page.locator('#hint').tap();
-    await expect(page.locator('#hints .hint-panel')).toBeVisible();
+    await page.locator('.MLK__layer.is-visible .kb-tool[data-act="hint"]:visible').tap();
+    const hintPanel = page.locator('#hints .hint-panel');
+    await expect(hintPanel).toBeVisible();
     await expect.poll(async () => {
-      const panel = (await page.locator('#hints .hint-panel').boundingBox())!;
-      return panel.y < (await actionsTop()) - 24;
+      const panel = (await hintPanel.boundingBox())!;
+      const top = await page.evaluate(() => window.mathVirtualKeyboard.boundingRect.top);
+      return panel.y < top;
     }).toBe(true);
+    await expect.poll(() => page.evaluate(() => window.mathVirtualKeyboard.visible)).toBe(true);
+    await expect(field).toBeFocused();
     await screenshot(page, 'mobile-keyboard-hint-visible');
+  } finally {
+    await context.close();
+  }
+});
+
+test('phone keyboard shows in-field verdicts and clears them when the answer changes', async ({ browser, browserName }) => {
+  test.skip(browserName !== 'chromium', 'Mobile keyboard geometry is verified once in Chromium.');
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true });
+  try {
+    const page = await context.newPage();
+    await openApp(page, onlySkill('constant', 1));
+    await page.getByRole('button', { name: /Start practicing|Continue practicing/ }).click();
+    const field = page.locator('math-field').first();
+    await field.focus();
+    await page.evaluate(() => window.mathVirtualKeyboard.show());
+    await expect.poll(() => page.evaluate(() => window.mathVirtualKeyboard.visible)).toBe(true);
+
+    await setMathfield(field, '3x^{2}\\sin(x)+x^{3}\\cos(x)-\\frac{2}{x}+5');
+    await page.locator('.MLK__layer.is-visible .practice-enter:visible').tap();
+    const incorrectBox = page.locator('.answer-box[data-verdict="incorrect"]');
+    const incorrectVerdict = incorrectBox.locator('.answer-verdict');
+    await expect(incorrectVerdict).toHaveText('! Not quite');
+    const longAnswerGeometry = await page.evaluate(() => {
+      const field = document.querySelector('math-field')!.getBoundingClientRect();
+      const verdict = document.querySelector('.answer-box[data-verdict="incorrect"] .answer-verdict')!.getBoundingClientRect();
+      return {
+        fieldTop: field.top,
+        fieldBottom: field.bottom,
+        fieldLeft: field.left,
+        fieldRight: field.right,
+        verdictTop: verdict.top,
+        verdictBottom: verdict.bottom,
+        verdictLeft: verdict.left,
+        verdictRight: verdict.right,
+        backgroundImage: getComputedStyle(document.querySelector('.answer-verdict')!).backgroundImage,
+      };
+    });
+    expect(longAnswerGeometry.verdictLeft).toBeGreaterThan(longAnswerGeometry.fieldLeft + 40);
+    expect(longAnswerGeometry.verdictTop).toBeGreaterThanOrEqual(longAnswerGeometry.fieldTop);
+    expect(longAnswerGeometry.verdictBottom).toBeLessThanOrEqual(longAnswerGeometry.fieldBottom);
+    expect(longAnswerGeometry.verdictRight).toBeLessThanOrEqual(longAnswerGeometry.fieldRight);
+    expect(longAnswerGeometry.backgroundImage).toContain('linear-gradient');
+    await screenshot(page, 'mobile-keyboard-long-wrong-verdict');
+
+    const correctAnswer = await currentAnswer(page);
+    await setMathfield(field, correctAnswer);
+    await expect(page.locator('.answer-box')).not.toHaveAttribute('data-verdict');
+    await page.locator('.MLK__layer.is-visible .practice-enter:visible').tap();
+    const correctVerdict = page.locator('.answer-box[data-verdict="correct"] .answer-verdict');
+    const meter = page.locator('.answer-box .answer-meter');
+    await expect(correctVerdict).toHaveText('✓ Correct');
+    await expect(meter).toBeVisible();
+    await expect(page.locator('#next')).toBeFocused();
+
+    const correctGeometry = await page.evaluate(() => {
+      const keyboardTop = window.mathVirtualKeyboard.boundingRect.top;
+      const verdict = document.querySelector('.answer-box .answer-verdict')!.getBoundingClientRect();
+      const meter = document.querySelector('.answer-box .answer-meter')!.getBoundingClientRect();
+      const actions = document.querySelector('.actions')!.getBoundingClientRect();
+      return {
+        keyboardTop,
+        verdictBottom: verdict.bottom,
+        meterBottom: meter.bottom,
+        actionsWidth: actions.width,
+        actionsHeight: actions.height,
+      };
+    });
+    expect(correctGeometry.verdictBottom).toBeLessThanOrEqual(correctGeometry.keyboardTop);
+    expect(correctGeometry.meterBottom).toBeLessThanOrEqual(correctGeometry.keyboardTop);
+    expect(correctGeometry.actionsWidth).toBeLessThanOrEqual(1);
+    expect(correctGeometry.actionsHeight).toBeLessThanOrEqual(1);
+    await expect.poll(() => page.evaluate(() => window.mathVirtualKeyboard.visible)).toBe(true);
+    await screenshot(page, 'mobile-keyboard-correct-verdict');
+  } finally {
+    await context.close();
+  }
+});
+
+test('phone keyboard tab-row controls preserve focus and skip to another question', async ({ browser, browserName }) => {
+  test.skip(browserName !== 'chromium', 'Mobile keyboard controls are verified once in Chromium.');
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true });
+  try {
+    const page = await context.newPage();
+    const pageErrors: Error[] = [];
+    page.on('pageerror', (error) => pageErrors.push(error));
+    await openApp(page, onlySkill('constant', 1, 3));
+    await page.getByRole('button', { name: /Start practicing|Continue practicing/ }).click();
+    const field = page.locator('math-field').first();
+    await field.focus();
+    await page.evaluate(() => window.mathVirtualKeyboard.show());
+    await expect.poll(() => page.evaluate(() => window.mathVirtualKeyboard.visible)).toBe(true);
+
+    const visibleTools = page.locator('.MLK__layer.is-visible .kb-tool:visible');
+    await expect(visibleTools).toHaveCount(3);
+    await expect(page.locator('.MLK__layer.is-visible .kb-tool[data-act="hint"]')).toHaveText('Hint?');
+    await expect(page.locator('.MLK__layer.is-visible .kb-tool[data-act="skip"]')).toHaveText('Skip');
+    await expect(page.locator('.MLK__layer.is-visible .kb-tool[data-act="hide"]')).toHaveAttribute('aria-label', 'Hide keyboard');
+
+    for (let hint = 0; hint < 3; hint += 1) {
+      await page.locator('.MLK__layer.is-visible .kb-tool[data-act="hint"]:visible').tap();
+      await expect(page.locator('#hints .hint-panel')).toBeVisible();
+      await expect.poll(() => page.evaluate(() => window.mathVirtualKeyboard.visible)).toBe(true);
+      await expect(field).toBeFocused();
+    }
+    await expect(page.locator('.MLK__layer.is-visible .kb-tool[data-act="hint"]')).toBeHidden();
+
+    const previousQuestion = (await readStoredState(page)).session?.current?.question.signature;
+    await page.locator('.MLK__layer.is-visible .kb-tool[data-act="skip"]:visible').tap();
+    await expect.poll(async () => (await readStoredState(page)).session?.current?.question.signature)
+      .not.toBe(previousQuestion);
+    await expect.poll(() => page.evaluate(() => window.mathVirtualKeyboard.visible)).toBe(true);
+    const nextField = page.locator('math-field').first();
+    await expect(nextField).toBeFocused();
+    expect((await readStoredState(page)).session?.finished).toBe(false);
+
+    await setMathfield(nextField, await currentAnswer(page));
+    await nextField.press('Enter');
+    await expect(page.locator('#feedback')).toContainText('Correct');
+    await expect(visibleTools).toHaveCount(1);
+    await expect(page.locator('.MLK__layer.is-visible .kb-tool[data-act="hide"]:visible')).toHaveCount(1);
+    await expect(page.locator('.MLK__layer.is-visible .kb-tool[data-act="hint"]')).toBeHidden();
+    await expect(page.locator('.MLK__layer.is-visible .kb-tool[data-act="skip"]')).toBeHidden();
+    expect(pageErrors).toEqual([]);
+  } finally {
+    await context.close();
+  }
+});
+
+test('phone keyboard enter key grades and advances in two taps', async ({ browser, browserName }) => {
+  test.skip(browserName !== 'chromium', 'Mobile keyboard controls are verified once in Chromium.');
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true });
+  try {
+    const page = await context.newPage();
+    const pageErrors: Error[] = [];
+    page.on('pageerror', (error) => pageErrors.push(error));
+    await openApp(page, onlySkill('constant', 1, 3));
+    await page.getByRole('button', { name: /Start practicing|Continue practicing/ }).click();
+    const field = page.locator('math-field').first();
+    const firstQuestion = (await readStoredState(page)).session?.current?.question.signature;
+    await field.focus();
+    await page.evaluate(() => window.mathVirtualKeyboard.show());
+    await expect.poll(() => page.evaluate(() => window.mathVirtualKeyboard.visible)).toBe(true);
+    await setMathfield(field, await currentAnswer(page));
+
+    const enterKey = page.locator('.MLK__layer.is-visible .practice-enter:visible');
+    await expect(enterKey).toHaveText('Check');
+    await enterKey.tap();
+    await expect(page.locator('.answer-box[data-verdict="correct"] .answer-verdict')).toHaveText('✓ Correct');
+    await expect(enterKey).toHaveText('Next');
+    await expect(page.locator('#next')).toBeFocused();
+    await expect.poll(() => page.evaluate(() => window.mathVirtualKeyboard.visible)).toBe(true);
+
+    await enterKey.tap();
+    await expect.poll(async () => (await readStoredState(page)).session?.current?.question.signature)
+      .not.toBe(firstQuestion);
+    await expect.poll(() => page.evaluate(() => window.mathVirtualKeyboard.visible)).toBe(true);
+    await expect(page.locator('math-field').first()).toBeFocused();
+    expect(pageErrors).toEqual([]);
   } finally {
     await context.close();
   }

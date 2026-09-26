@@ -331,22 +331,31 @@ test.describe('session transition flows', () => {
 
   test('on a 390px viewport, the open math keyboard and input survive Next', async ({ page, browserName }) => {
     const config = flowConfig();
+    const pageErrors: Error[] = [];
+    page.on('pageerror', (error) => pageErrors.push(error));
     await page.clock.install({ time: FIXED_NOW });
     await openApp(page, config, { width: 390, height: 844 });
     await page.getByRole('button', { name: /Start practicing|Continue practicing/ }).click();
     await expect.poll(() => currentPrimarySkill(page)).toBe('constant');
 
     const firstField = page.locator('math-field').first();
+    const firstQuestion = (await readStoredState(page)).session?.current?.question.signature;
     await firstField.focus();
     await page.getByRole('button', { name: 'Math keyboard' }).click();
     await expect.poll(() => keyboardVisible(page)).toBe(true);
     await setMathfield(firstField, await currentAnswer(page));
-    await page.getByRole('button', { name: 'Check answer' }).click();
+    const enterKey = page.locator('.MLK__layer.is-visible .practice-enter:visible');
+    await expect(enterKey).toHaveText('Check');
+    await enterKey.click();
     await expect(page.locator('#feedback')).toContainText('Correct');
     await expect.poll(() => keyboardVisible(page)).toBe(true);
     await expect(page.locator('#next')).toBeEnabled();
+    await expect(page.locator('#next')).toBeFocused();
 
-    await page.locator('#next').click();
+    await expect(enterKey).toHaveText('Next');
+    await enterKey.click();
+    await expect.poll(async () => (await readStoredState(page)).session?.current?.question.signature)
+      .not.toBe(firstQuestion);
     await expect.poll(() => currentPrimarySkill(page)).toBe('constant');
     await expect.poll(() => keyboardVisible(page)).toBe(true);
     const nextField = page.locator('math-field').first();
@@ -358,5 +367,6 @@ test.describe('session transition flows', () => {
       path: path.join(screenshotDir, `${browserName}-flow-mobile-390-next-input.png`),
       fullPage: true,
     });
+    expect(pageErrors).toEqual([]);
   });
 });

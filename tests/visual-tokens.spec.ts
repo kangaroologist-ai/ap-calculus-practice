@@ -115,6 +115,16 @@ test("math keyboard geometry and tooltips match on Main and More", async ({ brow
             .filter((key) => !key.classList.contains("separator")) as HTMLElement[];
           const firstKey = rowKeys[0].getBoundingClientRect();
           const lastKey = rowKeys[rowKeys.length - 1].getBoundingClientRect();
+          const enter = layer.querySelector<HTMLElement>(".practice-enter")!;
+          const enterHasTwoUnitClass = enter.classList.contains("w20");
+          const enterBackground = getComputedStyle(enter).backgroundColor;
+          const tintProbe = document.createElement("span");
+          tintProbe.style.backgroundColor = getComputedStyle(document.documentElement)
+            .getPropertyValue("--tint")
+            .trim();
+          document.body.append(tintProbe);
+          const tintBackground = getComputedStyle(tintProbe).backgroundColor;
+          tintProbe.remove();
           const oneUnitWidths = Array.from(layer.querySelectorAll<HTMLElement>(
             ".MLK__rows > .MLK__row > div:not(.separator)",
           ))
@@ -142,6 +152,9 @@ test("math keyboard geometry and tooltips match on Main and More", async ({ brow
             oneUnitWidths,
             actionOffsets,
             plateHeight: plateRect.height,
+            enterHasTwoUnitClass,
+            enterBackground,
+            tintBackground,
           };
         });
 
@@ -160,10 +173,12 @@ test("math keyboard geometry and tooltips match on Main and More", async ({ brow
           expect(Math.abs((geometry.keyAreaLeft + geometry.keyAreaRight) / 2 - width / 2))
             .toBeLessThanOrEqual(2);
         }
-        expect(geometry.actionOffsets).toHaveLength(4);
+        expect(geometry.actionOffsets).toHaveLength(3);
         for (const offset of geometry.actionOffsets) {
           expect(offset).toBeLessThanOrEqual(1);
         }
+        expect(geometry.enterHasTwoUnitClass).toBe(true);
+        expect(geometry.enterBackground).toBe(geometry.tintBackground);
         plateHeights.push(geometry.plateHeight);
         await expect(page.locator('.ML__keyboard [data-command*="undo"]')).toHaveCount(0);
         await page.screenshot({ path: `${output}/keyboard-${width}-${pageName.toLowerCase()}.png` });
@@ -184,6 +199,31 @@ test("math keyboard geometry and tooltips match on Main and More", async ({ brow
     }
   } finally {
     await Promise.all([mobileContext.close(), desktopContext.close()]);
+  }
+});
+
+test("brand mark geometry and favicon match on Main and Help", async ({ page, browserName }) => {
+  test.skip(browserName !== "chromium", "Brand mark geometry is verified once in Chromium.");
+  for (const width of [390, 1280]) {
+    await page.setViewportSize({ width, height: 900 });
+    for (const route of ["/", "/help.html"] as const) {
+      await page.goto(route);
+      const mark = page.locator(".brand-mark");
+      const svg = mark.locator("svg");
+      await expect(svg).toHaveCount(1);
+      await expect(page.locator('link[rel="icon"]')).toHaveAttribute("href", "/favicon.svg");
+      const offset = await mark.evaluate((element) => {
+        const painted = element.querySelector("svg g")!.getBoundingClientRect();
+        const box = element.getBoundingClientRect();
+        return {
+          x: Math.abs((painted.left + painted.right) / 2 - (box.left + box.right) / 2),
+          y: Math.abs((painted.top + painted.bottom) / 2 - (box.top + box.bottom) / 2),
+        };
+      });
+      expect(offset.x).toBeLessThanOrEqual(0.75);
+      expect(offset.y).toBeLessThanOrEqual(0.75);
+      await page.screenshot({ path: `${output}/brand-${width}-${route === "/" ? "home" : "help"}.png` });
+    }
   }
 });
 
