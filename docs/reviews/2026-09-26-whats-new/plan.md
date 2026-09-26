@@ -50,7 +50,7 @@
 
 本功能涉及启动流程与焦点，改动集中在少数文件，由我直接实现，不委派 Luna。
 
-- [ ] **T0 · W0** — `package.json` 版本改为 `1.1.1`（`package-lock.json` 同步）；`vite.config.ts` 与 `vitest.config.ts` 用 `define` 注入 `__APP_VERSION__`，`src/` 中声明其类型。验证：T1 的测试要求 `__APP_VERSION__ === WHATS_NEW[0].version`；构建产物中出现 `1.1.1`。
+- [x] **T0 · W0** — `package.json` 版本改为 `1.1.1`（`package-lock.json` 同步）；`vite.config.ts` 与 `vitest.config.ts` 用 `define` 注入 `__APP_VERSION__`，`src/` 中声明其类型。验证：T1 的测试要求 `__APP_VERSION__ === WHATS_NEW[0].version`；构建产物中出现 `1.1.1`。**结果：** `package.json`/锁文件根版本为 1.1.1；`src/env.d.ts` 声明类型；版本断言通过（T1）；`dist/assets/main-*.js` 含 `1.1.1`。
 - [x] **T1 · W1/W10** — 新建 `src/whats-new.ts`：导出 `WHATS_NEW`（`1.1.1`、`1.1.0` 两条），以及纯函数 `compareVersions`、`unseenEntries(entries, seen)`。验证：新增 `tests/whats-new.test.ts`，覆盖版本唯一且严格倒序、版本等于 `package.json`、seen 为空/最新/较旧/无法解析/比最新还新时返回的未读条目。**结果：** `tests/whats-new.test.ts` 6/6 通过（2026-09-26 17:08），含 `__APP_VERSION__ === package.json === WHATS_NEW[0]` 的断言。
 - [x] **T2 · W2–W5/W8** — `src/main.ts`：新增 `readSeen()`/`writeSeen()`（`try/catch` 包住 `localStorage`，出错返回“不可用”）；在 `boot()` 中按 W2–W5 决定是否弹窗，基于 `saved` 判断新老用户，`progressLink` 存在时跳过。验证：T5 的 e2e 用例。**结果：** `boot()` 中实现；新设备通过链接恢复时同样设为最新（W3/W5 细化）。T5 (a)(b)(c)(d)(e)(h) 通过。
 - [x] **T3 · W2/W6/W7** — `src/main.ts`：`whatsNew(entries)` 用现有 `modal()` 渲染条目与 “Got it” 按钮；页脚加 “What's new · v{版本}” 按钮；条目显示版本号与日期；关闭时如有题目调用 `focusAnswer()`。`src/style.css` 只在需要时为条目列表加少量样式（沿用 tokens）。验证：T5、T6。**结果：** 页脚显示 “What’s new · v1.1.1”；条目带版本与日期；“Got it”/✕/Esc 关闭；关闭后焦点回到答案（T5(g)）。样式只用现有 tokens。
@@ -61,9 +61,20 @@
   ![390 浅色](whats-new-390-light.png) ![1280 深色](whats-new-1280-dark.png)
 
   人工查看：两条记录、版本与日期、按钮都完整可见，无裁切。
-- [ ] **T7 · W12** — `npm test`、`npm run test:math`、`npm run build`、`npm run test:e2e`；提交并推送，等待 CI。验证：CI 成功，记录测试数。
-- [ ] **T8 · W12** — `wrangler pages deploy dist`；比对线上 `/`、`/help` 与关键资源的 SHA-256；在干净浏览器预置老用户进度后打开线上站点，确认弹窗出现一次、刷新后不再出现。验证：哈希一致 + 线上截图。
+- [x] **T7 · W12** — `npm test`、`npm run test:math`、`npm run build`、`npm run test:e2e`；提交并推送，等待 CI。验证：CI 成功，记录测试数。**结果：** 单元测试 23 个文件 326/326 通过；数学 corpus 10,100 题 0 失败；构建成功；e2e 三引擎 136 通过、32 项按设计仅 Chromium 运行而跳过、0 失败。`d4e6104` 已推送，CI run 36232461501 成功。
+- [x] **T8 · W12** — `wrangler pages deploy dist`；比对线上 `/`、`/help` 与关键资源的 SHA-256；在干净浏览器预置老用户进度后打开线上站点，确认弹窗出现一次、刷新后不再出现。验证：哈希一致 + 线上截图。**结果：** Cloudflare 部署 `51e3b4b1`（来源 `d4e6104`）；正式域名 `/`、`/help` 与 4 个资源文件共 6 个与本地 `dist` SHA-256 一致；线上 `/help` 含 “Updates and version”。干净 Chromium 预置老用户进度后打开线上站点：弹窗出现、两条记录；点 Got it 后刷新不再弹出；页脚显示 “What’s new · v1.1.1”。线上截图（390 浅色，老用户首次打开）：
+
+  ![线上 390 浅色](live-returning-390-light.png)
 
 ## Progress log
 
-（实现后记录提交哈希与关键结果。）
+- `d4e6104` — What's new 窗口与版本号 1.1.1；单元测试 326 通过（新增 6），数学 10,100 题 0 失败，e2e 136 通过 / 32 跳过 / 0 失败（新增 `whats-new.spec.ts` 7 例 × 3 引擎，视觉 4 例）；CI 成功；Cloudflare 部署 `51e3b4b1`，线上 6 个文件哈希一致，线上老用户弹窗验证通过。
+
+## 完成核对
+
+- W0 → T0 + T1（版本断言）+ T8（线上页脚 v1.1.1）：满足。
+- W1、W10 → T1（单测）+ T6 截图（两条记录内容）：满足。
+- W2、W4 → T5(b) + T8 线上：满足。W3 → T5(a)；链接恢复新设备由 `progress-link.spec.ts` 原有用例覆盖弹窗不遮挡流程，且代码在无本地进度时写入标记：满足。
+- W5 → T5(d)(e)：满足。启动出错页面不经过弹窗代码（错误发生在 `render()` 之前或进入 catch），未单独测试，属于代码检查结论。
+- W6、W7 → T3 + T5(f)(g)：满足；(g) 通过页脚入口验证，启动弹窗共用同一关闭逻辑（R11）。
+- W8 → T5(h)：满足。W9 → T6：满足。W11 → T4：满足。W12 → T7 + T8：满足。
