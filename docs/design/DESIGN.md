@@ -81,7 +81,9 @@ rem 刻度，最小 12 px（`--t-caption`），由 `tests/visual-tokens.spec.ts`
 | `--space-6` | 24px |
 | `--space-7` | 28px |
 | `--space-8` | 32px |
+| `--space-9` | 36px |
 | `--space-10` | 40px |
+| `--space-14` | 56px |
 
 现有取值到令牌的对应（按 `src/style.css` 中 padding / margin / gap 的出现次数统计）：
 
@@ -94,6 +96,8 @@ rem 刻度，最小 12 px（`--t-caption`），由 `tests/visual-tokens.spec.ts`
 | 15（4）、17（2） | 16 | |
 | 25（5）、27（2） | 24 或 28 | |
 | 30（2） | 32 | |
+| 35、37（欢迎卡片内边距） | 36（`--space-9`） | 上下左右内边距统一为 36 |
+| 58 | 56（`--space-14`） | |
 | 0、1–3 px、≥ 64 px 的布局尺寸 | 保留字面值 | 不属于间距节奏 |
 
 验收（Spec S2）：每处数值变化 ≤ 2 px，超出的逐条说明理由；改前改后的截图矩阵由审核者比对，不允许破版、换行变化或裁切。
