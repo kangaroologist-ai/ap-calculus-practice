@@ -256,7 +256,7 @@ Codex 沙盒不能起服务器，所有浏览器测试和截图都由 Claude 运
 - [x] **K-5 · K1–K7 · Luna max**（改写测试，范围有限；它跑不了 Playwright，由 Claude 运行）— 更新 `tests/app.spec.ts` 中依赖 “Type y” / “Type arcsin” 的键盘用例；在 `tests/visual-tokens.spec.ts` 加几何与气泡断言（留白、键宽、图标偏移、两页高度、`::after` 不可见、工具栏不存在）。文件：只动这两个测试文件。 **结果**（Luna max 编写，Claude 复核并修改两处）：`tests/app.spec.ts` 中两个键盘用例改用新页名和读音名称，并逐一比对两页的完整键表；`tests/visual-tokens.spec.ts` 新增几何测试。复核时我改了两处：① 留白原先相对 MathLive 的内缩底板测量，永远是 0，改为相对屏幕边缘（Spec K2）；② 触屏上答题框获得焦点时会自动打开键盘，与按钮的开关操作竞争，导致测试失败，改为直接打开键盘（按钮本身由 app.spec 覆盖）。提交 `72c22df`、`64a27b5`。
 - [x] **K-6 · 复核 K-4/K-5 · Claude** — 读 diff，查有没有为了通过而放宽断言；运行 vitest 与三引擎 Playwright。 **结果**：复核 K-4 / K-5 时没有发现放宽断言的情况。反向验证：把样式表换回改版前，几何测试失败（留白 20.5 px，上限 6 px）。键盘相关浏览器测试在三个引擎上 16 项通过，20 项按设计跳过（只在 Chromium 测几何）；Vitest 24 个文件 352 项通过。
 - [x] **K-7 · K1–K7 · Claude**（视觉检查）— 对比 `baseline/` 与改后截图矩阵（WebKit 390 两页、点按后 1.5 s、深色、1280），逐条对照 K1–K7 报告通过 / 不通过。 **结果（并入 R-3，改由 Claude 完成，理由见 R-3 修订）**：K1–K7 已由自动测试断言（`tests/math-keyboard-layout.test.ts` 26 项，`tests/visual-tokens.spec.ts` 几何测试），另外对照了 `artifacts/design/1.2.0/` 中键盘两页、点按后、深色、1280 的截图，全部符合。
-- [ ] **K-8 · 复核 K-7 · Claude** — 核实 Sonnet 结论；不通过的项回到 K-3。然后请用户在真机 iPhone 上确认一次（我无法操作真机）。
+- [ ] **K-8 · 复核 K-7 · Claude** — 核实 Sonnet 结论；不通过的项回到 K-3。然后请用户在真机 iPhone 上确认一次（我无法操作真机）。 **进展**：非正式环境预览已部署，地址 https://design-keyboard-1-2.ap-calculus-practice.pages.dev（资源 `main-BhzghcQ3.js`，`/help` 已是新文案）；正式站点未改动（仍为 `main-jvVkbN6_.js`）。等待用户在 iPhone 上确认。
 
 ### 阶段 D · 其他设计改进（依赖阶段 S 的令牌）
 
