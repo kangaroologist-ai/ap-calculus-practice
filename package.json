@@ -10,7 +10,8 @@
     "test": "vitest run",
     "test:progress": "vitest run tests/progress.test.ts tests/transfer.test.ts",
     "test:math": "tsx scripts/math-corpus.ts && .venv/bin/python scripts/check_math.py",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "design:capture": "node --import tsx scripts/design-capture.ts"
   },
   "dependencies": {
     "@cortex-js/compute-engine": "0.130.0",
