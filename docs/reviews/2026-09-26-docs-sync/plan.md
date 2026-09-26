@@ -30,7 +30,12 @@ GitHub `main` 与本地一致（`dec26fc`），因此问题在内容，不在推
 - [x] **T1 · U1** — `README.md`：修正 S1–S5。验证：逐条对照 S1–S5 引用的代码位置，并 grep 确认“播放一次”已删除。**结果：** 改了 5 处（欢迎按钮、键盘两页与变量、深色/读屏、无法读取的代码、庆祝规则）；grep 已找不到“播放一次”，庆祝规则两处说法一致。
 - [x] **T2 · U2** — `help.html`：在 Typing formulas 里补键盘两页与题目变量；在 Move progress 里补无法读取代码时的做法。验证：`tests/ux-refresh.spec.ts`、`tests/visual-tokens.spec.ts` 通过；查看 390/1280 帮助页截图。**结果：** 两个 spec 共 12 项通过，12 项按设计只在 Chromium 运行而跳过；展开所有折叠区后截图：390 light 与 1280 dark 都没有横向溢出，新文字排版正常（本目录 `help-answer-*.png`、`help-move-*.png`）。提示文字与 `src/transfer.ts`、`src/migrate.ts` 中的实际消息一致。
 - [x] **T3 · U3** — `../AGENTS.md`：新增“练习网站文档同步”一节。验证：重新阅读该节；在最终回复中说明 S6 的 Codex 加载范围问题。**结果：** 已在 `../AGENTS.md` 末尾新增“练习网站（ap-calculus-practice）文档同步”一节，共 5 条（同轮更新两份文档、先核对再改、help 随网站部署、无需更新时写明理由、交付前检查），并重新读过。该文件不在 git 中，因此没有提交哈希。
-- [ ] **T4 · U1/U2/U4** — `npm test`、`npm run build`，提交并推送，等待 CI。验证：CI 成功。
-- [ ] **T5 · U4** — `wrangler pages deploy dist`，比对线上 `/help` 与关键资源的 SHA-256。验证：全部一致。
+- [x] **T4 · U1/U2/U4** — `npm test`、`npm run build`，提交并推送，等待 CI。验证：CI 成功。**结果：** 单元测试 320/320 通过，构建成功；`84e5e25` 已推送，CI 成功。
+- [x] **T5 · U4** — `wrangler pages deploy dist`，比对线上 `/help` 与关键资源的 SHA-256。验证：全部一致。**结果：** 部署 `35e01f28`（来源 `84e5e25`）；正式域名 8 个文件与本地 `dist` 全部一致，线上 `/help` 能找到新句子 “can’t be read”。
 
 ## Progress log
+- `84e5e25` — README 改 5 处，help 新增 2 段，另外更新 `../AGENTS.md`（不在 git 中）；单元测试 320 通过，帮助页与视觉 e2e 12 项通过；CI 成功；Cloudflare 部署 `35e01f28`，线上 8 个文件哈希一致。
+
+## 完成核对
+
+- U1 → T1 + T4：满足。U2 → T2（截图 + 测试）+ T5（已上线）：满足。U3 → T3：满足；但 S6 指出 Codex 在本仓库内工作时读不到这份规则，这一点未解决，交给用户决定。U4 → T4 + T5：满足。
