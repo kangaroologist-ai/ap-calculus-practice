@@ -838,7 +838,7 @@ test('mobile keyboard keeps submit above keys, hides, and grades', async ({ page
 
   // Both custom layouts expose the primary hide action; use the active layer
   // so this remains stable if MathLive restores the last selected tab.
-  const hideKey = page.locator('.ML__keyboard [data-command*="hideVirtualKeyboard"]:visible');
+  const hideKey = page.locator('.MLK__layer.is-visible [aria-label="hide keyboard"]:visible');
   await expect(hideKey).toHaveCount(1);
   const geometry = await page.evaluate(() => {
     const keyboard = window.mathVirtualKeyboard.boundingRect;
@@ -851,7 +851,7 @@ test('mobile keyboard keeps submit above keys, hides, and grades', async ({ page
 
   await hideKey.click();
   await expect.poll(() => page.evaluate(() => window.mathVirtualKeyboard.visible)).toBe(false);
-  await expect(page.locator('.ML__keyboard [data-command*="hideVirtualKeyboard"]:visible')).toHaveCount(0);
+  await expect(page.locator('.MLK__layer.is-visible [aria-label="hide keyboard"]:visible')).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Math keyboard' }).click();
   await expect.poll(() => page.evaluate(() => window.mathVirtualKeyboard.visible)).toBe(true);
@@ -859,7 +859,7 @@ test('mobile keyboard keeps submit above keys, hides, and grades', async ({ page
   await expect(page.locator('#feedback')).toContainText('Correct');
 });
 
-test('Functions math keyboard exposes y and inverse-trig insertion', async ({ page, browserName }) => {
+test('More math keyboard exposes y and inverse-trig insertion', async ({ page, browserName }) => {
   test.skip(browserName !== 'chromium', 'MathLive keyboard insertion is verified in the Chromium representative.');
   await openApp(page, onlySkill('implicit', 5), { width: 390, height: 844 });
   await page.getByRole('button', { name: /Start practicing|Continue practicing/ }).click();
@@ -867,30 +867,36 @@ test('Functions math keyboard exposes y and inverse-trig insertion', async ({ pa
   await field.focus();
   await page.getByRole('button', { name: 'Math keyboard' }).click();
   await expect(page.locator('.ML__keyboard')).toBeVisible();
-  await expect(
-    page.locator('.ML__keyboard .MLK__keycap[aria-label="Type y"]:visible'),
-  ).toBeVisible();
 
-  const toolbarText = await page.locator('.MLK__toolbar').allTextContents();
-  expect(toolbarText.join(' ')).toContain('Derivatives');
-  expect(toolbarText.join(' ')).toContain('Functions');
-  const derivativeKeys = await page.locator('.ML__keyboard .MLK__keycap:visible').evaluateAll((keys) =>
-    keys.map((key) => key.getAttribute('aria-label')?.replace(/^Type /, '')).filter(Boolean),
+  const visibleLayer = page.locator('.MLK__layer.is-visible');
+  const mainKeys = await visibleLayer.locator('.MLK__keycap:visible').evaluateAll((keys) =>
+    keys.map((key) => key.getAttribute('aria-label')),
   );
-  expect(derivativeKeys).toEqual(expect.arrayContaining(['x', 'y', 'sec', 'csc']));
-  const keyText = await page.locator('.ML__keyboard .MLK__keycap').allTextContents();
-  expect(keyText.some((label) => /√|∛|root|sqrt/i.test(label))).toBe(true);
+  expect(mainKeys).toEqual([
+    'sine', 'cosine', 'tangent', '7', '8', '9', 'fraction', 'left parenthesis', 'right parenthesis',
+    'secant', 'cosecant', 'cotangent', '4', '5', '6', 'times', 'power', 'square root',
+    'e to the power', 'natural log', 'x', '1', '2', '3', 'minus',
+    'y', '0', 'decimal point', 'plus',
+  ]);
+  await expect(visibleLayer.locator('.MLK__toolbar .selected')).toHaveText('Main');
 
-  await page.locator('.MLK__toolbar .layer-switch').filter({ hasText: 'Functions' }).click();
-  const functionKeys = await page.locator('.ML__keyboard .MLK__keycap:visible').evaluateAll((keys) =>
-    keys.map((key) => key.getAttribute('aria-label')?.replace(/^Type /, '')).filter(Boolean),
+  await visibleLayer.locator('.MLK__toolbar .layer-switch').filter({ hasText: 'More' }).click();
+  await expect(page.locator('.MLK__layer.is-visible .MLK__toolbar .selected')).toHaveText('More');
+  const moreLayer = page.locator('.MLK__layer.is-visible');
+  const moreKeys = await moreLayer.locator('.MLK__keycap:visible').evaluateAll((keys) =>
+    keys.map((key) => key.getAttribute('aria-label')),
   );
-  expect(functionKeys).toEqual(expect.arrayContaining(['arcsin', 'arccos', 'arctan', 'cot']));
-  await page.locator('.ML__keyboard .MLK__keycap[aria-label="Type y"]:visible').click();
+  expect(moreKeys).toEqual([
+    'inverse sine', 'inverse cosine', 'inverse tangent',
+    'log base', 'cube root', 'pi',
+    'y', 't', 'theta',
+  ]);
+
+  await moreLayer.locator('.MLK__keycap[aria-label="y"]').click();
   await expect(field).toHaveJSProperty('value', 'y');
-  await page.locator('.ML__keyboard .MLK__keycap[aria-label="Type arcsin"]:visible').click();
+  await moreLayer.locator('.MLK__keycap[aria-label="inverse sine"]').click();
   const inserted = await field.evaluate((element) => (element as HTMLElement & { value: string }).value);
   expect(inserted).toContain('arcsin');
   expect(inserted).toContain('y');
-  await screenshot(page, 'mobile-functions-keyboard-insertion');
+  await screenshot(page, 'mobile-more-keyboard-insertion');
 });

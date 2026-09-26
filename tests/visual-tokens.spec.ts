@@ -72,6 +72,117 @@ for (const width of [390, 1280]) {
   }
 }
 
+test("math keyboard geometry and tooltips match on Main and More", async ({ browser, browserName }) => {
+  test.skip(browserName !== "chromium", "Keyboard geometry is verified once in Chromium.");
+  const mobileContext = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    hasTouch: true,
+  });
+  const desktopContext = await browser.newContext({
+    viewport: { width: 1280, height: 860 },
+  });
+
+  try {
+    const viewports = [
+      { page: await mobileContext.newPage(), width: 390, touch: true },
+      { page: await desktopContext.newPage(), width: 1280, touch: false },
+    ];
+    for (const { page, width, touch } of viewports) {
+      await page.goto("/");
+      await page.getByRole("button", { name: /Start practicing|Continue practicing/ }).click();
+      await page.locator("math-field").first().waitFor({ state: "visible" });
+      await page.getByRole("button", { name: "Math keyboard" }).click();
+      await expect(page.locator(".ML__keyboard")).toBeVisible();
+
+      const plateHeights: number[] = [];
+      for (const pageName of ["Main", "More"] as const) {
+        const visibleLayer = page.locator(".MLK__layer.is-visible");
+        const selectedPage = (await visibleLayer.locator(".MLK__toolbar .selected").textContent())?.trim();
+        if (selectedPage !== pageName) {
+          await visibleLayer.locator(".MLK__toolbar .layer-switch").filter({ hasText: pageName }).click();
+        }
+        await expect(page.locator(".MLK__layer.is-visible .MLK__toolbar .selected")).toHaveText(pageName);
+
+        const geometry = await page.locator(".MLK__layer.is-visible").evaluate((layer) => {
+          const plate = layer.closest<HTMLElement>(".MLK__plate")!;
+          const plateRect = plate.getBoundingClientRect();
+          const firstRow = layer.querySelector(".MLK__rows > .MLK__row")!;
+          const rowKeys = Array.from(firstRow.children)
+            .filter((key) => !key.classList.contains("separator")) as HTMLElement[];
+          const firstKey = rowKeys[0].getBoundingClientRect();
+          const lastKey = rowKeys[rowKeys.length - 1].getBoundingClientRect();
+          const oneUnitWidths = Array.from(layer.querySelectorAll<HTMLElement>(
+            ".MLK__rows > .MLK__row > div:not(.separator)",
+          ))
+            .filter((key) => !["w5", "w15", "w20", "w30", "w40", "w50"].some((widthClass) =>
+              key.classList.contains(widthClass),
+            ))
+            .map((key) => key.getBoundingClientRect().width);
+          const actionOffsets = Array.from(layer.querySelectorAll<HTMLElement>(
+            ".MLK__rows > .MLK__row > div.action",
+          )).flatMap((key) => {
+            const svg = key.querySelector("svg");
+            if (!svg) return [];
+            const keyRect = key.getBoundingClientRect();
+            const svgRect = svg.getBoundingClientRect();
+            return [Math.abs(
+              (svgRect.left + svgRect.right) / 2 - (keyRect.left + keyRect.right) / 2,
+            )];
+          });
+          return {
+            // Spec K2 measures from the screen edge, not from MathLive's inset plate.
+            leftMargin: firstKey.left,
+            rightMargin: document.documentElement.clientWidth - lastKey.right,
+            keyAreaLeft: firstKey.left,
+            keyAreaRight: lastKey.right,
+            oneUnitWidths,
+            actionOffsets,
+            plateHeight: plateRect.height,
+          };
+        });
+
+        if (width === 390) {
+          expect(geometry.leftMargin).toBeGreaterThanOrEqual(0);
+          expect(geometry.leftMargin).toBeLessThanOrEqual(6);
+          expect(geometry.rightMargin).toBeGreaterThanOrEqual(0);
+          expect(geometry.rightMargin).toBeLessThanOrEqual(6);
+        }
+        expect(geometry.oneUnitWidths.length).toBeGreaterThan(0);
+        for (const keyWidth of geometry.oneUnitWidths) {
+          expect(Math.abs(keyWidth - geometry.oneUnitWidths[0])).toBeLessThanOrEqual(1);
+        }
+        if (width === 1280) {
+          expect(geometry.keyAreaRight - geometry.keyAreaLeft).toBeLessThanOrEqual(760);
+          expect(Math.abs((geometry.keyAreaLeft + geometry.keyAreaRight) / 2 - width / 2))
+            .toBeLessThanOrEqual(2);
+        }
+        expect(geometry.actionOffsets).toHaveLength(4);
+        for (const offset of geometry.actionOffsets) {
+          expect(offset).toBeLessThanOrEqual(1);
+        }
+        plateHeights.push(geometry.plateHeight);
+        await expect(page.locator('.ML__keyboard [data-command*="undo"]')).toHaveCount(0);
+        await page.screenshot({ path: `${output}/keyboard-${width}-${pageName.toLowerCase()}.png` });
+
+        if (pageName === "Main") {
+          const plus = page.locator('.MLK__layer.is-visible .MLK__keycap[aria-label="plus"]');
+          if (touch) await plus.tap();
+          else await plus.click();
+          await page.waitForTimeout(1500);
+          const tooltipDisplays = await page.locator(".ML__keyboard [data-tooltip]").evaluateAll((elements) =>
+            elements.map((element) => getComputedStyle(element, "::after").display),
+          );
+          expect(tooltipDisplays.length).toBeGreaterThan(0);
+          expect(tooltipDisplays.every((display) => display === "none")).toBe(true);
+        }
+      }
+      expect(Math.abs(plateHeights[0] - plateHeights[1])).toBeLessThanOrEqual(1);
+    }
+  } finally {
+    await Promise.all([mobileContext.close(), desktopContext.close()]);
+  }
+});
+
 for (const scheme of ["light", "dark"] as const) {
   test(
     `all visible 390px practice and path text is at least 12px in ${scheme}`,
