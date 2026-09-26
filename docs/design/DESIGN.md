@@ -121,7 +121,6 @@ rem 刻度，最小 12 px（`--t-caption`），由 `tests/visual-tokens.spec.ts`
 |---|---|---|
 | `--shadow-card` | `0 4px 24px` `--label` 2% | 练习卡片 |
 | `--shadow-dialog` | `0 24px 90px` `--label` 20% | 对话框 |
-| `--shadow-bar` | `0 −4px 16px` `--label` 3% | 键盘上方的操作栏 |
 
 深色模式在深色令牌块中重新定义这三个值（已移入深色令牌块）。一个元素只用阴影或描边中的一种表示层级。
 
@@ -132,7 +131,6 @@ rem 刻度，最小 12 px（`--t-caption`），由 `tests/visual-tokens.spec.ts`
 | `--dur-press` | 100ms | 按钮按下反馈 |
 | `--dur-fast` | 150ms | 反馈框颜色切换 |
 | `--dur-base` | 200ms | 对话框与遮罩进出 |
-| `--dur-chrome` | 220ms | 键盘打开时操作栏跟随上移 |
 | `--ease-out` | `cubic-bezier(0.23, 1, 0.32, 1)` | 进入、按下回弹 |
 | `--ease-in-out` | `cubic-bezier(0.77, 0, 0.175, 1)` | 屏幕内的位置移动 |
 
@@ -143,7 +141,7 @@ rem 刻度，最小 12 px（`--t-caption`），由 `tests/visual-tokens.spec.ts`
 - 断点：`max-width: 900px`、`700px`、`430px`、`320px`（`src/style.css` 末尾的 Responsive 部分）。
 - 审查视口：390 × 844（iPhone，WebKit 仿真）和 1280 × 860（桌面，Chromium），浅色与深色各一套；320 px 只做溢出检查。
 - 练习卡片桌面最宽 800 px；1280 px 下键盘打开时侧栏留空是有意为之。
-- 安全区：页眉、页脚和键盘上方的操作栏使用 `env(safe-area-inset-*)`。真机横屏仍需核对。
+- 安全区：页眉和页脚使用 `env(safe-area-inset-*)`。真机横屏仍需核对。
 
 ## 5. 组件
 
@@ -184,7 +182,15 @@ MathLive `math-field`，边框 `--control-border`，聚焦时 3 px `--focus` 外
 
 答对之后：`Check answer` 与 `Need a hint?` 隐藏，`Next question →` 显示为主按钮并获得焦点；3 秒自动前进与 Enter 继续保持不变。落实位置：`src/main.ts:398` 的 `updateControls()`；`tests/app.spec.ts`。
 
-手机键盘打开时：判分后答题框保留焦点、键盘重新打开，页面必须滚动到让反馈框完整位于固定操作栏上方；新出现的提示面板也要滚进视野。落实位置：`src/main.ts` 的 `keepAnswerVisible` 与 `revealNewHint`；`tests/app.spec.ts` “phone keyboard keeps feedback and new hints above the action bar”。（v1.1.1 及之前两者都被操作栏遮住，见审查记录 U-R15、U-R16。）
+**手机上键盘打开时的形态**（宽度 ≤ 700 px；Spec D9、K8、K9，见 `docs/reviews/2026-09-26-keyboard-followups/`）：
+
+- 操作栏与页面反馈框、倒计时都**视觉隐藏**：元素仍在页面中、可以获得焦点、读屏软件能读到反馈，只是看不见。不能用 `display: none`：答对后焦点要移到 Next 按钮，MathLive 才会释放旧答题框（R8）。
+- 结果显示在答题框里：答对时边框为 `--success`，框内右侧显示 “✓ Correct”，框底有一条 3 px 的倒计时线；答错时边框为 `--warning`，显示 “! Not quite”；无效或无法判定时显示 “i Couldn’t check”。状态文字下垫一层 `--surface` 底色，向左约 32 px 渐变为透明，长答案的末尾淡出但仍可见。修改答案后，答错类标签随即清除。
+- 主操作在键盘里：确认键判分前显示 Check、答对后显示 Next；Hint?、Skip 和收起键盘在键盘页签行右侧（见 6.1）。
+- 页面只为键盘留出底部空间（键盘高度加 16 px）；新出现的提示面板会滚到至少露出开头，同时尽量保留答题框可见。
+- 落实位置：`src/main.ts` 的 `renderAnswerVerdict`、`syncKeyboardControls`、`runKeyboardControl`、`keepAnswerVisible`、`revealNewHint`；`src/style.css` 中 `max-width: 700px` 一节的 `.keyboard-open` 规则；`tests/app.spec.ts`、`tests/flow.spec.ts`。
+
+键盘收起时（包括桌面），操作区与反馈框就是上面描述的常规形态。
 
 ### 5.4 对话框
 
@@ -215,10 +221,10 @@ Main 页：
 
 | | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
 |---|---|---|---|---|---|---|---|---|---|
-| 行 1 | sin | cos | tan | 7 | 8 | 9 | a/b | ( | ) |
+| 行 1 | sin | cos | tan | 7 | 8 | 9 | ÷ | ( | ) |
 | 行 2 | sec | csc | cot | 4 | 5 | 6 | × | xⁿ | √ |
-| 行 3 | eˣ | ln | [v] | 1 | 2 | 3 | − | ← | → |
-| 行 4 | ⌨↓（2 格） | | [v2] | 0（2 格） | | . | + | ⌫（2 格） | |
+| 行 3 | eˣ | ln | [v] | 1 | 2 | 3 | − | ⌫（2 格） | |
+| 行 4 | ← | → | [v2] | 0（2 格） | | . | + | Check / Next（2 格，蓝底） | |
 
 More 页：
 
@@ -226,17 +232,20 @@ More 页：
 |---|---|---|---|
 | 行 1 | arcsin | arccos | arctan |
 | 行 2 | log▫ | ∛ | π |
-| 行 3 | y（2 格）、t（2 格）、θ（3 格） | | ← 在第 8 列，→ 在第 9 列 |
-| 行 4 | ⌨↓（第 1–2 列）、空白 5 格、⌫（第 8–9 列） | | |
+| 行 3 | y（2 格）、t（2 格）、θ（3 格） | | ⌫ 在第 8–9 列 |
+| 行 4 | ← 在第 1 列、→ 在第 2 列，空白 5 格，Check / Next 在第 8–9 列 | | |
+
+页签行（Main / More 所在的一行）右侧：**Hint?**、**Skip** 两个文字按钮和一个收起键盘图标按钮。提示用完时隐藏 Hint?；答对后隐藏 Hint? 与 Skip，只留收起按钮。这些按钮放在 MathLive 页签行右侧原本空着的编辑工具栏位置；MathLive 每次重建键盘都会清空这个位置，由 `src/main.ts` 用 `MutationObserver` 自动补回。
 
 规则（由 `tests/math-keyboard-layout.test.ts` 检查）：
 
 1. 每行合计 9 个单位；数字 1–9 在第 4–6 列，组成 3 × 3 块，0 在底行第 4–5 列，小数点在第 6 列。
 2. 第 7 列是运算列：分式、×、−、+（与计算器和 Desmos 的顺序一致）。
-3. 导航键（← → ⌫ ⌨↓）在两页的行、列、宽度都相同。
-4. 除导航键和变量 / 常数键（x、y、t、θ、π）外，任何命令不在两页同时出现。
+3. ← → ⌫ 和确认键在两页的行、列、宽度都相同；键盘上没有收起键（收起在页签行）。
+4. 除 ← → ⌫、确认键和变量 / 常数键（x、y、t、θ、π）外，任何命令不在两页同时出现。
 5. 题库答案里出现的每种运算都能在 Main 页找到对应的键。
-6. 只有一个分式键；在 MathLive 中输入 `/` 本身就生成分式，所以不另设除号。
+6. 只有一个分式键，标签为 ÷ 以与运算列一致，按下插入上下分式（在 MathLive 中输入 `/` 本身就生成分式）。
+7. 确认键在 MathLive 里不做任何事（一个空插入命令；MathLive 中没有命令的键会把标签当文字输入），由 app 处理：判分前等同 Check，答对后等同 Next，与按 Enter 相同。
 
 取舍依据：题库 4,040 题的答案中，sin / cos 各约 23%、eˣ 17%、√ 13%、sec / csc 8–9%、tan / cot 4–5%、ln 3%；反三角、log、∛、π 为 0%（`scripts/key-usage.ts`）。
 
@@ -258,7 +267,7 @@ MathLive 只提供 0.5、1.5、2、5 格的宽度类；3 格键在布局数据�
 ### 6.3 外观与反馈
 
 - 键帽 `--surface`，底板 `--fill`，功能键使用 MathLive 的次级样式。
-- 按下时背景变为 `--separator`，不缩放、不加过渡（P2）。
+- 按下时背景变为 `--separator`，不缩放、不加过渡（P2）。确认键与页签行按钮由 app 自己处理点按（MathLive 在键盘里取消了 pointerdown，触屏上不会产生 click），按下状态由 `.is-pressed` 类绘制。
 - 触屏上关闭悬停高亮（`@media (hover: none)`），避免点过的键留着高亮。
 - **不显示悬停气泡**：`.ML__keyboard [data-tooltip]::after { display: none }`。
 - 功能键图标居中（偏移 ≤ 1 px）。MathLive 给退格键加了 `bottom right` 类，把图标推到角落，样式表把功能键统一改为居中。
@@ -275,16 +284,19 @@ MathLive 把键帽的 `tooltip` 优先用作 `aria-label`，所以 `tooltip` 只
 | + / − / × | plus / minus / times | sec / csc / cot | secant / cosecant / cotangent |
 | ( / ) | left parenthesis / right parenthesis | ln / log▫ | natural log / log base |
 | . | decimal point | arcsin / arccos / arctan | inverse sine / inverse cosine / inverse tangent |
-| a/b | fraction | x / y / t / θ / π | x / y / t / theta / pi |
+| ÷ | fraction | x / y / t / θ / π | x / y / t / theta / pi |
 | xⁿ | power | ← / → | move left / move right |
 | √ / ∛ | square root / cube root | ⌫ | delete |
-| eˣ | e to the power | ⌨↓ | hide keyboard |
+| eˣ | e to the power | Check / Next | check answer / next question |
+
+页签行按钮使用普通 `<button>`：Hint?、Skip 读出按钮文字，收起按钮的名称为 “Hide keyboard”。
 
 ### 6.5 已知限制
 
 - MathLive 的页签是普通 `<div>`，没有 `role="tab"`，键盘和读屏都无法切换页签（上游问题，暂不处理）。
 - iOS Safari 不支持 `navigator.vibrate()`，网页无法触发触觉反馈。
 - WebKit 仿真不能完全复现 iOS 点按后的悬停残留；与键盘有关的改动需要真机确认。
+- **MathLive 的焦点记录**：MathLive 另外记着“当前在输入的答题框”，只有浏览器焦点真正移到别的元素上才会清除，它自己的 `blur()` 不会清除。如果一个仍被记为聚焦的答题框被删掉，下一个答题框获得焦点时就会报错。因此换题前要把焦点移到 Next 按钮上（`next()` 中已处理）。另外，答题框有焦点且键盘打开时，把它设为只读会让 MathLive 收起键盘，所以这种情况下改用 `beforeinput` 拦截编辑。
 
 ## 7. 动效
 
@@ -294,7 +306,7 @@ MathLive 把键帽的 `tooltip` 优先用作 `aria-label`，所以 `tooltip` 只
 |---|---|---|
 | 每次练习数百次 | 键盘按键、输入、光标移动 | 不做动画 |
 | 每题一次 | 反馈框出现、按钮状态变化 | 只做颜色 / 背景过渡，`--dur-fast` |
-| 偶尔 | 对话框、键盘打开时的操作栏 | `@starting-style` 从 `scale(0.95)` 加透明度进入，`--dur-base`；操作栏用 `--dur-chrome` 跟随键盘；退出不慢于进入 |
+| 偶尔 | 对话框 | `@starting-style` 从 `scale(0.95)` 加透明度进入，`--dur-base`；退出不慢于进入 |
 | 少见 | 连对庆祝 | 见下文 |
 
 - 进入和按下一律 `--ease-out`；不用 ease-in；不从 `scale(0)` 开始。

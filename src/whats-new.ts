@@ -11,9 +11,10 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     date: "2026-09-26",
     title: "A tidier math keyboard",
     items: [
-      "The math keyboard is laid out like a calculator: numbers in one block, operations in one column, and keys that fill the width of your phone.",
+      "The math keyboard is laid out like a calculator: numbers in one block, ÷ × − + in one column, and keys that fill the width of your phone.",
       "<strong>Main</strong> has everything most answers need; <strong>More</strong> has inverse trig, log, cube root, and extra variables. No more repeated keys or “Type …” bubbles.",
-      "On a phone, “Not quite” and new hints now stay visible above the keyboard.",
+      "The blue key at the bottom right checks your answer, then takes you to the next question. <strong>Hint?</strong>, <strong>Skip</strong>, and hide keyboard sit next to the page names.",
+      "On a phone, your result shows right in the answer box, so it is never hidden behind the keyboard.",
       "After a correct answer, <strong>Next question</strong> is the one button to press.",
     ],
   },
