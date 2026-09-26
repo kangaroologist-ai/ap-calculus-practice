@@ -362,7 +362,9 @@ function mountInputs() {
   const vars = c.question.domain.curve
     ? ["x", "y"]
     : [c.question.domain.variable];
-  window.mathVirtualKeyboard.layouts = layoutsFor(vars);
+  window.mathVirtualKeyboard.editToolbar = "none";
+  // App layouts allow width 3 via w30 CSS; MathLive types only list built-in widths.
+  window.mathVirtualKeyboard.layouts = layoutsFor(vars) as import("mathlive").VirtualKeyboardLayout[];
   on("keyboard", () => {
     if (window.mathVirtualKeyboard.visible) window.mathVirtualKeyboard.hide();
     else {
