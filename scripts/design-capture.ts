@@ -285,7 +285,9 @@ async function saveImage(
   state: string,
 ): Promise<string> {
   const name = `${width}-${scheme}-${String(index).padStart(2, "0")}-${state}`;
-  await page.screenshot({ path: path.join(out, `${name}.png`), fullPage: false });
+  // Finish CSS transitions first (dialogs fade in over 200 ms); otherwise a capture taken
+  // right after opening shows an almost transparent dialog.
+  await page.screenshot({ path: path.join(out, `${name}.png`), fullPage: false, animations: "disabled" });
   imagesWritten.count += 1;
   return name;
 }
