@@ -270,7 +270,7 @@ Codex 沙盒不能起服务器，所有浏览器测试和截图都由 Claude 运
 
 ### 阶段 T · 安装设计技能（用户答复问题 4 后新增）
 
-- [ ] **T-1 · S4 · Claude**（在用户目录安装，属于环境配置）— 把 `emilkowalski/skills` 中的 `apple-design`、`emil-design-eng`，以及 `pbakaus/impeccable` 的 `impeccable` 技能目录复制到 `~/.claude/skills/`。impeccable 的启动器会在首次运行时下载可执行文件：**只安装文件，不运行启动器**；是否运行它的检测器由用户自己决定。验证：技能目录存在且 `SKILL.md` 可读；记录来源提交哈希。
+- [x] **T-1 · S4 · Claude**（在用户目录安装，属于环境配置）— 把 `emilkowalski/skills` 中的 `apple-design`、`emil-design-eng`，以及 `pbakaus/impeccable` 的 `impeccable` 技能目录复制到 `~/.claude/skills/`。impeccable 的启动器会在首次运行时下载可执行文件：**只安装文件，不运行启动器**；是否运行它的检测器由用户自己决定。验证：技能目录存在且 `SKILL.md` 可读；记录来源提交哈希。 **结果**：已安装到 `~/.claude/skills/apple-design`、`emil-design-eng`（来自 `emilkowalski/skills@d16ebe6`）和 `impeccable`（来自 `pbakaus/impeccable@9d715cc`，v4.4.0）；三个 `SKILL.md` 的 `name` 字段均能读到。impeccable 的 `scripts/impeccable` 启动器已随目录复制，但没有运行。新会话才会加载新技能。
 - [ ] **T-2 · 复核 · Claude** — 确认 W-2 的审核流程改为直接调用已安装的技能，而不是读取 SKILL.md 文本。
 
 ### 阶段 R · 发布（本身就是 S4 的第一次演练）
