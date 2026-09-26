@@ -105,7 +105,7 @@
 
 - [ ] **F-1 · K8/K10 · Astra medium**（布局数据；需要读 MathLive 源码确认 2 格确认键的写法，以及“不带命令的按键”该怎么写）— `src/math-keyboard.ts` 两页新布局（确认键带 `practice-enter` 类、收起键移除、⌫ 与 ← → 换位、÷ 标签）；`tests/math-keyboard-layout.test.ts` 同步更新。验证：vitest、tsc。
 - [ ] **F-2 · K8/K9/D9 · Claude**（跨模块的交互逻辑和视觉细节，需要在浏览器里反复调试）— `src/main.ts`：确认键与页签行按钮的 `pointerup` 委托、按钮自动补回、Check / Next 文字切换、Hint / Skip 后保持键盘打开、答题框内的结果显示与倒计时；`src/style.css`：键盘打开时隐藏操作栏、底部留白、答题框状态、渐变底、页签行按钮样式。
-- [ ] **F-3 · D10 · Claude**（设计：字形绘制与光学居中）— SVG 图标替换 `src/main.ts` 中的 `icon`（及 `help.html` 中的同款图标）；`public/favicon.svg`；`index.html` / `help.html` 的 `<link rel="icon">`。
+- [x] **F-3 · D10 · Claude**（设计：字形绘制与光学居中）— SVG 图标替换 `src/main.ts` 中的 `icon`（及 `help.html` 中的同款图标）；`public/favicon.svg`；`index.html` / `help.html` 的 `<link rel="icon">`。 **结果**（提交 `deb0af1`）：用路径画出斜体 f 与撇号，按字形的可见包围盒居中；在 app 中实测字形中心偏差：WebKit 390 px 为 0 px（主页和帮助页），Chromium 1280 px 深色为 0.33 px。新增 `public/favicon.svg`，`index.html` 与 `help.html` 都引用它。截图：`logo-after.png`。
 - [ ] **F-4 · K8/K9/D9/D10 · Luna max**（浏览器测试改写，范围明确，在 F-1 到 F-3 完成之后）— `tests/app.spec.ts`、`tests/visual-tokens.spec.ts`：确认键两步、页签行按钮、键盘打开时的答题框结果、图标居中；Claude 运行。
 - [ ] **F-5 · 复核 · Claude** — 读 diff；运行全部测试；新测试放到旧代码上确认会失败。
 - [ ] **F-6 · 文档 · Claude** — DESIGN.md、README、`help.html`、`src/whats-new.ts` 的 1.2.0 条目。
