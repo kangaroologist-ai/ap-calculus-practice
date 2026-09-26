@@ -28,6 +28,7 @@ const key = (id: string, width = 1): KeyboardKeycap => {
   const item = MATH_KEYS.find(item => item.id === id)!;
   const face = ['x','y','t'].includes(id) ? {latex:id}
     : id === 'minus' ? {label:'−'}
+    : id === 'fraction' ? {label:'÷'}
     : id === 'log' ? {latex:'\\log_{\\placeholder{}}'}
     : 'latex' in item ? {latex:item.latex} : {label:item.label};
   // MathLive has no width-3 mapping; the app's keyboard CSS supplies w30.
@@ -35,20 +36,23 @@ const key = (id: string, width = 1): KeyboardKeycap => {
 };
 // Shortcut overrides retain MathLive's SVG labels, commands, and action classes.
 const action = (label: string, tooltip: string, width = 1): KeyboardKeycap => ({label, tooltip, width});
+// A command-less key types its label. Empty insertAfter is a no-op even with a selection.
+// MathLive 0.110 mathlive.mjs:28816–28858, 39786–39790; the app handles pointerup.
+const enter = (): KeyboardKeycap => ({label:'Check', class:'action practice-enter', tooltip:'check answer', width:2, command:['insert','',{insertionMode:'insertAfter'}]});
 export function layoutsFor(vars: string[]): KeyboardLayout[] {
   const variable = vars.includes('y') ? 'x' : vars[0] === 'θ' ? 'theta' : vars[0];
   return [
     {label:'Main',rows:[
       ['sin','cos','tan','7','8','9','fraction','open','close'].map(id=>key(id)),
       ['sec','csc','cot','4','5','6','multiply','power','sqrt'].map(id=>key(id)),
-      [...['exponential','ln',variable,'1','2','3','minus'].map(id=>key(id)),action('[left]','move left'),action('[right]','move right')],
-      [action('[hide-keyboard]','hide keyboard',2),key(vars.includes('y') ? 'y' : 'pi'),key('0',2),key('decimal'),key('plus'),action('[backspace]','delete',2)],
+      [...['exponential','ln',variable,'1','2','3','minus'].map(id=>key(id)),action('[backspace]','delete',2)],
+      [action('[left]','move left'),action('[right]','move right'),key(vars.includes('y') ? 'y' : 'pi'),key('0',2),key('decimal'),key('plus'),enter()],
     ]},
     {label:'More',rows:[
       ['arcsin','arccos','arctan'].map(id=>key(id,3)),
       ['log','cbrt','pi'].map(id=>key(id,3)),
-      [key('y',2),key('t',2),key('theta',3),action('[left]','move left'),action('[right]','move right')],
-      [action('[hide-keyboard]','hide keyboard',2),{label:'[separator]',width:5},action('[backspace]','delete',2)],
+      [key('y',2),key('t',2),key('theta',3),action('[backspace]','delete',2)],
+      [action('[left]','move left'),action('[right]','move right'),{label:'[separator]',width:5},enter()],
     ]},
   ];
 }

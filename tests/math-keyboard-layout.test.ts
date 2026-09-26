@@ -55,8 +55,8 @@ const EXPECTED_KEY_TOOLTIPS: Record<string, string> = {
 const EXPECTED_ACTION_TOOLTIPS: Record<string, string> = {
   '[left]': 'move left',
   '[right]': 'move right',
-  '[hide-keyboard]': 'hide keyboard',
   '[backspace]': 'delete',
+  Check: 'check answer',
 };
 
 const KEY_ID_COMMANDS_ALLOWED_ON_BOTH_PAGES = new Set(['x', 'y', 't', 'theta', 'pi']);
@@ -135,9 +135,14 @@ describe.each(LAYOUT_CASES)('math keyboard for $vars', ({ vars, variable, second
     }
   });
 
-  it('keeps navigation keys in the same row, columns, and widths on both pages', () => {
+  it('keeps navigation and enter keys in their required positions on both pages', () => {
     const [main, more] = layouts;
-    for (const label of ['[left]', '[right]', '[backspace]', '[hide-keyboard]']) {
+    for (const [label, row, column, width] of [
+      ['[left]', 4, 1, 1],
+      ['[right]', 4, 2, 1],
+      ['[backspace]', 3, 8, 2],
+      ['Check', 4, 8, 2],
+    ] as const) {
       const locate = (layout: typeof main) => {
         const locations: Array<{ row: number; column: number; width: number }> = [];
         layout.rows.forEach((row, rowIndex) => {
@@ -149,17 +154,52 @@ describe.each(LAYOUT_CASES)('math keyboard for $vars', ({ vars, variable, second
         });
         return locations;
       };
-      expect(locate(main), `${label} on Main`).toHaveLength(1);
+      expect(locate(main), `${label} on Main`).toEqual([{ row, column, width }]);
       expect(locate(main), `${label} on Main`).toEqual(locate(more));
     }
   });
 
-  it('does not repeat commands across pages except variable and constant keys', () => {
+  it('removes hide-keyboard and leaves enter behaviour to the app', () => {
+    layouts.forEach((layout) => {
+      const keys = layout.rows.flat();
+      expect(keys.some((keycap) => keycap.label === '[hide-keyboard]')).toBe(false);
+      const enterKeys = keys.filter((keycap) => keycap.class?.split(/\s+/).includes('practice-enter'));
+      expect(enterKeys).toHaveLength(1);
+      const [enter] = enterKeys;
+      expect(enter.label).toBe('Check');
+      expect(enter.class?.split(/\s+/)).toContain('action');
+      expect(enter.tooltip).toBe('check answer');
+      expect(enter.width).toBe(2);
+      // insertAfter makes the empty insert a no-op even when text is selected.
+      expect(enter.command).toEqual(['insert', '', { insertionMode: 'insertAfter' }]);
+      expect(enter.insert).toBeUndefined();
+      expect(enter.key).toBeUndefined();
+      expect(enter.latex).toBeUndefined();
+      for (const label of ['[left]', '[right]', '[backspace]']) {
+        const keycap = keys.find((keycap) => keycap.label === label)!;
+        expect(keycap.command).toBeUndefined();
+        expect(keycap.insert).toBeUndefined();
+      }
+    });
+  });
+
+  it('labels the fraction key with a division sign while retaining fraction insertion', () => {
+    const fractions = layouts.flatMap((layout) => layout.rows.flat()).filter((keycap) => keyId(keycap) === 'fraction');
+    expect(fractions).toHaveLength(1);
+    expect(fractions[0].label).toBe('÷');
+    expect(fractions[0].latex).toBeUndefined();
+    expect(fractions[0].tooltip).toBe('fraction');
+    expect(fractions[0].command).toEqual(['insert', '\\frac{#@}{#?}', {
+      focus: true, mode: 'math', format: 'latex', selectionMode: 'placeholder',
+    }]);
+  });
+
+  it('does not repeat commands across pages except variable, constant, and enter keys', () => {
     const [main, more] = layouts;
     const commandsOn = (layout: typeof main) =>
       new Set(
         layout.rows.flatMap((row) =>
-          row.flatMap((keycap) => (keycap.command === undefined ? [] : [JSON.stringify(keycap.command)])),
+          row.flatMap((keycap) => (keycap.command === undefined || keycap.class?.split(/\s+/).includes('practice-enter') ? [] : [JSON.stringify(keycap.command)])),
         ),
       );
     const mainCommands = commandsOn(main);
