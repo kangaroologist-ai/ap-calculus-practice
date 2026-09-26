@@ -216,7 +216,9 @@ async function submitForFeedback(
 
 async function readKeyboardGeometry(page: Page): Promise<KeyboardGeometry> {
   const result = await page.evaluate(() => {
-    const round = (value: number) => Number(value.toFixed(2));
+    // Whole pixels, like the baseline. No arrow function here: tsx wraps named functions in a
+    // __name() helper that does not exist inside the page.
+    const round = Math.round;
     const keyboard = document.querySelector<HTMLElement>(".ML__keyboard");
     const plate = keyboard?.querySelector<HTMLElement>(".MLK__plate");
     const plateRect = plate?.getBoundingClientRect();
@@ -326,7 +328,10 @@ async function captureKeyboard(
   await inFreshPage(browser, options, async (page) => {
     await startQuestion(page, base);
     await hideKeyboard(page, true);
-    await page.getByRole("button", { name: "Math keyboard" }).click();
+    // On a touch device the answer's focus handler also opens the keyboard, so a click on
+    // the toggle button could race it and close it again. Open it directly instead.
+    await page.locator("math-field").first().focus();
+    await page.evaluate(() => window.mathVirtualKeyboard.show());
     await page.locator(".ML__keyboard").waitFor({ state: "visible" });
     await page.waitForTimeout(300);
     if (mode === "tap") {
