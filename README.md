@@ -125,7 +125,7 @@ npm run test:e2e
 npm run design:capture
 ```
 
-在 `artifacts/design/<版本>/` 生成 390 px（WebKit iPhone 仿真）与 1280 px（Chromium）、浅色与深色的截图矩阵和键盘几何数据，然后做三套视角的独立评审，P0 / P1 问题清零后才发布。
+在 `artifacts/design/<版本>/` 生成 390 px（WebKit iPhone 仿真）与 1280 px（Chromium）、浅色与深色的截图矩阵和键盘几何数据，然后按改动范围比对受影响的界面状态（常规审核）。新增界面或组件、修改设计原则或令牌、较大改版时，再做调用三套评审技能的完整审核。P0 / P1 问题清零后才发布。
 
 ## Cloudflare Pages
 
