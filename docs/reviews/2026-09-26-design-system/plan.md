@@ -259,7 +259,7 @@ Codex 沙盒不能起服务器，所有浏览器测试和截图都由 Claude 运
 
 ### 阶段 D · 其他设计改进（依赖阶段 S 的令牌）
 
-- [ ] **D-1 · D1 · Claude**（状态、焦点与自动前进逻辑交织）— 修改 `src/main.ts` 操作按钮的渲染与焦点（约 315、382、479 行附近），以及 `src/style.css` 中 `.next` 的主按钮样式；更新 `tests/app.spec.ts` 的相关断言。验证：三种判定的浏览器测试和截图。
+- [x] **D-1 · D1 · Claude**（状态、焦点与自动前进逻辑交织）— 修改 `src/main.ts` 操作按钮的渲染与焦点（约 315、382、479 行附近），以及 `src/style.css` 中 `.next` 的主按钮样式；更新 `tests/app.spec.ts` 的相关断言。验证：三种判定的浏览器测试和截图。 **结果**（Astra medium 实施，与 D-3 中 `src/main.ts` 的部分合为步骤 A2，提交 `31f475b`；Claude 复核）：按钮状态统一由 `updateControls()` 决定，重新渲染时也一致。答对后 Check answer 与提示按钮隐藏，Next question 成为唯一主按钮并获得焦点。Chromium / Firefox / WebKit 上 `app`、`flow`、`whats-new`、`ux-refresh` 共 128 项通过；两项 WebKit 失败是测试写法问题：Safari 要按 Option+Tab 才会聚焦按钮，而且鼠标点击不会让按钮获得焦点，我改为从键盘打开对话框后全部通过。截图：`artifacts/design/det-*/390-*-06-correct-feedback.png`。
 - [ ] **D-2 · D2/D3 · Luna max**（样式表内的机械改动，数值已定）— 在 `src/style.css` 中加按压态、限定悬停、给反馈框 / 对话框 / 操作栏加过渡、重写减少动态的规则；另新建 `tests/motion.spec.ts`，断言正常模式与 reduced-motion 下的计算样式。文件：只动这两个。必须在 S-3 之后执行。
 - [ ] **D-3 · D4/D5/D6 · Claude**（多处小改动）— `src/main.ts`：SVG 图标、弹窗标题文案、对话框初始焦点、`h1`；`src/style.css`：页脚对齐、固定对话框头部；对应的测试断言。
 - [ ] ~~**D-4 · D7 · Claude**~~ — **取消**（用户决定不改庆祝频率）。只剩一项：在 `docs/ui-review.md` 中把 U-R12 标为“已决定：保持现状”，由 R-1 一并完成。
