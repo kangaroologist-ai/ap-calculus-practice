@@ -260,11 +260,11 @@ Codex 沙盒不能起服务器，所有浏览器测试和截图都由 Claude 运
 ### 阶段 D · 其他设计改进（依赖阶段 S 的令牌）
 
 - [x] **D-1 · D1 · Claude**（状态、焦点与自动前进逻辑交织）— 修改 `src/main.ts` 操作按钮的渲染与焦点（约 315、382、479 行附近），以及 `src/style.css` 中 `.next` 的主按钮样式；更新 `tests/app.spec.ts` 的相关断言。验证：三种判定的浏览器测试和截图。 **结果**（Astra medium 实施，与 D-3 中 `src/main.ts` 的部分合为步骤 A2，提交 `31f475b`；Claude 复核）：按钮状态统一由 `updateControls()` 决定，重新渲染时也一致。答对后 Check answer 与提示按钮隐藏，Next question 成为唯一主按钮并获得焦点。Chromium / Firefox / WebKit 上 `app`、`flow`、`whats-new`、`ux-refresh` 共 128 项通过；两项 WebKit 失败是测试写法问题：Safari 要按 Option+Tab 才会聚焦按钮，而且鼠标点击不会让按钮获得焦点，我改为从键盘打开对话框后全部通过。截图：`artifacts/design/det-*/390-*-06-correct-feedback.png`。
-- [ ] **D-2 · D2/D3 · Luna max**（样式表内的机械改动，数值已定）— 在 `src/style.css` 中加按压态、限定悬停、给反馈框 / 对话框 / 操作栏加过渡、重写减少动态的规则；另新建 `tests/motion.spec.ts`，断言正常模式与 reduced-motion 下的计算样式。文件：只动这两个。必须在 S-3 之后执行。
-- [ ] **D-3 · D4/D5/D6 · Claude**（多处小改动）— `src/main.ts`：SVG 图标、弹窗标题文案、对话框初始焦点、`h1`；`src/style.css`：页脚对齐、固定对话框头部；对应的测试断言。
+- [x] **D-2 · D2/D3 · Luna max**（样式表内的机械改动，数值已定）— 在 `src/style.css` 中加按压态、限定悬停、给反馈框 / 对话框 / 操作栏加过渡、重写减少动态的规则；另新建 `tests/motion.spec.ts`，断言正常模式与 reduced-motion 下的计算样式。文件：只动这两个。必须在 S-3 之后执行。 **结果**（Luna max 实施，与 D-3 的 CSS 部分合为步骤 L6，提交 `b7cbb69`；Claude 复核）：加入动效令牌、按压态、限定悬停、反馈框颜色过渡、对话框 `@starting-style` 进入、操作栏跟随键盘；减少动态规则改为只去掉位移和缩放。复核时发现去掉通配规则后，MathLive 自己的键盘滑入动画在减少动态模式下也会播放，我补了一条针对键盘的规则。`tests/motion.spec.ts` 2 项在 Chromium 通过；换回旧样式表时两项都失败。
+- [x] **D-3 · D4/D5/D6 · Claude**（多处小改动）— `src/main.ts`：SVG 图标、弹窗标题文案、对话框初始焦点、`h1`；`src/style.css`：页脚对齐、固定对话框头部；对应的测试断言。 **结果**：`src/main.ts` 部分由 Astra 在 A2 完成（`31f475b`）：SVG 键盘图标、“Move your progress”、对话框打开时焦点在标题、`h1.brand-heading`。CSS 部分由 Luna 在 L6 完成：`h1.brand-heading` 样式移入样式表，页脚链接统一基线（原因：页脚中的 `<a>` 与 `<button>` 在 44 px 最小高度内的垂直对齐方式不同）。**更正 Research U-R12**：对话框头部原本就是 `position: sticky`，评审 C“头部与主按钮都在同一个滚动区域内”的推断不成立；What's new 的 “Got it” 在首屏之外属于正常滚动，不需要修改。
 - [ ] ~~**D-4 · D7 · Claude**~~ — **取消**（用户决定不改庆祝频率）。只剩一项：在 `docs/ui-review.md` 中把 U-R12 标为“已决定：保持现状”，由 R-1 一并完成。
 - [x] **D-8 · D8 · Claude**（滚动与键盘、焦点相互影响，需要在浏览器里反复调试）— 修改 `src/main.ts` 中 `keepAnswerVisible` 和判分 / 提示之后的滚动逻辑；在 `tests/app.spec.ts` 加 390 px 触屏下的两项断言。验证：新测试通过、改前失败；截图矩阵中答错、无效、提示三种状态都能看到内容。 **结果**（提交 `1c01317`）：`keepAnswerVisible` 把可见的反馈框一并算进“需要露出的区域”；新增 `revealNewHint`，在新提示出现后把它滚到视野里。WebKit iPhone 仿真连续 4 次实测：反馈框 y = 301–350，操作栏 y = 365；提示面板 y = 78–157。新测试在 Chromium 触屏 390 px 下通过；换回修复前的 `main.ts` 时失败。改后截图：`after/390-light-incorrect-feedback-visible.png`、`after/390-light-hint-visible.png`。
-- [ ] **D-5 · 复核 D-2 · Claude** — 读 diff，查有没有放宽断言；运行全部测试；截 `prefers-reduced-motion` 截图；录一段键盘打开的慢放视频，看操作栏是否与键盘同步。
+- [x] **D-5 · 复核 D-2 · Claude** — 读 diff，查有没有放宽断言；运行全部测试；截 `prefers-reduced-motion` 截图；录一段键盘打开的慢放视频，看操作栏是否与键盘同步。 **结果**：读了 diff，没有放宽断言；Vitest 352 项、构建、数学核验（10,100 条，0 失败）全部通过；三引擎完整浏览器测试的结果记在 R-2。
 - [ ] **D-6 · D1–D7 · Sonnet** — 用 W-1 的截图矩阵做前后对比，按 Emil 清单（按压、悬停、时长、缓动、减少动态）与 impeccable polish 清单逐项检查。
 - [ ] **D-7 · 复核 D-6 · Claude** — 核实结论；不通过的项退回对应的 D 项。
 
