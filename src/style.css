@@ -54,6 +54,12 @@
   --radius-lg: 16px;
   --radius-xl: 20px;
   --radius-full: 999px;
+  --dur-press: 100ms;
+  --dur-fast: 150ms;
+  --dur-base: 200ms;
+  --dur-chrome: 220ms;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
   --shadow-card: 0 4px 24px color-mix(in srgb, var(--label) 2%, transparent);
   --shadow-dialog: 0 24px 90px color-mix(in srgb, var(--label) 20%, transparent);
   --shadow-bar: 0 -4px 16px color-mix(in srgb, var(--label) 3%, transparent);
@@ -130,6 +136,11 @@ h1 {
   font-size: var(--t-large-title);
   line-height: 1.06;
   letter-spacing: -1.6px;
+  margin: 0;
+}
+h1.brand-heading {
+  font: inherit;
+  letter-spacing: inherit;
   margin: 0;
 }
 summary {
@@ -465,12 +476,14 @@ footer {
   padding: var(--space-2) var(--space-1);
   font-size: var(--t-caption);
   min-height: 44px;
-}
-.text-button:hover {
-  text-decoration: underline;
+  transition: transform var(--dur-press) var(--ease-out), background-color var(--dur-fast) ease;
 }
 footer .text-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   font-size: var(--t-caption);
+  line-height: 1.4;
 }
 .icon-button {
   width: 44px;
@@ -499,16 +512,29 @@ footer .text-button {
   text-decoration: none;
   background: var(--fill);
   color: var(--label);
+  transition: transform var(--dur-press) var(--ease-out), background-color var(--dur-fast) ease;
 }
 .button.subtle {
   background: transparent;
   border-color: var(--control-border);
 }
-.button.subtle:hover {
+.button:active:not(:disabled),
+.text-button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+.icon-button:active:not(:disabled) {
   background: var(--fill);
 }
-.button.primary:hover {
-  background: var(--tint);
+@media (hover: hover) and (pointer: fine) {
+  .text-button:hover {
+    text-decoration: underline;
+  }
+  .button.subtle:hover {
+    background: var(--fill);
+  }
+  .button.primary:hover {
+    background: var(--tint);
+  }
 }
 .help-page a.button.primary {
   color: var(--bg);
@@ -660,6 +686,7 @@ math-field:focus-within {
   margin-top: var(--space-4);
   background: var(--fill);
   color: var(--label-2);
+  transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease;
 }
 .feedback::before {
   display: inline-block;
@@ -971,10 +998,37 @@ dialog {
   max-height: calc(100dvh - 32px);
   overflow-y: auto;
   scrollbar-gutter: stable;
+  opacity: 0;
+  transform: scale(0.95);
+  transition:
+    opacity var(--dur-base) var(--ease-out),
+    transform var(--dur-base) var(--ease-out),
+    overlay var(--dur-base) allow-discrete,
+    display var(--dur-base) allow-discrete;
+}
+dialog[open] {
+  opacity: 1;
+  transform: none;
+}
+@starting-style {
+  dialog[open] {
+    opacity: 0;
+    transform: scale(0.95);
+  }
 }
 dialog::backdrop {
   backdrop-filter: blur(3px);
   background: color-mix(in srgb, var(--label) 32%, transparent);
+  opacity: 0;
+  transition: opacity var(--dur-base) var(--ease-out);
+}
+dialog[open]::backdrop {
+  opacity: 1;
+}
+@starting-style {
+  dialog[open]::backdrop {
+    opacity: 0;
+  }
 }
 .modal-heading {
   display: flex;
@@ -993,6 +1047,9 @@ dialog::backdrop {
   margin: 0;
   font-size: var(--t-title-small);
   font-weight: 600;
+}
+dialog h2[tabindex="-1"]:focus {
+  outline: none;
 }
 .qr-wrap {
   text-align: center;
@@ -1185,6 +1242,7 @@ dialog::backdrop {
     padding-left: max(var(--space-4), env(safe-area-inset-left));
     padding-right: max(var(--space-4), env(safe-area-inset-right));
     padding-bottom: calc(var(--space-3) + env(safe-area-inset-bottom));
+    transition: bottom var(--dur-chrome) var(--ease-out);
   }
 }
 
@@ -1262,10 +1320,10 @@ dialog::backdrop {
   font-variant-numeric: tabular-nums;
 }
 .streak.milestone {
-  animation: streak-pulse 650ms ease-out;
+  animation: streak-pulse 650ms var(--ease-out);
 }
 .streak.celebrate {
-  animation: streak-pulse 650ms ease-out;
+  animation: streak-pulse 650ms var(--ease-out);
 }
 .sparks {
   position: absolute;
@@ -1279,7 +1337,7 @@ dialog::backdrop {
   height: 5px;
   background: var(--tint);
   border-radius: var(--radius-xs);
-  animation: streak-spark 800ms ease-out forwards;
+  animation: streak-spark 800ms var(--ease-out) forwards;
   transform: rotate(var(--angle));
 }
 .sparks i:nth-child(even) {
@@ -1315,8 +1373,6 @@ dialog::backdrop {
 @media (prefers-reduced-motion: reduce) {
   * {
     scroll-behavior: auto !important;
-    animation: none !important;
-    transition: none !important;
   }
   .streak.milestone {
     animation: none;
@@ -1332,5 +1388,34 @@ dialog::backdrop {
   }
   .full-celebration {
     display: none;
+  }
+  .button,
+  .text-button {
+    transition: background-color var(--dur-fast) ease;
+  }
+  .button:active:not(:disabled),
+  .text-button:active:not(:disabled) {
+    transform: none;
+  }
+  dialog {
+    transform: none;
+    transition:
+      opacity var(--dur-base) var(--ease-out),
+      overlay var(--dur-base) allow-discrete,
+      display var(--dur-base) allow-discrete;
+  }
+  @starting-style {
+    dialog[open] {
+      transform: none;
+    }
+  }
+  .keyboard-open .actions {
+    transition: none;
+  }
+  /* MathLive slides its keyboard in and does not check this preference itself. */
+  .ML__keyboard,
+  .ML__keyboard * {
+    animation: none !important;
+    transition: none !important;
   }
 }
