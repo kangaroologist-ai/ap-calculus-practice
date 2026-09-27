@@ -242,7 +242,7 @@ Labels: **[F]** fact (source), **[I]** inference, **[U]** unknown, **[P]** pre-e
 | 3 | ( / \|▫\| | ) | e^▫ / e | 1 / r | 2 / s | 3 / t | − | ⌫ | ⌫ |
 | 4 | ← | → | ln / log▫ | 0 / θ | 0 / θ | . / π | + | Check | Check |
 
-- **S1 单页键位。** 键盘只有上表一页，没有页签；每个功能只出现一次（主字或 alt）。*Accept:* 单元测试逐格核对 x、t、θ、隐函数四种情形的主字、alt 与宽度；390 截图。*From:* G1、G10→第 2 轮、第 3 轮、R3、R9
+- **S1 单页键位。** 键盘只有上表一页，没有页签；每个功能只出现一次（主字或 alt），变量除外（上表本身就让本题变量既有自己的键、又是某个数字的 alt；L1 复核时补写这条例外，两处用同一个命令）。*Accept:* 单元测试逐格核对 x、t、θ、隐函数四种情形的主字、alt 与宽度；390 截图。*From:* G1、G10→第 2 轮、第 3 轮、R3、R9
 - **S2 占位与符号。** 等待输入的位置画空框（▫/▫、▫^▫、e^▫、√▫、log▫、\|▫\|）；乘号为 “·”；分式键单按插入上下分式，alt 为 ÷。答题框里乘号也显示为 “·”。*Accept:* 单元测试核对键帽 LaTeX；浏览器中按 · 后答题框的显示；截图。*From:* 第 2 点、G7、G13、R2、R8
 - **S3 alt、⇧ 与长按。**（第 4–6 轮与 T1b 评审后）键上不印 alt。⇧ 点一次只对下一个键生效，连点两次锁定，再点解除；⇧ 三态照 iOS shift 的形状（关 = 灰色功能键底、空心箭头；一次性 = 白底实心箭头；锁定 = 白底实心箭头加下方横线），激活与锁定时箭头为 `--tint` 蓝色（G20）。⇧ 激活时有 alt 的键显示 alt 并变为 `--tint` 色，没有 alt 的键保持原样、不变淡（评审 A2）；三角键显示 sin⁻¹ 等、输入 arcsin 等。长按：只在有 alt 的键上计时（B5），按住 450 ms 且手指移动不超过 8 px 时弹出气泡显示 alt（B1），松手输入 alt 且气泡立即消失，手指移出键外取消（80 ms 淡出）；气泡出现 120 ms，透明度 0→1、缩放 0.95→1、ease-out，减少动态模式下只保留透明度（B4、B8）。键盘上禁用 iOS 的长按菜单与文字选择（B2）。读屏：⇧ 名为 shift，状态用 `aria-pressed`；⇧ 激活时键的读屏名称随 alt 更新（A6）。*Accept:* 浏览器测试（单按、⇧ 一次、⇧ 锁定、长按松手、长按移出、无 alt 键长按等同单按）逐项核对答题框内容；`tests/contrast.test.ts` 覆盖 ⇧ 状态下的蓝色字；iPhone 真机确认长按无系统菜单。*From:* G12→第 2 轮、G15、第 4–6 轮、R7、R9、`reviews/synthesis.md`
 - **S4 字体。** 所有数学键帽由 KaTeX 渲染，与题目公式同一套字体；Check / Next 与顶栏按钮用界面字体。*Accept:* 单元测试：数学键都用 `latex` 键帽；浏览器中取 sin、7、+ 键的计算字体为 KaTeX_*。*From:* 第 3 点、G5、R4
@@ -273,7 +273,8 @@ Luna 步骤（第 8 轮后重排，负责人要求多交给 Luna max）：
 
 每一步回来后由 Claude 复核（T7 的做法，逐步进行）并在浏览器里验证，再提交；Playwright 与截图由 Claude 运行（Codex 沙箱不能开端口）。
 
-- [ ] **T2** (S1–S4) `src/math-keyboard.ts`：单页布局、`shift` alt 定义、`[shift]` 键、空框键帽、KaTeX 键帽、读屏名称（含 alt）；同时改写 `tests/math-keyboard-layout.test.ts`。*Verify:* 单元测试；Claude 在浏览器看 390 截图。*Owner:* Luna max（L1）- Spec 已定，键位与接口在步骤说明里写死，文件集独立
+- [x] **T2** (S1–S4) `src/math-keyboard.ts`：单页布局、`shift` alt 定义、`[shift]` 键、空框键帽、KaTeX 键帽、读屏名称（含 alt）；同时改写 `tests/math-keyboard-layout.test.ts`。*Verify:* 单元测试；Claude 在浏览器看 390 截图。*Owner:* Luna max（L1）- Spec 已定，键位与接口在步骤说明里写死，文件集独立
+  **结果**：Luna 报告 tsc 通过、布局测试 29 项、全部单元测试 355 项通过。Claude 复核：读 diff；发现 Luna 为通过 “命令不重复” 测试，让数字 alt 的字母用 `insert`、变量键用 `typedText`（功能相同、写法不同，属于绕过测试）。Claude 改为两处同一命令，并在测试里明确写出 “变量除外” 的例外（S1、DESIGN.md 6.1 规则 4 同步补写）；重跑 tsc 与全部单元测试 355 项通过。WebKit 390 截图 `l1-390-normal.png`、`l1-390-shift.png`：一页 4×9、⇧ 下各键换成 alt、← → ⌫ Check 不变，无页面错误。留给 L3 的样式：⇧ 三个图标同时显示、函数名字号偏小（`small` 类）、`·` 太小、空框键大小。
 - [ ] **T3** (S3) `src/main.ts`、`src/style.css`：长按（只对有 alt 的键；450 ms、移动 8 px 取消；到时设一次性 shift 并弹气泡，气泡动效与减少动态）、⇧ 三态样式（iOS 形状）、⇧ 状态下 alt 字变蓝、iOS 长按菜单与选择的禁用、⇧ 的 `aria-pressed` 与 alt 读屏名称、覆盖 MathLive 对 ← → ⌫ 的 shift 功能。*Verify:* Claude 在浏览器里逐项试（WebKit 390）；T6 浏览器测试。*Owner:* Luna max（L3）- 负责人要求多委派；Claude 在步骤说明里写明借用 MathLive shift 的机制与取消时必须复位 `shiftPressCount`，并亲自做浏览器验证
 - [ ] **T4** (S5) `src/main.ts`、`src/style.css`：Hint?、Skip 注入顶栏左侧，收起留右侧，触控高度 44 px；首次提示（本机记录是否已用过长按 / ⇧）。*Verify:* 截图；T6。*Owner:* Luna max（L2）
 - [ ] **T5** (S2、S6) `src/main.ts`、`src/style.css`：把框内显示（右侧文字、边框颜色、倒计时线）从 `@media (max-width: 700px)` 的 `.keyboard-open` 规则移出，对所有情况生效；`#feedback`、`#auto-next` 在所有情况下视觉隐藏；无效 / 无法判定的框内 “Check your input”（G22）与框下小字（G19、G21），小字纳入 `keepAnswerVisible`；核实答题框乘号显示为 “·”。（第 5 轮更正：不做框底状态栏）*Verify:* Claude 看 1280、390 键盘开 / 关截图，核对读屏 live region 与焦点；T6。*Owner:* Luna max（L2）- 与 T4 同一步
@@ -287,6 +288,7 @@ Project obligations:
 - [ ] **P1** README 与 `help.html` 同步：applies — README 第 36、38 段，`help.html` 的 Correct、Not quite 与 Typing formulas。*Owner:* Claude（文档不委派）
 - [ ] **P2** 版本与 What's new：applies，不提升版本（D1）— 改写 `src/whats-new.ts` 的 1.2.0 条目（单页键盘、⇧ 与长按、框内结果）。*Owner:* Claude
 - [ ] **P3** DESIGN.md：applies — 5.2 / 5.3（框内显示对所有设备生效、无效 / 无法判定的短标签与框下小字）、第 9 节文案；`review-workflow.md` 第 6 节 “颜色以外的图标” 改为 “颜色以外的区分（符号或文字）”（R10）、6.1（单页布局表、规则改写，D8）、6.3（字体、alt 小字、⇧、气泡）、6.4（读屏名称）、6.5（长按借用 shift 的注意事项）。*Owner:* Claude
+  **进展（P1–P3，未勾选）**：Luna 跑 L1、L2 期间，Claude 按最终 Spec 起草了 README 第 36、38 段、`help.html` 的结果说明与 Typing formulas、`src/whats-new.ts` 1.2.0 条目（4 条，What's new 单元测试 6 项通过；日期在发布时更新）、DESIGN.md 5.3、6.1–6.5、7、8 与 `review-workflow.md` 的清单。实现完成后逐条对照代码核对（尤其气泡时长、44 px 顶栏是否增加键盘高度、`w30` 是否删除），再勾选。
 - [ ] **P4** 设计审核：applies，**完整审核**（新增 ⇧ 键与长按气泡两个组件，R9）— 按 `review-workflow.md` 运行 `npm run design:capture` 并调用三套评审技能；P0 / P1 清零，结论写进本文。*Owner:* Claude（截图评审可交给 Sonnet 只读代理，设计决定由 Claude 做）
 - [ ] **P5** iPhone 真机确认：applies — 键盘排布、长按（含没有系统菜单）、⇧ 三态、首次提示。*Owner:* 负责人
 - [ ] **P6** 部署与线上核对：applies — 重新部署预览 → 负责人 iPhone 确认 → 合并 `main` → 部署 → 确认线上 `/` 与 `/help` 为新版（接续 `2026-09-26-keyboard-followups` 的 F-8）。*Owner:* Claude + 负责人

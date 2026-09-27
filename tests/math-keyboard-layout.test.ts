@@ -1,18 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import { SKILLS } from '../src/catalog';
-import { KEYBOARD_COLUMNS, layoutsFor, MATH_KEYS } from '../src/math-keyboard';
+import { altFor, KEYBOARD_COLUMNS, layoutsFor, MATH_KEYS } from '../src/math-keyboard';
 import { generateQuestion } from '../src/questions';
 import { TEMPLATES } from '../src/templates';
 import type { Expr } from '../src/types';
 
 const LAYOUT_CASES = [
-  { vars: ['x'], variable: 'x', second: 'pi' },
-  { vars: ['t'], variable: 't', second: 'pi' },
-  { vars: ['theta'], variable: 'theta', second: 'pi' },
-  { vars: ['x', 'y'], variable: 'x', second: 'y' },
+  { vars: ['x'], variable: 'x', latex: 'x' },
+  { vars: ['t'], variable: 't', latex: 't' },
+  { vars: ['theta'], variable: 'theta', latex: '\\theta' },
+  { vars: ['x', 'y'], variable: 'x', latex: 'x' },
 ] as const;
 
-const EXPECTED_KEY_TOOLTIPS: Record<string, string> = {
+const EXPECTED_PRIMARY_TOOLTIPS: Record<string, string> = {
   '0': '0',
   '1': '1',
   '2': '2',
@@ -25,7 +25,14 @@ const EXPECTED_KEY_TOOLTIPS: Record<string, string> = {
   '9': '9',
   x: 'x',
   y: 'y',
+  z: 'z',
+  u: 'u',
+  v: 'v',
+  w: 'w',
+  r: 'r',
+  s: 's',
   t: 't',
+  theta: 'theta',
   plus: 'plus',
   minus: 'minus',
   multiply: 'times',
@@ -35,7 +42,6 @@ const EXPECTED_KEY_TOOLTIPS: Record<string, string> = {
   fraction: 'fraction',
   power: 'power',
   sqrt: 'square root',
-  cbrt: 'cube root',
   exponential: 'e to the power',
   sin: 'sine',
   cos: 'cosine',
@@ -44,206 +50,252 @@ const EXPECTED_KEY_TOOLTIPS: Record<string, string> = {
   csc: 'cosecant',
   cot: 'cotangent',
   ln: 'natural log',
-  log: 'log base',
-  arcsin: 'inverse sine',
-  arccos: 'inverse cosine',
-  arctan: 'inverse tangent',
-  theta: 'theta',
-  pi: 'pi',
+};
+
+const EXPECTED_ALT_TOOLTIPS: Record<string, string> = {
+  '0': 'theta',
+  '1': 'r',
+  '2': 's',
+  '3': 't',
+  '4': 'u',
+  '5': 'v',
+  '6': 'w',
+  '7': 'x',
+  '8': 'y',
+  '9': 'z',
+  decimal: 'pi',
+  exponential: 'e',
+  fraction: 'divide',
+  ln: 'log base',
+  open: 'absolute value',
+  power: 'to the power',
+  sec: 'secant squared',
+  csc: 'cosecant squared',
+  cot: 'cotangent squared',
+  sin: 'inverse sine',
+  cos: 'inverse cosine',
+  tan: 'inverse tangent',
+  sqrt: 'square root of',
 };
 
 const EXPECTED_ACTION_TOOLTIPS: Record<string, string> = {
-  '[left]': 'move left',
-  '[right]': 'move right',
-  '[backspace]': 'delete',
-  Check: 'check answer',
+  left: 'move left',
+  right: 'move right',
+  backspace: 'delete',
+  check: 'check answer',
 };
-
-const KEY_ID_COMMANDS_ALLOWED_ON_BOTH_PAGES = new Set(['x', 'y', 't', 'theta', 'pi']);
-const ALLOWED_SHARED_COMMANDS = new Set(
-  MATH_KEYS.filter((key) => KEY_ID_COMMANDS_ALLOWED_ON_BOTH_PAGES.has(key.id)).map((key) =>
-    JSON.stringify(key.command),
-  ),
-);
 
 function keyId(keycap: { class?: string }): string | undefined {
   return keycap.class?.match(/(?:^|\s)practice-key-([^\s]+)/)?.[1];
 }
 
-function positionsOf(layout: ReturnType<typeof layoutsFor>[number], id: string) {
-  const positions: Array<{ row: number; column: number; width: number }> = [];
-  layout.rows.forEach((row, rowIndex) => {
-    let column = 1;
-    row.forEach((keycap) => {
-      if (keyId(keycap) === id) positions.push({ row: rowIndex + 1, column, width: keycap.width });
-      column += keycap.width;
-    });
+function shiftObject(keycap: { shift?: string | Partial<import('mathlive').VirtualKeyboardKeycap> }) {
+  return typeof keycap.shift === 'object' && keycap.shift !== null ? keycap.shift : undefined;
+}
+
+function keyAt(layout: ReturnType<typeof layoutsFor>[number], rowNumber: number, columnNumber: number) {
+  let column = 1;
+  for (const keycap of layout.rows[rowNumber - 1]) {
+    if (columnNumber >= column && columnNumber < column + keycap.width) return keycap;
+    column += keycap.width;
+  }
+  throw new Error(`No key at row ${rowNumber}, column ${columnNumber}`);
+}
+
+function mathKeycaps(layout: ReturnType<typeof layoutsFor>[number]) {
+  const mathIds = new Set(MATH_KEYS.map(key => key.id));
+  return layout.rows.flat().filter(keycap => {
+    const id = keyId(keycap);
+    return id !== undefined && mathIds.has(id);
   });
-  return positions;
 }
 
-function expectKeyAt(
-  layout: ReturnType<typeof layoutsFor>[number],
-  id: string,
-  row: number,
-  column: number,
-  width = 1,
-): void {
-  expect(positionsOf(layout, id), `${id} position`).toEqual([{ row, column, width }]);
+const EXPECTED_POSITIONS: Array<Array<{ id: string; width?: number }>> = [
+  [
+    { id: 'sin' }, { id: 'cos' }, { id: 'tan' }, { id: '7' }, { id: '8' }, { id: '9' },
+    { id: 'fraction' }, { id: 'variable' }, { id: 'shift' },
+  ],
+  [
+    { id: 'sec' }, { id: 'csc' }, { id: 'cot' }, { id: '4' }, { id: '5' }, { id: '6' },
+    { id: 'multiply' }, { id: 'power' }, { id: 'sqrt' },
+  ],
+  [
+    { id: 'open' }, { id: 'close' }, { id: 'exponential' }, { id: '1' }, { id: '2' },
+    { id: '3' }, { id: 'minus' }, { id: 'backspace', width: 2 },
+  ],
+  [
+    { id: 'left' }, { id: 'right' }, { id: 'ln' }, { id: '0', width: 2 },
+    { id: 'decimal' }, { id: 'plus' }, { id: 'check', width: 2 },
+  ],
+];
+
+const expectedInsert = (latex: string, selectionMode: 'after' | 'placeholder' = 'placeholder') => [
+  'insert', latex, { focus: true, mode: 'math', format: 'latex', selectionMode },
+];
+const expectedTyped = (text: string) => [
+  'typedText', text, { focus: true, feedback: true, simulateKeystroke: true },
+];
+
+function variableLatex(variable: string): string {
+  return variable === 'theta' ? '\\theta' : variable;
 }
 
-describe.each(LAYOUT_CASES)('math keyboard for $vars', ({ vars, variable, second }) => {
+function expectedAltCommand(id: string, variable: string, latex: string) {
+  if (id === 'sin') return MATH_KEYS.find(key => key.id === 'arcsin')?.command;
+  if (id === 'cos') return MATH_KEYS.find(key => key.id === 'arccos')?.command;
+  if (id === 'tan') return MATH_KEYS.find(key => key.id === 'arctan')?.command;
+  if (id === 'sec' || id === 'csc' || id === 'cot') return expectedInsert(latex, 'after');
+  if (id === 'fraction') return expectedInsert('\\div', 'after');
+  if (id === 'power') return expectedInsert(`${variableLatex(variable)}^{#?}`);
+  if (id === 'sqrt') return expectedInsert(`\\sqrt{${variableLatex(variable)}}`, 'after');
+  if (id === 'open') return expectedInsert('\\left|#?\\right|');
+  if (id === 'exponential') return expectedTyped('e');
+  if (id === 'ln') return expectedInsert('\\log_{#?}');
+  if (id === '0') return MATH_KEYS.find(key => key.id === 'theta')?.command;
+  if (id === 'decimal') return MATH_KEYS.find(key => key.id === 'pi')?.command;
+  return expectedTyped(latex);
+}
+
+describe.each(LAYOUT_CASES)('math keyboard for $vars', ({ vars, variable, latex: variableFace }) => {
   const layouts = layoutsFor([...vars]);
 
-  it('has Main and More pages with four rows of nine columns', () => {
-    expect(layouts.map((layout) => layout.label)).toEqual(['Main', 'More']);
-    layouts.forEach((layout) => {
-      expect(layout.rows).toHaveLength(4);
-      layout.rows.forEach((row, rowIndex) => {
-        expect(
-          row.reduce((sum, keycap) => sum + keycap.width, 0),
-          `${layout.label} row ${rowIndex + 1}`,
-        ).toBe(KEYBOARD_COLUMNS);
+  it('provides one edit-toolbar layout with four rows of nine units', () => {
+    expect(layouts).toHaveLength(1);
+    expect(layouts[0].displayEditToolbar).toBe(true);
+    expect(layouts[0].label).toBeUndefined();
+    const [layout] = layouts;
+    expect(layout.rows).toHaveLength(4);
+    layout.rows.forEach((row, rowIndex) => {
+      expect(row.reduce((sum, keycap) => sum + keycap.width, 0), `row ${rowIndex + 1}`).toBe(KEYBOARD_COLUMNS);
+    });
+  });
+
+  it('places every primary key and width at the specified grid position', () => {
+    const [layout] = layouts;
+    EXPECTED_POSITIONS.forEach((row, rowIndex) => {
+      let column = 1;
+      row.forEach(({ id, width = 1 }) => {
+        const keycap = keyAt(layout, rowIndex + 1, column);
+        if (id === 'shift') {
+          expect(keycap.class?.split(/\s+/)).toContain('shift');
+        } else if (id === 'variable') {
+          expect(keyId(keycap)).toBe(variable);
+          expect(keycap.latex).toBe(variableFace);
+        } else {
+          expect(keyId(keycap)).toBe(id);
+        }
+        expect(keycap.width).toBe(width);
+        column += width;
       });
     });
   });
 
-  it('aligns the calculator number block and operator column', () => {
-    const [main] = layouts;
-    for (const [id, row, column] of [
-      ['7', 1, 4],
-      ['8', 1, 5],
-      ['9', 1, 6],
-      ['4', 2, 4],
-      ['5', 2, 5],
-      ['6', 2, 6],
-      ['1', 3, 4],
-      ['2', 3, 5],
-      ['3', 3, 6],
-    ] as const) {
-      expectKeyAt(main, id, row, column);
-    }
-    expectKeyAt(main, '0', 4, 4, 2);
-    expectKeyAt(main, 'decimal', 4, 6);
-    for (const [id, row] of [
-      ['fraction', 1],
-      ['multiply', 2],
-      ['minus', 3],
-      ['plus', 4],
-    ] as const) {
-      expectKeyAt(main, id, row, 7);
-    }
+  it('uses a KaTeX LaTeX face and the existing primary command for every math key', () => {
+    const [layout] = layouts;
+    mathKeycaps(layout).forEach(keycap => {
+      const id = keyId(keycap)!;
+      expect(keycap.latex, `${id} face`).toBeDefined();
+      expect(keycap.label, `${id} should render through LaTeX`).toBeUndefined();
+      expect(keycap.command, `${id} primary command`).toEqual(MATH_KEYS.find(key => key.id === id)?.command);
+      expect(keycap.tooltip, `${id} spoken name`).toBe(EXPECTED_PRIMARY_TOOLTIPS[id]);
+    });
+    expect(keyAt(layout, 2, 7).latex).toBe('\\cdot');
+    expect(keyAt(layout, 3, 7).latex).toBe('-');
+    expect(keyAt(layout, 1, 7).latex).toBe('\\frac{\\placeholder{}}{\\placeholder{}}');
+    expect(keyAt(layout, 2, 8).latex).toBe('\\placeholder{}^{\\placeholder{}}');
+    expect(keyAt(layout, 2, 9).latex).toBe('\\sqrt{\\placeholder{}}');
+    expect(keyAt(layout, 3, 1).latex).toBe('(');
+    expect(keyAt(layout, 3, 3).latex).toBe('e^{\\placeholder{}}');
+    expect(keyAt(layout, 4, 3).latex).toBe('\\ln');
   });
 
-  it('keeps navigation and enter keys in their required positions on both pages', () => {
-    const [main, more] = layouts;
-    for (const [label, row, column, width] of [
-      ['[left]', 4, 1, 1],
-      ['[right]', 4, 2, 1],
-      ['[backspace]', 3, 8, 2],
-      ['Check', 4, 8, 2],
-    ] as const) {
-      const locate = (layout: typeof main) => {
-        const locations: Array<{ row: number; column: number; width: number }> = [];
-        layout.rows.forEach((row, rowIndex) => {
-          let column = 1;
-          row.forEach((keycap) => {
-            if (keycap.label === label) locations.push({ row: rowIndex + 1, column, width: keycap.width });
-            column += keycap.width;
-          });
-        });
-        return locations;
-      };
-      expect(locate(main), `${label} on Main`).toEqual([{ row, column, width }]);
-      expect(locate(main), `${label} on Main`).toEqual(locate(more));
-    }
+  it('gives every alternate its face, insertion command, class, and spoken name', () => {
+    const [layout] = layouts;
+    mathKeycaps(layout).forEach(keycap => {
+      const id = keyId(keycap)!;
+      const alternate = altFor(id, [...vars]);
+      if (!alternate) {
+        expect(keycap.shift, `${id} should not have an alternate`).toBeUndefined();
+        expect(keycap.class?.split(/\s+/)).not.toContain('practice-has-alt');
+        return;
+      }
+
+      expect(keycap.class?.split(/\s+/)).toContain('practice-has-alt');
+      const shift = shiftObject(keycap)!;
+      expect(shift).toMatchObject({
+        latex: alternate.latex,
+        command: expectedAltCommand(id, variable, alternate.latex),
+        class: expect.stringContaining(`practice-key-${id}`),
+        tooltip: id === 'power'
+          ? `${variable} ${EXPECTED_ALT_TOOLTIPS[id]}`
+          : id === 'sqrt'
+            ? `${EXPECTED_ALT_TOOLTIPS[id]} ${variable}`
+            : EXPECTED_ALT_TOOLTIPS[id],
+      });
+      expect(shift.class?.split(/\s+/)).toContain('practice-has-alt');
+      expect(shift.class?.split(/\s+/)).toContain('practice-alt-on');
+      expect(shift.label).toBeUndefined();
+    });
+    expect(altFor('power', [...vars])?.latex).toBe(`${variableFace}^{\\placeholder{}}`);
+    expect(altFor('sqrt', [...vars])?.latex).toBe(`\\sqrt{${variableFace}}`);
+    expect(altFor('unknown', [...vars])).toBeUndefined();
   });
 
-  it('removes hide-keyboard and leaves enter behaviour to the app', () => {
-    layouts.forEach((layout) => {
-      const keys = layout.rows.flat();
-      expect(keys.some((keycap) => keycap.label === '[hide-keyboard]')).toBe(false);
-      const enterKeys = keys.filter((keycap) => keycap.class?.split(/\s+/).includes('practice-enter'));
-      expect(enterKeys).toHaveLength(1);
-      const [enter] = enterKeys;
-      expect(enter.label).toBe('Check');
-      expect(enter.class?.split(/\s+/)).toContain('action');
-      expect(enter.tooltip).toBe('check answer');
-      expect(enter.width).toBe(2);
-      // insertAfter makes the empty insert a no-op even when text is selected.
-      expect(enter.command).toEqual(['insert', '', { insertionMode: 'insertAfter' }]);
-      expect(enter.insert).toBeUndefined();
-      expect(enter.key).toBeUndefined();
-      expect(enter.latex).toBeUndefined();
-      for (const label of ['[left]', '[right]', '[backspace]']) {
-        const keycap = keys.find((keycap) => keycap.label === label)!;
-        expect(keycap.command).toBeUndefined();
-        expect(keycap.insert).toBeUndefined();
+  it('keeps navigation and Check unchanged when Shift is active', () => {
+    const [layout] = layouts;
+    for (const [row, column] of [[4, 1], [4, 2], [3, 8], [4, 8]] as const) {
+      const keycap = keyAt(layout, row, column);
+      expect(keycap.class?.split(/\s+/)).toContain('hide-shift');
+      expect(shiftObject(keycap)).toMatchObject({
+        label: keycap.label,
+        command: keycap.command,
+        class: keycap.class,
+        tooltip: keycap.tooltip,
+      });
+    }
+    const [shift] = layout.rows[0].slice(-1);
+    expect(shift.class?.split(/\s+/)).toContain('shift');
+    expect(shift.tooltip).toBe('shift');
+    expect(shift.label).toContain('practice-shift-off');
+    expect(shift.label).toContain('practice-shift-on');
+    expect(shift.label).toContain('practice-shift-lock');
+    expect(shift.label?.match(/aria-hidden="true"/g)).toHaveLength(3);
+  });
+
+  // Variables are the one allowed repeat: the question's variable has its own key and
+  // the same letter is also a digit alt, so every letter sits in the same place in any question.
+  const VARIABLE_COMMANDS = new Set(
+    MATH_KEYS.filter(item => /^[a-z]$|^theta$/.test(item.id)).map(item => JSON.stringify(item.command)),
+  );
+
+  it('does not repeat a math command among primaries and alternates, except variables', () => {
+    const commands = new Set<string>();
+    mathKeycaps(layouts[0]).forEach(keycap => {
+      for (const command of [keycap.command, shiftObject(keycap)?.command]) {
+        if (command === undefined || VARIABLE_COMMANDS.has(JSON.stringify(command))) continue;
+        const serialized = JSON.stringify(command);
+        expect(commands.has(serialized), `duplicate command ${serialized}`).toBe(false);
+        commands.add(serialized);
       }
     });
   });
 
-  it('labels the fraction key with a division sign while retaining fraction insertion', () => {
-    const fractions = layouts.flatMap((layout) => layout.rows.flat()).filter((keycap) => keyId(keycap) === 'fraction');
-    expect(fractions).toHaveLength(1);
-    expect(fractions[0].label).toBe('÷');
-    expect(fractions[0].latex).toBeUndefined();
-    expect(fractions[0].tooltip).toBe('fraction');
-    expect(fractions[0].command).toEqual(['insert', '\\frac{#@}{#?}', {
-      focus: true, mode: 'math', format: 'latex', selectionMode: 'placeholder',
-    }]);
-  });
+  it('keeps the Check key behavior and action names', () => {
+    const [layout] = layouts;
+    const check = keyAt(layout, 4, 8);
+    expect(check.label).toBe('Check');
+    expect(check.class?.split(/\s+/)).toContain('action');
+    expect(check.tooltip).toBe(EXPECTED_ACTION_TOOLTIPS.check);
+    expect(check.command).toEqual(['insert', '', { insertionMode: 'insertAfter' }]);
+    expect(check.width).toBe(2);
+    expect(check.insert).toBeUndefined();
+    expect(check.key).toBeUndefined();
+    expect(check.latex).toBeUndefined();
 
-  it('does not repeat commands across pages except variable, constant, and enter keys', () => {
-    const [main, more] = layouts;
-    const commandsOn = (layout: typeof main) =>
-      new Set(
-        layout.rows.flatMap((row) =>
-          row.flatMap((keycap) => (keycap.command === undefined || keycap.class?.split(/\s+/).includes('practice-enter') ? [] : [JSON.stringify(keycap.command)])),
-        ),
-      );
-    const mainCommands = commandsOn(main);
-    const moreCommands = commandsOn(more);
-    const shared = [...mainCommands].filter((command) => moreCommands.has(command));
-    expect(shared.filter((command) => !ALLOWED_SHARED_COMMANDS.has(command))).toEqual([]);
-  });
-
-  it('uses only supported widths and marks every width-three key with w30', () => {
-    const allowedWidths = new Set([1, 2, 3, 5]);
-    layouts.forEach((layout) =>
-      layout.rows.flat().forEach((keycap) => {
-        expect(allowedWidths.has(keycap.width), `${layout.label} width ${keycap.width}`).toBe(true);
-        if (keycap.width === 3) expect(keycap.class ?? '').toMatch(/(?:^|\s)w30(?:\s|$)/);
-      }),
-    );
-  });
-
-  it('puts the question variable and second variable or pi in their slots', () => {
-    const [main] = layouts;
-    expectKeyAt(main, variable, 3, 3);
-    expectKeyAt(main, second, 4, 3);
-  });
-});
-
-it('gives every keycap its expected spoken-name tooltip', () => {
-  const keycaps = LAYOUT_CASES.flatMap(({ vars }) =>
-    layoutsFor([...vars]).flatMap((layout) => layout.rows.flat()),
-  );
-  keycaps.forEach((keycap) => {
-    // A spacer is not a key: it is not focusable and has no command, so it has no name.
-    if (keycap.label === '[separator]') {
-      expect(keycap.command).toBeUndefined();
-      return;
-    }
-    const tooltip = keycap.tooltip ?? '';
-    expect(tooltip.trim(), `${keycap.label ?? keyId(keycap) ?? 'unnamed keycap'} tooltip`).not.toBe('');
-    expect(tooltip).not.toMatch(/^Type/);
-
-    const id = keyId(keycap);
-    if (id) {
-      expect(tooltip, `${id} tooltip`).toBe(EXPECTED_KEY_TOOLTIPS[id]);
-    } else if (keycap.label && keycap.label in EXPECTED_ACTION_TOOLTIPS) {
-      expect(tooltip, `${keycap.label} tooltip`).toBe(EXPECTED_ACTION_TOOLTIPS[keycap.label]);
+    for (const [row, column, id] of [[4, 1, 'left'], [4, 2, 'right'], [3, 8, 'backspace']] as const) {
+      const action = keyAt(layout, row, column);
+      expect(keyId(action)).toBe(id);
+      expect(action.tooltip).toBe(EXPECTED_ACTION_TOOLTIPS[id]);
     }
   });
 });
@@ -274,10 +326,10 @@ function collectAnswerHeads(expr: Expr, visit: (head: string, keyId: string | un
     ? 'exponential'
     : ANSWER_HEAD_TO_KEY_ID[head];
   visit(head, key);
-  expr.slice(1).forEach((part) => collectAnswerHeads(part, visit));
+  expr.slice(1).forEach(part => collectAnswerHeads(part, visit));
 }
 
-it('can enter every answer operator head from the question Main page', () => {
+it('can enter every answer operator head using a primary or alternate key', () => {
   const seedsPerTemplate = 10;
   for (const skill of SKILLS) {
     TEMPLATES[skill.id].forEach((template, templateIndex) => {
@@ -289,14 +341,18 @@ it('can enter every answer operator head from the question Main page', () => {
           ok: () => true,
         });
         const vars = question.domain.curve ? ['x', 'y'] : [question.domain.variable];
-        const [main] = layoutsFor(vars);
-        const mainKeyIds = new Set(main.rows.flatMap((row) => row.map(keyId).filter((id): id is string => id !== undefined)));
+        const [layout] = layoutsFor(vars);
+        const availableKeyIds = new Set(layout.rows.flatMap(row => row.flatMap(keycap => {
+          const id = keyId(keycap);
+          if (!id || !MATH_KEYS.some(key => key.id === id)) return [];
+          return [id, ...(shiftObject(keycap)?.command === undefined ? [] : [id])];
+        })));
 
-        question.answers.forEach((answer) =>
-          collectAnswerHeads(answer, (head, key) => {
-            expect(key, `Unmapped MathJSON head "${head}" in ${question.id}`).toBeDefined();
-            if (key) {
-              expect(mainKeyIds, `MathJSON head "${head}" maps to unavailable Main key "${key}" in ${question.id}`).toContain(key);
+        question.answers.forEach(answer =>
+          collectAnswerHeads(answer, (head, id) => {
+            expect(id, `Unmapped MathJSON head "${head}" in ${question.id}`).toBeDefined();
+            if (id) {
+              expect(availableKeyIds, `MathJSON head "${head}" has no keyboard key in ${question.id}`).toContain(id);
             }
           }),
         );
