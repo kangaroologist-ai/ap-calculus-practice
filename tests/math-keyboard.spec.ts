@@ -433,3 +433,41 @@ test('the key block stays on screen across several questions', async ({ page }) 
     await page.waitForTimeout(300);
   }
 });
+
+// On an iPhone the page jolted when a key left a superscript or root placeholder selected:
+// MathLive scrolled the page after every key. The practice page now scrolls only when the
+// keyboard really covers the answer (task 2026-09-27-iphone-viewport-storage R5).
+test('typing a power or a root does not scroll the page unless the keyboard covers the answer', async ({ page }) => {
+  await openPracticeKeyboard(page);
+  await page.evaluate(() => {
+    const calls: string[] = [];
+    (window as unknown as { scrollCalls: string[] }).scrollCalls = calls;
+    const original = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = function (this: Element, ...args: Parameters<Element['scrollIntoView']>) {
+      if (this.localName === 'math-field') calls.push('scrollIntoView');
+      return original.apply(this, args);
+    };
+  });
+  const scrollY = await page.evaluate(() => window.scrollY);
+  for (const id of ['x', 'power', '2', 'sqrt', 'x']) await pointerPressKey(page, id);
+  expect(await valueOf(page)).toContain('\\sqrt');
+  expect(await page.evaluate(() => (window as unknown as { scrollCalls: string[] }).scrollCalls)).toEqual([]);
+  expect(await page.evaluate(() => window.scrollY)).toBe(scrollY);
+
+  // Push the answer under the keyboard: the next key still brings it back into view.
+  await page.evaluate(() => {
+    const spacer = document.createElement('div');
+    spacer.style.height = '700px';
+    document.getElementById('answer-fields')!.before(spacer);
+    window.scrollTo(0, 0);
+  });
+  const covered = await page.evaluate(() =>
+    document.querySelector('math-field')!.getBoundingClientRect().bottom > window.mathVirtualKeyboard.boundingRect.top,
+  );
+  expect(covered).toBe(true);
+  await pointerPressKey(page, 'power');
+  const gap = await page.evaluate(() =>
+    window.mathVirtualKeyboard.boundingRect.top - document.querySelector('math-field')!.getBoundingClientRect().bottom,
+  );
+  expect(gap).toBeGreaterThanOrEqual(15);
+});

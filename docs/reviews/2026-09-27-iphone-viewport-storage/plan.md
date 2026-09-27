@@ -1,6 +1,6 @@
 ---
 task: iphone-viewport-storage
-phase: research       # grill | research | spec | todo | implement | acceptance | done
+phase: implement      # grill | research | spec | todo | implement | acceptance | done
 scope: ap-calculus-practice / iPhone Safari：键盘超出可见区域；本地存储打开不正常
 branch: fix-iphone-keyboard-viewport
 version: 1.2.0 → 1.2.1（预计，用户可见的修复）
@@ -33,6 +33,11 @@ Recon：键盘任务里已做的真机取数与分析，见 Research。
 第 3 轮（2026-09-27，负责人在第二次预览上真机试用，原话）：“每次输入幂和根号的时候屏幕会跳动一下，但是键盘已经不会挡住了。能调查到原因嘛？写好文档就行，后面再 implement”
 → **S1 真机通过**（键盘不再被挡）。新问题：输入幂和根号时页面跳动 → R5；本轮只调查并写文档，不改代码。
 
+第 4 轮（2026-09-27，新会话，原话）：“把上一个session没完成的键盘调整完成”
+→ 开始实施 T7、T8。未另问、按默认处理：
+- D4：T7（事件记录）与 T8（`onScrollIntoView` 修法）放进**同一次预览**，省一次真机往返。诊断模式下加 `&mlscroll=1` 可恢复 MathLive 自己的滚动，负责人可以在同一个预览上先录 “修法前”、再录 “修法后”；若修法后仍跳，事件记录会显示是否为 iOS 原生滚动（H2）。
+- D5：真机确认 S4 后再发布 1.2.1（P6）；若仍跳且确认是 H2，再问负责人是否先发布。
+
 ## Research
 
 ### R1. 键盘超出可见区域 13 px（已查明原因，待真机验证修法）
@@ -64,7 +69,8 @@ Recon：键盘任务里已做的真机取数与分析，见 Research。
 - **[F]** MathLive 每次按键后都调用答题框的 `scrollIntoView()`（仿真里一次按键 1–3 次，`jump.cjs` 计数）。它会做三件事（`mathlive.mjs:39720-39785`）：① `host.scrollIntoView({ block: "nearest" })`；② 若答题框底边低于键盘顶边，再 `scrollBy(底边 − 键盘顶边 + 8)` 滚动整页；③ 按光标或选区的位置，距答题框上下边缘不足 20 px 时滚动答题框内部，左右同理。
 - **[F]** 幂与根号的共同点：按下后 MathLive 选中一个空的占位框（选区不为空），③ 就改用选区的上下边界计算；上标和根号的占位框位置比正文高。其他常用键（数字、变量、运算符）之后光标是折叠的。
 - **[F]** MathLive 用一个固定定位、裁剪掉的 `contenteditable` 元素（`.ML__keyboard-sink`）接收输入，并在命令后把焦点留在它上面（`mathlive.mjs:13159-13171`、`39180`）。
-- **[F]** MathLive 提供 `onScrollIntoView` 选项：设置后完全不做上面的 ①②③，改由页面自己决定怎么滚（`mathlive.mjs:39724`）。
+- **[F]** MathLive 提供 `onScrollIntoView` 选项：设置后不做 ①②，改由页面自己决定怎么滚（`mathlive.mjs:39724`）。
+- **[F]** 更正（第 4 轮复读源码，`mathlive.mjs:39738-39780`）：③ **不受** `onScrollIntoView` 影响，仍会执行。答题框内容没有溢出时 `host.scroll()` 不起作用，所以 H3 只在公式高过答题框时才可能出现；事件记录会记下答题框 `scrollTop` 的变化来确认。
 
 **推测（按可能性）**
 - **[I] H1**：真机上 KaTeX 字形或行高与仿真略有差别，加了上标或根号后答题框内容变高几像素，底边越过 “键盘顶边 − 8 px”，触发 ②，整页被滚动一下。与 “只有幂和根号” 最吻合。
@@ -102,8 +108,12 @@ Recon：键盘任务里已做的真机取数与分析，见 Research。
   **结果**：诊断面板加了层 / 背板 / 键区高度、背板下内边距、`env(safe-area-inset-bottom)` 实测值和键区底边的最近 3 次变动；靠它在仿真里定位了 R4，真机读数随下一次预览再取。
 - [x] **T5** (S3) `src/main.ts`、`src/storage.ts`（如需）、`src/style.css`：存储打开加超时（约 5 秒）；超时或失败时显示 “Couldn’t open your saved progress.” 说明、Reload 按钮和次要的 “Continue without saving”（进入现有临时模式）。测试：模拟打开超时与失败。*Owner:* Claude - 涉及启动流程与数据安全
   **结果**：`loadStateWithin(5000)` 与 `chooseAfterStorageFailure()`（`src/main.ts`），`.boot-actions`（`src/style.css`）。测试 “when opening saved progress hangs / fails, practice asks for a reload”：卡住用真实的 IndexedDB 升级事务阻塞模拟（第一次用假的请求对象，`idb` 立即失败，并没有测到卡住，已改），失败用 `indexedDB.open` 抛错；两者在旧代码上失败、修正后通过。README、`help.html`、What's new 1.2.1 第二条、DESIGN.md 6.5 同步。
-- [ ] **T7** (S4) `src/main.ts`：R5 的诊断事件记录（只在 `?debug=viewport` 时），部署预览，请负责人截图。*Verify:* 仿真里能记录到键名与滚动来源。*Owner:* Claude - 需要真机数据（负责人第 3 轮：先写文档，稍后实施）
-- [ ] **T8** (S4) 按 T7 的数据实施修法（预计：答题框设置 `onScrollIntoView` 并交给 `keepAnswerVisible()`），加测试（`scrollIntoView` 被调用时页面不滚、键盘遮挡时仍然滚到位）。*Owner:* Claude - 待取证后细化
+- [x] **T7** (S4) `src/main.ts`：R5 的诊断事件记录（只在 `?debug=viewport` 时）：键盘按键、`scrollBy` / `scrollTo` / `scrollIntoView` / 元素 `scroll` 调用、`scroll` 事件（附 `scrollY` 变化，标注最近 100 ms 内有无脚本滚动调用，没有即 “native”）、答题框高度与 `scrollTop` 变化、`visualViewport.offsetTop` 变化；面板显示最近 10 条。*Verify:* 仿真里输入 “x 幂 2 → 根号 x”，记录里能看到键名与滚动来源。*Owner:* Claude - 需要真机数据（D4）
+  **结果**：诊断面板末尾的 “events” 最近 10 条：键名、`scrollY a→b` 加最近 100 ms 内的页面级滚动调用（`window.*`、`page.*`、`math-field.*`，没有就是 `native`）、`vv top` 变化、答题框高度 / `scrollTop` 变化；只记页面级调用，因为 MathLive 每键都会横向滚动自己的内部 `field`。WebKit iPhone 13（答题框被推到键盘下）：修法后 `scrollY 0→600 window.scrollBy+…`；`&mlscroll=1` 时 `page.scrollBy+…scrollIntoView` 并紧跟一次 592→593，来源区分得开（`eventlog.png`、`eventlog-mlscroll.png`，会话 scratchpad）。面板改为自动换行，长行不再被截掉。
+- [x] **T8** (S4) `src/main.ts`：答题框设置 `onScrollIntoView`：手机键盘打开时交给 `keepAnswerVisible()`（只在被挡时滚），其余情况保持 MathLive 的 `scrollIntoView({ block: "nearest" })`；`?debug=viewport&mlscroll=1` 时不设置（D4）。`tests/math-keyboard.spec.ts`：答题框可见时输入幂与根号页面不滚、MathLive 的 `scrollBy` 不再被调用；答题框被键盘挡住时输入仍滚到位。*Verify:* 新测试在未设置时失败、设置后三种引擎通过；预览真机 S4。*Owner:* Claude - 小改动，依赖真机验证
+  **结果**：`mountInputs()` 里设置 `mf.onScrollIntoView`；`keepMathLiveScroll` 读 `?debug=viewport&mlscroll=1`。新测试 “typing a power or a root does not scroll the page unless the keyboard covers the answer”：去掉修法时答题框的 `scrollIntoView` 被调用 14 次、三种引擎失败；修法后 0 次、`scrollY` 不变，答题框被推到键盘下时按一键后距键盘 ≥ 15 px，三种引擎通过。全套：unit 355、Playwright 198 通过（60 跳过）。真机效果待 T9。
+- [ ] **T10** (S2、S4) `src/whats-new.ts` 1.2.1 加第三条（输入时页面不再跳动），真机确认 S4 后再写，以免写了没做到的事；`docs/design/DESIGN.md` 6.5 加一条输入时滚动的规则（已写）；README / `help.html`：检索后没有关于输入时滚动的说法，无需修改。*Owner:* Claude - 文档不委派
+- [ ] **T9** (S4) 部署预览（D4），请负责人真机按 R5 的方法截图（修法后；需要时加 `&mlscroll=1` 录修法前）。*Owner:* Claude
 - [x] **T3** (S2) `package.json` 1.2.1、`src/whats-new.ts` 新条目、DESIGN.md 6.5、README / help 核对。*Owner:* Claude - 文档不委派
   **结果**：`package.json` 1.2.1；What's new 1.2.1 两条（项目规则要求 2–6 条，第一次写 1 条被 What's new 单元测试拦下后补了第二条）；DESIGN.md 6.5 新增一条。另记 **[P]**：`package-lock.json` 的版本仍是 1.1.1，1.2.0 时就没同步，本次不改。
 

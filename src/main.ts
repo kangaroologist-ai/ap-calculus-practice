@@ -60,6 +60,9 @@ let config: Config,
 let modalCleanup: () => void = () => {};
 const grader = new Grader();
 let activeMathfield: MathfieldElement | undefined;
+const debugParams = new URLSearchParams(location.search);
+// ?debug=viewport&mlscroll=1 keeps MathLive's own scrolling, to record the jump it caused (plan R5).
+const keepMathLiveScroll = debugParams.get("debug") === "viewport" && debugParams.get("mlscroll") === "1";
 // On phones the keyboard-open layout has no action bar; content must stay above the keyboard.
 // With the keyboard open, .actions is visually hidden (1 px), so it can't be the boundary.
 function visibleBottom() {
@@ -390,6 +393,16 @@ function mountInputs() {
         else void submit();
       }
     });
+    // MathLive scrolls the page after almost every key; on an iPhone a superscript or root
+    // placeholder was enough to jolt it (task 2026-09-27-iphone-viewport-storage R5).
+    // With the phone keyboard open, scroll only when the keyboard really covers the answer.
+    if (!keepMathLiveScroll)
+      mf.onScrollIntoView = () => {
+        if (window.mathVirtualKeyboard.visible && matchMedia("(max-width: 700px)").matches) {
+          activeMathfield = mf;
+          keepAnswerVisible();
+        } else mf.scrollIntoView({ block: "nearest", inline: "nearest" });
+      };
     mf.addEventListener("focus", () => {
       if (c.verdict?.status === "correct") cancelAutoNext();
       activeMathfield = mf;
@@ -894,11 +907,11 @@ window.addEventListener("resize", syncViewportHeight);
 window.visualViewport?.addEventListener("resize", syncViewportHeight);
 // ?debug=viewport shows the numbers needed to diagnose the keyboard sliding under Safari's
 // address bar on an iPhone (plan R22). Not linked anywhere; remove once that is fixed.
-if (new URLSearchParams(location.search).get("debug") === "viewport") {
+if (debugParams.get("debug") === "viewport") {
   const panel = document.createElement("pre");
   panel.setAttribute("aria-hidden", "true");
   panel.style.cssText =
-    "position:fixed;top:env(safe-area-inset-top);left:0;z-index:2000;margin:0;padding:4px 6px;font:11px/1.3 ui-monospace,monospace;background:rgba(0,0,0,.75);color:#fff;pointer-events:none";
+    "position:fixed;top:env(safe-area-inset-top);left:0;right:0;white-space:pre-wrap;word-break:break-all;z-index:2000;margin:0;padding:4px 6px;font:11px/1.3 ui-monospace,monospace;background:rgba(0,0,0,.75);color:#fff;pointer-events:none";
   const update = () => {
     const vv = window.visualViewport;
     const kb = window.mathVirtualKeyboard;
@@ -911,6 +924,8 @@ if (new URLSearchParams(location.search).get("debug") === "viewport") {
       `layer h ${document.querySelector<HTMLElement>("body > .ML__keyboard")?.getBoundingClientRect().height.toFixed(1)} var ${getComputedStyle(document.documentElement).getPropertyValue("--practice-viewport-height")}`,
       ...keyboardLayout(),
       ...plateMoves.slice(-3),
+      `-- events${keepMathLiveScroll ? " (MathLive scroll)" : ""}`,
+      ...events,
     ].join("\n");
   };
   // Which part moves when the keys sink (task 2026-09-27-iphone-viewport-storage R3): the layer,
@@ -936,6 +951,69 @@ if (new URLSearchParams(location.search).get("debug") === "viewport") {
       `plate h ${plate?.height.toFixed(1)}`,
     ];
   };
+  // What makes the page jump while typing (task R5): the key, then each scroll with its source.
+  // A scroll with no script call just before it is iOS itself ("native").
+  const events: string[] = [];
+  const log = (line: string) => {
+    events.push(`${new Date().toISOString().slice(17, 23)} ${line}`);
+    if (events.length > 10) events.shift();
+    update();
+  };
+  let calls: { at: number; what: string }[] = [];
+  const describe = (target: unknown) =>
+    target === window ? "window"
+    : target === document.scrollingElement ? "page"
+    : target instanceof Element ? target.localName + (target.id ? `#${target.id}` : "")
+    : "?";
+  const watchCalls = (owner: object, names: string[]) => {
+    for (const name of names) {
+      const original = (owner as Record<string, (...args: unknown[]) => unknown>)[name];
+      if (typeof original !== "function") continue;
+      (owner as Record<string, unknown>)[name] = function (this: unknown, ...args: unknown[]) {
+        // MathLive also scrolls its inner field sideways on every key; that can't move the page.
+        const pageLevel = this === window || this === document.scrollingElement || this instanceof MathfieldElement;
+        if (pageLevel || name === "scrollIntoView")
+          calls = [...calls.slice(-5), { at: performance.now(), what: `${describe(this)}.${name}` }];
+        return original.apply(this, args);
+      };
+    }
+  };
+  watchCalls(window, ["scrollBy", "scrollTo", "scroll"]);
+  watchCalls(Element.prototype, ["scrollBy", "scrollTo", "scroll", "scrollIntoView"]);
+  let lastScrollY = scrollY;
+  window.addEventListener("scroll", () => {
+    const recent = calls.filter((call) => performance.now() - call.at < 100).map((call) => call.what);
+    const source = recent.length ? [...new Set(recent)].join("+") : "native";
+    log(`scrollY ${lastScrollY.toFixed(0)}→${scrollY.toFixed(0)} ${source}`);
+    lastScrollY = scrollY;
+  });
+  let lastOffsetTop = window.visualViewport?.offsetTop ?? 0;
+  window.visualViewport?.addEventListener("scroll", () => {
+    const offsetTop = window.visualViewport!.offsetTop;
+    if (Math.abs(offsetTop - lastOffsetTop) >= 0.5) log(`vv top ${lastOffsetTop.toFixed(0)}→${offsetTop.toFixed(0)}`);
+    lastOffsetTop = offsetTop;
+  });
+  let lastField = "";
+  const checkField = () => {
+    const field = activeMathfield?.isConnected ? activeMathfield : document.querySelector("math-field");
+    if (!field) return;
+    const now = `h ${field.getBoundingClientRect().height.toFixed(0)} scrollTop ${field.scrollTop.toFixed(0)}`;
+    if (lastField && now !== lastField) log(`field ${lastField} → ${now}`);
+    lastField = now;
+  };
+  window.addEventListener(
+    "pointerdown",
+    (event) => {
+      const key = (event.target as Element | null)?.closest?.(".ML__keyboard .MLK__keycap");
+      if (!key) return;
+      const id = /practice-key-(\S+)/.exec(key.className)?.[1] ?? key.textContent?.trim().slice(0, 8);
+      log(`key ${id}`);
+      setTimeout(() => requestAnimationFrame(checkField), 0);
+      setTimeout(checkField, 400);
+    },
+    true,
+  );
+  setInterval(checkField, 500);
   document.body.append(panel);
   for (const target of [window, window.visualViewport]) {
     target?.addEventListener("resize", update);
