@@ -12,6 +12,7 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     title: "The whole keyboard on iPhone",
     items: [
       "On iPhone, the bottom row of the math keyboard (arrows, ln, 0, and Check) is no longer cut off at the bottom of the screen.",
+      "On iPhone, the page no longer jumps when you type a fraction, a power, or a square root.",
       "If your saved progress can’t be opened, practice now says so and offers <strong>Reload</strong>, instead of waiting forever or quietly starting a session that isn’t saved.",
     ],
   },

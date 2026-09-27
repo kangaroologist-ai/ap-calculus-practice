@@ -34,6 +34,11 @@ Recon：键盘任务里已做的真机取数与分析，见 Research。
 第 7 轮（2026-09-27，负责人用 `&anchor=none` 真机试用，原话）：“还是jump”（附截图 `round7-iphone-anchor-none.webp`）
 → 排除滚动锚定；回 Research（R8），源码里找到触发点。
 
+第 8 轮（2026-09-27，负责人在第五次预览上真机试用，原话）：“没问题了，上线吧”
+→ **S4 真机通过**（P5）。发布 1.2.1。未另问、按默认处理：
+- D6：按计划删除 `?debug=viewport` 诊断面板及其 `mlscroll`、`anchor` 实验开关（T16）；`heldScroll` 兜底保留——负责人确认时它在场，删掉等于改了已确认的组合。
+- D7：What's new 1.2.1 加第三条（输入分式、幂、根号时页面不再跳动）（T10）。
+
 | # | Question | Options (recommendation first) | Owner's answer | Date |
 |---|---|---|---|---|
 | G1 | 存储打开超时或失败后怎么处理 | **显示 “无法打开已保存的进度，请重新载入页面” 与重新载入按钮，不自动进入临时模式**（避免学生在不保存的模式里做题）/ 超时后自动进入临时模式（现有的失败路径） | 第 2 轮：“local-storage problem uses "please reload"” → 推荐方案 | 2026-09-27 |
@@ -166,7 +171,10 @@ Recon：键盘任务里已做的真机取数与分析，见 Research。
   **结果**：`quietKeyboardSink()`（`src/main.ts`），在 `mountInputs()` 与答题框 `focus` 时挂上。新测试 “keys that select a placeholder leave the hidden input alone while the keyboard is open”（分式、幂、根号；含内部字段守护）：去掉修法时三种引擎失败，恢复后通过；Firefox 里聚焦输入框内本来就有折叠光标，所以只检查 “有没有选中文字”。全套 unit 355、Playwright 203 通过（60 跳过）。模拟器见 T13。真机待确认。
 - [x] **T15** (S1) `tests/math-keyboard.spec.ts`：**[P]** “the keyboard layer follows the visible height…” 在 Firefox 偶发失败（`Expected 500, Received 700`，连跑 3 遍 1 次）：测试先把变量设成 500、再在下一步读层高，中间迟到的 `resize` 事件把变量改回 `innerHeight`。改为在同一次 `evaluate` 里设置并读取。与 T14 无关（T1 时写的测试）。*Verify:* Firefox 该文件连跑 5 遍全过。*Owner:* Claude - 一处测试修正
   **结果**：同一次 `evaluate` 里设置变量并读层高；Firefox `math-keyboard.spec.ts` 连跑 5 遍 65/65 通过。
-- [ ] **T10** (S2、S4) `src/whats-new.ts` 1.2.1 加第三条（输入时页面不再跳动），真机确认 S4 后再写，以免写了没做到的事；`docs/design/DESIGN.md` 6.5 加一条输入时滚动的规则（已写）；README / `help.html`：检索后没有关于输入时滚动的说法，无需修改。*Owner:* Claude - 文档不委派
+- [x] **T16** (S4) `src/main.ts`：删除 `?debug=viewport` 诊断面板、事件记录与 `mlscroll` / `anchor` 开关（`keepMathLiveScroll` 一并去掉）；`DESIGN.md` 6.5 中提到 `?debug=viewport` 的说法同步。*Verify:* 检索 `debug=viewport`、`mlscroll` 只剩任务文档；全套测试。*Owner:* Claude - 删除调试代码
+  **结果**：删除 `src/main.ts` 的诊断面板（约 120 行）、`debugParams`、`keepMathLiveScroll`，`onScrollIntoView`、`quietKeyboardSink()`、`holdScrollAfterKey()` 改为无条件生效。检索 `debug=viewport`、`mlscroll`、`keepMathLiveScroll` 在 `src`、`tests`、README、`help.html`、`docs/design` 中为 0。**[P]** `src/main.ts` 在 `main` 上本来就不符合 Prettier 格式（项目未强制），本次不处理。
+- [x] **T10** (S2、S4) `src/whats-new.ts` 1.2.1 加第三条（输入时页面不再跳动），真机确认 S4 后再写，以免写了没做到的事；`docs/design/DESIGN.md` 6.5 加一条输入时滚动的规则（已写）；README / `help.html`：检索后没有关于输入时滚动的说法，无需修改。*Owner:* Claude - 文档不委派
+  **结果**：What's new 1.2.1 第三条 “On iPhone, the page no longer jumps when you type a fraction, a power, or a square root.”；DESIGN.md 6.5 已写（T8、T11、T14）；README / `help.html` 检索 “jump / 跳” 只有无关的 Skip 与部署说明，无需修改。全套 unit 355、Playwright 204 通过（60 跳过），构建通过。
 - [ ] **T9** (S4) 部署预览（D4），请负责人真机按 R5 的方法截图（修法后；需要时加 `&mlscroll=1` 录修法前）。*Owner:* Claude
   **进展**：第三次预览（提交 `86f261f`）：部署 `c39ac23c`，别名与部署都返回 `main-B_ee2kt_.js`，与本地构建一致，包内含 `mlscroll`。等负责人真机截图。
   **进展**：第四次预览（提交 `33d07a6`，含 T11）：部署 `b3ab8987`，别名与部署都返回 `main-U0Wqk8e8.js`，与本地构建一致。等负责人真机确认（按 “清空 → 收起 → 重开 → 分式 / 幂”）。
@@ -183,11 +191,13 @@ Project obligations:
   **结果**：6.5。
 - [x] **P4** 设计审核：applies，常规审核（改的是既有键盘的定位，不新增组件）：390 深浅色键盘打开状态比对。
   **结果（常规审核）**：仿真中键盘外观与 1.2.0 相同（`after-390-light.png`、`after-390-dark.png`），差异只在 iPhone 真机上出现，由 P5 确认。无 P0 / P1。
-- [ ] **P5** iPhone 真机确认：applies — 键盘底部读数与最后一行可见。
+  第 3–8 轮的改动（T8、T11、T14、T16）只改滚动行为和删除调试代码，不改任何界面外观；R7 的逐帧录屏（`evidence-r7/`）与真机确认覆盖了可见效果。仍为常规审核，无 P0 / P1。
+- [x] **P5** iPhone 真机确认：applies — 键盘底部读数与最后一行可见；输入时不跳动。
+  **结果**：S1 第 3 轮真机通过；S3 由负责人第 2 轮定案、预览中可用；S4 第 8 轮 “没问题了，上线吧”（第五次预览，提交 `45834ee`）。
 - [ ] **P6** 部署与线上核对：applies — 预览 → 真机确认 → 合并 `main` → 部署 → 线上 `/` 与 `/help`。
   **进展**：预览（提交 `8e85af7`）https://fix-iphone-keyboard-viewport.ap-calculus-practice.pages.dev ，部署 `6cb8c958`，返回 `main-D6IQTFAP.js`，与本地构建一致；正式站点仍为 1.2.0。等负责人真机确认（P5）。 第二次预览（第 2 轮修正后，提交 `82ff58f`）：部署 `cabe3a6f`，别名同上，均返回 `main-BOy_zPim.js`，与本地构建一致；正式站点仍为 1.2.0（`main-DKL8AnjN.js`）。
 
-诊断面板（`?debug=viewport`）随 1.2.0 上线，本任务结束时删除。
+诊断面板（`?debug=viewport`）随 1.2.0 上线，本任务结束时删除（T16 已删）。
 
 ## Acceptance
 
