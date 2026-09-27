@@ -61,11 +61,13 @@ let modalCleanup: () => void = () => {};
 const grader = new Grader();
 let activeMathfield: MathfieldElement | undefined;
 // On phones the keyboard-open layout has no action bar; content must stay above the keyboard.
+// With the keyboard open, .actions is visually hidden (1 px), so it can't be the boundary.
 function visibleBottom() {
+  const keyboard = window.mathVirtualKeyboard;
+  if (keyboard.visible && keyboard.boundingRect.height > 0)
+    return keyboard.boundingRect.top - 16;
   const actions = document.querySelector(".actions")?.getBoundingClientRect();
-  return (actions && actions.height > 0
-    ? actions.top
-    : window.mathVirtualKeyboard.boundingRect.top) - 16;
+  return (actions && actions.height > 1 ? actions.top : window.innerHeight) - 16;
 }
 function keepAnswerVisible() {
   if (
@@ -79,12 +81,11 @@ function keepAnswerVisible() {
   if (!field) return;
   const bounds = field.getBoundingClientRect();
   const bottom = visibleBottom();
-  // After a check the answer keeps focus and the keyboard reopens; the feedback
-  // below the field must stay above the fixed action bar, or the student never sees it.
-  const feedback = document.getElementById("feedback");
+  // The invalid-input caption is the only visible feedback below the answer fields.
+  const message = document.getElementById("answer-message");
   const needed =
-    feedback && !feedback.hidden
-      ? Math.max(bounds.bottom, feedback.getBoundingClientRect().bottom)
+    message && !message.hidden
+      ? Math.max(bounds.bottom, message.getBoundingClientRect().bottom)
       : bounds.bottom;
   if (needed > bottom)
     window.scrollBy({ top: needed - bottom, behavior: "instant" });
@@ -342,7 +343,7 @@ function questionView() {
   const s = state.session!,
     c = s.current!,
     q = c.question;
-  return `<div class="card-top practice-status" aria-label="Practice activity"><span class="streak" id="streak" aria-live="polite"><strong>${state.progress.streak ?? 0}</strong> in a row</span><span id="today-count" class="muted">${todayCount(state.progress)} practiced today</span></div><div class="question-body"><h2>${esc(q.title)}</h2>${math(q.prompt)}${q.domainText.startsWith("Use radians.") ? "" : `<p class="domain">${esc(q.domainText)}</p>`}<div id="answer-fields">${q.labels.map((label, i) => `<label class="answer-label" for="answer-${i}"><span class="answer-equation">${answerLabel(label, i)}</span><span class="answer-box"><math-field id="answer-${i}" aria-label="${esc(label)}"></math-field>${i === 0 ? '<span class="answer-verdict" aria-hidden="true"></span><span class="answer-meter" aria-hidden="true"><i></i></span>' : ""}</span></label>`).join("")}</div><div class="input-caption"><span>Equivalent forms are welcome.</span>${button("keyboard", '<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="vertical-align:-3px"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M5 9h2m2 0h2m2 0h2m2 0h2M5 12h2m2 0h2m2 0h2m2 0h2M7 15h10"/></svg> Math keyboard', "text-button")}</div><div id="feedback" class="feedback${c.verdict ? ` ${c.verdict.status}` : ""}" aria-live="polite" ${c.verdict ? "" : "hidden"}>${c.verdict ? feedback(c.verdict, q) : ""}</div><div id="auto-next" class="auto-next" hidden><span>Next in 3s</span><div><i></i></div></div><div class="actions">${button("submit", "Check answer", "button primary")}${button("hint", c.hintsUsed >= 3 ? "Solution shown" : c.hintsUsed === 2 ? "Show solution" : c.hintsUsed === 1 ? "Show next hint" : "Need a hint?", "button subtle")}${button("next", c.verdict?.status === "correct" || c.hintsUsed >= 3 ? "Next question →" : "Skip", "text-button next")}</div><div id="hints">${hintContent()}</div>${state.progress.skills[q.primarySkill]?.failureStreak >= 3 ? '<p class="notice">Let’s rebuild the idea. Review the rule, then try the quick checks that come next.</p>' : ""}</div>`;
+  return `<div class="card-top practice-status" aria-label="Practice activity"><span class="streak" id="streak" aria-live="polite"><strong>${state.progress.streak ?? 0}</strong> in a row</span><span id="today-count" class="muted">${todayCount(state.progress)} practiced today</span></div><div class="question-body"><h2>${esc(q.title)}</h2>${math(q.prompt)}${q.domainText.startsWith("Use radians.") ? "" : `<p class="domain">${esc(q.domainText)}</p>`}<div id="answer-fields">${q.labels.map((label, i) => `<label class="answer-label" for="answer-${i}"><span class="answer-equation">${answerLabel(label, i)}</span><span class="answer-box"><math-field id="answer-${i}" aria-label="${esc(label)}"></math-field>${i === 0 ? '<span class="answer-verdict" aria-hidden="true"></span><span class="answer-meter" aria-hidden="true"><i></i></span>' : ""}</span></label>`).join("")}</div><p id="answer-message" class="answer-message" aria-hidden="true" hidden></p><div class="input-caption"><span>Equivalent forms are welcome.</span>${button("keyboard", '<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="vertical-align:-3px"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M5 9h2m2 0h2m2 0h2m2 0h2M5 12h2m2 0h2m2 0h2m2 0h2M7 15h10"/></svg> Math keyboard', "text-button")}</div><div id="feedback" class="feedback${c.verdict ? ` ${c.verdict.status}` : ""}" aria-live="polite" ${c.verdict ? "" : "hidden"}>${c.verdict ? feedback(c.verdict, q) : ""}</div><div id="auto-next" class="auto-next" hidden><span>Next in 3s</span><div><i></i></div></div><div class="actions">${button("submit", "Check answer", "button primary")}${button("hint", c.hintsUsed >= 3 ? "Solution shown" : c.hintsUsed === 2 ? "Show solution" : c.hintsUsed === 1 ? "Show next hint" : "Need a hint?", "button subtle")}${button("next", c.verdict?.status === "correct" || c.hintsUsed >= 3 ? "Next question →" : "Skip", "text-button next")}</div><div id="hints">${hintContent()}</div>${state.progress.skills[q.primarySkill]?.failureStreak >= 3 ? '<p class="notice">Let’s rebuild the idea. Review the rule, then try the quick checks that come next.</p>' : ""}</div>`;
 }
 function feedback(v: Verdict, q: Question) {
   switch (v.status) {
@@ -598,13 +599,12 @@ async function next() {
   }
 }
 
-// The in-field result for the phone keyboard layout (Spec D9). Only the first field
-// shows it: verdicts are for the whole answer, not per component.
+// Only the first field shows a verdict: it applies to the whole answer, not one component.
 const VERDICT_TEXT: Record<Verdict["status"], string> = {
   correct: "✓ Correct",
   incorrect: "! Not quite",
-  invalid: "i Couldn’t check",
-  inconclusive: "i Couldn’t check",
+  invalid: "Check your input",
+  inconclusive: "Check your input",
 };
 function renderAnswerVerdict(clear = false) {
   const box = document.querySelector<HTMLElement>(".answer-box");
@@ -614,11 +614,37 @@ function renderAnswerVerdict(clear = false) {
   if (v) box.dataset.verdict = v.status;
   else delete box.dataset.verdict;
   text.textContent = v ? VERDICT_TEXT[v.status] : "";
+  const message = document.getElementById("answer-message");
+  if (message) {
+    const hasMessage = v?.status === "invalid" || v?.status === "inconclusive";
+    message.textContent = hasMessage ? v.message : "";
+    message.hidden = !hasMessage;
+  }
 }
-// Check / Next and the Hint?, Skip and hide buttons live in the math keyboard (Spec K8, K9).
+// Check / Next, Hint?, Skip and hide keyboard stay usable while MathLive rebuilds its toolbar.
 const HIDE_KEYBOARD_ICON =
   '<svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="11" rx="2"/><path d="M6.5 8h1m3 0h1m3 0h1m3 0h1M8.5 11.5h7M9 18.5l3 3 3-3"/></svg>';
-const KEYBOARD_TOOLS = `<button type="button" class="kb-tool" data-act="hint">Hint?</button><button type="button" class="kb-tool" data-act="skip">Skip</button><button type="button" class="kb-tool kb-hide" data-act="hide" aria-label="Hide keyboard">${HIDE_KEYBOARD_ICON}</button>`;
+const ALT_TIP_SEEN_KEY = "apcalc.keyboardAltTipSeen";
+let altTipSeen = (() => {
+  try {
+    return localStorage.getItem(ALT_TIP_SEEN_KEY) === "true";
+  } catch {
+    return false;
+  }
+})();
+function markAltTipSeen() {
+  altTipSeen = true;
+  try {
+    localStorage.setItem(ALT_TIP_SEEN_KEY, "true");
+  } catch {
+    // The in-memory flag still hides the tip for this page session.
+  }
+  document.querySelectorAll(".kb-alt-tip").forEach((tip) => tip.remove());
+}
+const KEYBOARD_HINT_TOOL = '<button type="button" class="kb-tool" data-act="hint">Hint?</button>';
+const KEYBOARD_SKIP_TOOL = '<button type="button" class="kb-tool" data-act="skip">Skip</button>';
+const KEYBOARD_ALT_TIP = '<span class="kb-alt-tip" aria-hidden="true">Hold a key or tap ⇧ for more</span>';
+const KEYBOARD_HIDE_TOOL = `<button type="button" class="kb-tool kb-hide" data-act="hide" aria-label="Hide keyboard">${HIDE_KEYBOARD_ICON}</button>`;
 function syncKeyboardControls() {
   const c = state.session?.current;
   const correct = c?.verdict?.status === "correct";
@@ -635,13 +661,33 @@ function syncKeyboardControls() {
 }
 // MathLive rebuilds the keyboard for every question and every show, dropping the buttons.
 new MutationObserver(() => {
-  const bars = document.querySelectorAll(".ML__keyboard .ML__edit-toolbar");
   let added = false;
-  bars.forEach((bar) => {
-    if (bar.querySelector(".kb-tool")) return;
-    bar.innerHTML = KEYBOARD_TOOLS;
-    added = true;
-  });
+  document
+    .querySelectorAll<HTMLElement>(".ML__keyboard .MLK__toolbar > .left")
+    .forEach((bar) => {
+      if (!bar.querySelector('.kb-tool[data-act="hint"]')) {
+        bar.insertAdjacentHTML("beforeend", KEYBOARD_HINT_TOOL);
+        added = true;
+      }
+      if (!bar.querySelector('.kb-tool[data-act="skip"]')) {
+        bar.insertAdjacentHTML("beforeend", KEYBOARD_SKIP_TOOL);
+        added = true;
+      }
+      const tip = bar.querySelector(".kb-alt-tip");
+      if (altTipSeen) tip?.remove();
+      else if (!tip) bar.insertAdjacentHTML("beforeend", KEYBOARD_ALT_TIP);
+    });
+  document
+    .querySelectorAll<HTMLElement>(".ML__keyboard .ML__edit-toolbar")
+    .forEach((bar) => {
+      bar
+        .querySelectorAll('.kb-tool[data-act="hint"], .kb-tool[data-act="skip"]')
+        .forEach((tool) => tool.remove());
+      if (!bar.querySelector('.kb-tool[data-act="hide"]')) {
+        bar.insertAdjacentHTML("beforeend", KEYBOARD_HIDE_TOOL);
+        added = true;
+      }
+    });
   if (added) syncKeyboardControls();
 }).observe(document.body, { childList: true, subtree: true });
 // Our keys and buttons in the math keyboard are handled here, in the capture phase, and

@@ -666,6 +666,24 @@ math-field::part(menu-toggle) {
   border-radius: inherit;
   background: var(--success);
 }
+.answer-box[data-verdict] .answer-verdict {
+  display: flex;
+}
+.answer-box[data-verdict="correct"] .answer-meter {
+  display: block;
+}
+.answer-box[data-verdict="correct"] math-field {
+  border-color: var(--success);
+}
+.answer-box[data-verdict="incorrect"] math-field {
+  border-color: var(--warning);
+}
+.answer-message {
+  overflow-wrap: anywhere;
+  margin: var(--space-1) 0 0;
+  color: var(--warning);
+  font-size: var(--t-footnote);
+}
 math-field {
   display: block;
   width: 100%;
@@ -729,6 +747,19 @@ math-field:focus-within {
 }
 
 /* Components — feedback */
+/* Results show in the answer box (Spec S6). The panel stays as the screen-reader live
+   region and the countdown drives the in-box meter, so both are only visually hidden. */
+#feedback,
+#auto-next {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
 .feedback {
   font-size: var(--t-footnote);
   line-height: 1.6;
@@ -1146,7 +1177,8 @@ dialog h2[tabindex="-1"]:focus {
 .ML__keyboard .kb-tool.is-pressed {
   opacity: 0.55;
 }
-/* Hint?, Skip and hide keyboard, in MathLive's empty edit-toolbar slot beside the page tabs. */
+/* The keyboard's top row: Hint?, Skip and the first-use tip on the left (the one-page
+   keyboard has no tabs there), hide keyboard in MathLive's edit-toolbar slot on the right. */
 .ML__keyboard .ML__edit-toolbar {
   display: flex;
   align-items: center;
@@ -1154,7 +1186,7 @@ dialog h2[tabindex="-1"]:focus {
   padding-right: var(--space-2);
 }
 .ML__keyboard .kb-tool {
-  min-height: 40px;
+  min-height: 44px;
   padding: 0 var(--space-2);
   border: 0;
   background: transparent;
@@ -1170,7 +1202,7 @@ dialog h2[tabindex="-1"]:focus {
 .ML__keyboard .kb-hide {
   display: grid;
   place-items: center;
-  min-width: 40px;
+  min-width: 44px;
   color: var(--label-2);
 }
 /* MathLive has width classes for 0.5, 1.5, 2 and 5 units only. */
@@ -1192,10 +1224,27 @@ dialog h2[tabindex="-1"]:focus {
   margin: 0;
 }
 .ML__keyboard .MLK__toolbar > .left {
+  flex: 1;
+  min-width: 0;
+  align-items: center;
   padding-left: 8px;
+}
+.ML__keyboard .MLK__toolbar > .left > .kb-tool {
+  padding: 0 var(--space-2);
 }
 .ML__keyboard .MLK__toolbar > .left > div {
   padding: 4px 12px;
+}
+.ML__keyboard .kb-alt-tip {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  padding: 0 var(--space-2);
+  color: var(--label-2);
+  font-size: var(--t-footnote);
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 @media (hover: none) {
   .ML__keyboard {
@@ -1319,32 +1368,14 @@ dialog h2[tabindex="-1"]:focus {
     padding-top: var(--space-5);
     padding-bottom: calc(var(--space-5) + env(safe-area-inset-bottom));
   }
-  /* With the keyboard open, Check / Next, Hint? and Skip live in the keyboard (Spec K8, K9),
-     and the result shows in the answer field (Spec D9). The page feedback stays readable
-     to screen readers through its live region. */
-  /* Visually hidden, not display: none: Next must stay focusable, because moving focus
-     there is what makes MathLive release the answer field before it is replaced. */
-  .keyboard-open .actions,
-  .keyboard-open #feedback,
-  .keyboard-open #auto-next {
+  /* Next must stay focusable: moving focus there makes MathLive release the answer field. */
+  .keyboard-open .actions {
     position: absolute;
     width: 1px;
     height: 1px;
     overflow: hidden;
     clip-path: inset(50%);
     white-space: nowrap;
-  }
-  .keyboard-open .answer-box[data-verdict] .answer-verdict {
-    display: flex;
-  }
-  .keyboard-open .answer-box[data-verdict="correct"] .answer-meter {
-    display: block;
-  }
-  .keyboard-open .answer-box[data-verdict="correct"] math-field {
-    border-color: var(--success);
-  }
-  .keyboard-open .answer-box[data-verdict="incorrect"] math-field {
-    border-color: var(--warning);
   }
 }
 
