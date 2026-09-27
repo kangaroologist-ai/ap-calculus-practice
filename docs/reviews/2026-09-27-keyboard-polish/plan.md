@@ -241,6 +241,11 @@ Labels: **[F]** fact (source), **[I]** inference, **[U]** unknown, **[P]** pre-e
 - **[F]** 按住 7 或 sin 700 ms 后松手，输入的是主功能（“7”、“\\sin”），计数回到 0；WebKit 与 Chromium 相同（验证脚本 `verify-l3.cjs` 在会话 scratchpad）。**[I]** 原因：L3 在 `window` 捕获阶段的 pointerup 里用 `queueMicrotask` 复位计数；浏览器派发的事件在两个监听器之间会执行微任务，于是复位发生在 MathLive 的 pointerup 读取计数之前。改为在 MathLive 处理完之后（`setTimeout(…, 0)`）再检查复位。
 - **[F]** ⇧ 后按 9 输入 “Z”（大写），⇧ 锁定时按 7、8 输入 “XY”。**[I]** MathLive 在 shift 状态下把 `typedText` 的字母转成大写。**事后更正**：L1 时 Luna 让数字 alt 的字母用 `insert`、变量键用 `typedText`，Claude 在复核中把它当作 “绕过测试” 改成了同一个 `typedText` 命令（提交 `63a8089`）——这个判断是错的，两种写法有实际原因。改回：字母、θ、π 的 alt 用 `insert`；测试的 “变量除外” 按功能（插入的字母）豁免，而不是按命令写法，并在测试注释里写明原因。
 
+### R14. ⇧ 状态下的读屏名称（核对文档时发现）
+
+- **[F]** ⇧ 打开后，MathLive 重绘键帽时只更新 `data-tooltip`（alt 的名称，如 “inverse sine”、“x”、“divide”），`aria-label` 仍是主功能的名称（“sine”、“7”、“fraction”），读屏会读错键（Chromium 实测，脚本 `aria.cjs` 在会话 scratchpad；`mathlive.mjs:29144-29160` 的 `render()` 只写 `dataset.tooltip`）。
+- **[I]** 修法：在已有的 `MutationObserver`（MathLive 每次重绘都会触发）里，把数学键帽的 `aria-label` 同步为当前的 `data-tooltip`；确认键不动（它的名称由 `syncKeyboardControls` 按 Check / Next 设置）。
+
 ### R11. L2 复核中发现：键盘上方的可见范围算错（实施中发现）
 
 - **[P]**（提交 `3e23463` 引入，1.2.0 预览版，未发布）`visibleBottom()` 在 `.actions` 高度大于 0 时以它的顶部为界。键盘打开时 `.actions` 是视觉隐藏的 1×1 px 元素，高度为 1，于是界限变成了页面下方很远的位置，而不是键盘顶部。以前框内结果本来就在答题框里，没有暴露；现在框下的 “Check your input” 原因会被键盘挡住。
@@ -264,7 +269,7 @@ Labels: **[F]** fact (source), **[I]** inference, **[U]** unknown, **[P]** pre-e
 
 - **S1 单页键位。** 键盘只有上表一页，没有页签；每个功能只出现一次（主字或 alt），变量除外（上表本身就让本题变量既有自己的键、又是某个数字的 alt；L1 复核时补写这条例外，两处用同一个命令）。*Accept:* 单元测试逐格核对 x、t、θ、隐函数四种情形的主字、alt 与宽度；390 截图。*From:* G1、G10→第 2 轮、第 3 轮、R3、R9
 - **S2 占位与符号。** 等待输入的位置画空框（▫/▫、▫^▫、e^▫、√▫、log▫、\|▫\|）；乘号为 “·”；分式键单按插入上下分式，alt 为 ÷。答题框里乘号也显示为 “·”。*Accept:* 单元测试核对键帽 LaTeX；浏览器中按 · 后答题框的显示；截图。*From:* 第 2 点、G7、G13、R2、R8
-- **S3 alt、⇧ 与长按。**（第 4–6 轮与 T1b 评审后）键上不印 alt。⇧ 点一次只对下一个键生效，连点两次锁定，再点解除；⇧ 三态照 iOS shift 的形状（关 = 灰色功能键底、空心箭头；一次性 = 白底实心箭头；锁定 = 白底实心箭头加下方横线），激活与锁定时箭头为 `--tint` 蓝色（G20）。⇧ 激活时有 alt 的键显示 alt 并变为 `--tint` 色，没有 alt 的键保持原样、不变淡（评审 A2）；三角键显示 sin⁻¹ 等、输入 arcsin 等。长按：只在有 alt 的键上计时（B5），到时直接写 MathLive 的内部字段 `_shiftPressCount = 1`（不重绘，R12），按住 450 ms 且手指移动不超过 8 px 时弹出气泡显示 alt（B1），松手输入 alt 且气泡立即消失，手指移出键外取消（80 ms 淡出）；气泡出现 120 ms，透明度 0→1、缩放 0.95→1、ease-out，减少动态模式下只保留透明度（B4、B8）。键盘上禁用 iOS 的长按菜单与文字选择（B2）。读屏：⇧ 名为 shift，状态用 `aria-pressed`；⇧ 激活时键的读屏名称随 alt 更新（A6）。*Accept:* 浏览器测试（单按、⇧ 一次、⇧ 锁定、长按松手、长按移出、无 alt 键长按等同单按）；一个测试在 MathLive 的 `_shiftPressCount` 字段不存在时失败（R12）逐项核对答题框内容；`tests/contrast.test.ts` 覆盖 ⇧ 状态下的蓝色字；iPhone 真机确认长按无系统菜单。*From:* G12→第 2 轮、G15、第 4–6 轮、R7、R9、`reviews/synthesis.md`
+- **S3 alt、⇧ 与长按。**（第 4–6 轮与 T1b 评审后）键上不印 alt。⇧ 点一次只对下一个键生效，连点两次锁定，再点解除；⇧ 三态照 iOS shift 的形状（关 = 灰色功能键底、空心箭头；一次性 = 白底实心箭头；锁定 = 白底实心箭头加下方横线），激活与锁定时箭头为 `--tint` 蓝色（G20）。⇧ 激活时有 alt 的键显示 alt 并变为 `--tint` 色，没有 alt 的键保持原样、不变淡（评审 A2）；三角键显示 sin⁻¹ 等、输入 arcsin 等。长按：只在有 alt 的键上计时（B5），到时直接写 MathLive 的内部字段 `_shiftPressCount = 1`（不重绘，R12），按住 450 ms 且手指移动不超过 8 px 时弹出气泡显示 alt（B1），松手输入 alt 且气泡立即消失，手指移出键外取消（`--dur-press` 100 ms 淡出）；气泡出现 `--dur-fast` 150 ms（评审 B 建议 120 / 80 ms；改用现有档位，因为 DESIGN.md 3.6 规定不新增时长档位，150 ms 仍在 B 引用的 125–200 ms 范围内），透明度 0→1、缩放 0.95→1、ease-out，减少动态模式下只保留透明度（B4、B8）。键盘上禁用 iOS 的长按菜单与文字选择（B2）。读屏：⇧ 名为 shift，状态用 `aria-pressed`；⇧ 激活时键的读屏名称随 alt 更新（A6）。*Accept:* 浏览器测试（单按、⇧ 一次、⇧ 锁定、长按松手、长按移出、无 alt 键长按等同单按）；一个测试在 MathLive 的 `_shiftPressCount` 字段不存在时失败（R12）逐项核对答题框内容；`tests/contrast.test.ts` 覆盖 ⇧ 状态下的蓝色字；iPhone 真机确认长按无系统菜单。*From:* G12→第 2 轮、G15、第 4–6 轮、R7、R9、`reviews/synthesis.md`
 - **S4 字体。** 所有数学键帽由 KaTeX 渲染，与题目公式同一套字体；Check / Next 与顶栏按钮用界面字体。*Accept:* 单元测试：数学键都用 `latex` 键帽；浏览器中取 sin、7、+ 键的计算字体为 KaTeX_*。*From:* 第 3 点、G5、R4
 - **S5 顶栏。** 左侧 Hint?、Skip，右侧收起键盘；显示规则不变（提示用完隐藏 Hint?，答对后隐藏 Hint? 与 Skip）；这些按钮触控高度 44 px（C-F6）。键盘第一次打开时，顶栏中间显示一行 “Hold a key or tap ⇧ for more”，学生第一次用过长按或 ⇧ 后不再显示，记在本机（G18）。*Accept:* 浏览器测试沿用并更新；截图。*From:* 第 3 轮
 - **S6 答题框内的结果（所有设备）。**（第 5 轮更正后）桌面与手机、键盘开与关，一律使用手机现在的框内显示：答题框右侧显示 “✓ Correct” / “! Not quite” / “i Couldn’t check”，边框分别为 `--success` / `--warning`，答对时框底有倒计时线；修改答案后答错类标签清除（现有行为）。页面下方不再显示反馈框和 “Next in 3s” 条（`#feedback` 保留为读屏 live region）；答错说明句不显示（读屏仍读）。桌面上 Next question 按钮保留。无效输入或无法判定时，框内显示 “Check your input”（G22，不加符号），答题框下方另显示一行小字说明具体原因（G19、G21：`--warning` 色、`--t-footnote`，前面不加符号），修改答案后消失；手机键盘打开时这行也保持在键盘上方。*Accept:* e2e：1280 与 390（键盘开 / 关）三种结果的框内文字可见、`#feedback` 与 `#auto-next` 视觉隐藏且 `#feedback` 文字仍含结果；截图。*From:* 第 5 点、G6、第 5 轮、R5
@@ -304,6 +309,10 @@ Luna 步骤（第 8 轮后重排，负责人要求多交给 Luna max）：
 - [x] **T5b** (S6) `src/main.ts` `visibleBottom()`：键盘可见时以键盘顶部为界（R11）。*Verify:* 390 键盘打开、无效输入时原因小字在键盘上方；提示面板仍能滚入。*Owner:* Claude - 一行修复，在复核中发现
 - [x] **T3b** (S3) `src/main.ts`（长按松手后的复位时机）、`src/math-keyboard.ts` 与 `tests/math-keyboard-layout.test.ts`（字母 alt 改回 `insert`，测试按功能豁免变量）：R13。*Verify:* `verify-l3.cjs` 各路径在 WebKit、Chromium 通过；单元测试。*Owner:* Claude - 复核中发现，改动小且涉及 Claude 自己在 L1 复核时引入的错误
   **结果**：见 T3 结果；布局单元测试 29 项、全部 355 项通过。
+- [x] **T3c** (S3) `src/style.css`：删去 L3 新增的 `--dur-key-bubble-in/out`，气泡改用 `--dur-fast` / `--dur-press`。*Verify:* 样式表里没有新时长令牌；`verify-l3.cjs` 仍通过。*Owner:* Claude - 核对文档时发现与 DESIGN.md 3.6 冲突
+  **结果**：见下方提交；气泡路径复测通过。
+- [x] **T3d** (S3) `src/main.ts`：R14 的读屏名称同步。*Verify:* ⇧ 前后 sin、7、分式键的 `aria-label` 分别为 sine / inverse sine、7 / x、fraction / divide；确认键仍为 check answer / next question。*Owner:* Claude - 核对中发现的小修复
+  **结果**：⇧ 前 sine / 7 / fraction，⇧ 后 inverse sine / x / divide（Chromium，`aria.cjs`）；tsc 通过。
 - [ ] **T6** (S1–S6) 测试：含 `_shiftPressCount` 字段的守护测试（R12）；`tests/math-keyboard-layout.test.ts` 改为单页布局与 alt；`tests/math-keyboard.spec.ts`、`tests/app.spec.ts` 中 More 页、页签行、框内结果相关的测试改写；新增 ⇧ / 长按、框内结果（所有设备）、无法判定小字、首次提示的浏览器测试；`tests/contrast.test.ts` 加 ⇧ 状态的蓝色字。*Verify:* T7。*Owner:* Luna max - 按本文 Spec 改写测试，范围限定在 `tests/`，与 T2–T5 的文件不重叠（Playwright 由 Claude 运行）；另把 `scripts/design-capture.ts` 的 “键盘第二页” 改为 ⇧ 一次性、⇧ 锁定、长按气泡三个状态（L4）
 - [ ] **T7** (S1–S6) 复核 T6：读 diff；运行 `npm test`、`npm run test:math`、`npm run build`、`npm run test:e2e`；新测试放到旧代码上确认失败；检查没有被放宽的断言。*Owner:* Claude - Luna 步骤之后的复核
 

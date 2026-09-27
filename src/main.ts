@@ -855,6 +855,16 @@ function onKeyboardPointerCancel(event: PointerEvent) {
   if (altPress?.pointerId === event.pointerId) cancelAltPress();
   if (shiftTap?.pointerId === event.pointerId) shiftTap = undefined;
 }
+// MathLive's render() updates data-tooltip to the alt's name while shifted but leaves
+// aria-label on the primary, so a screen reader would announce the wrong key (plan R14).
+function syncKeycapNames() {
+  document
+    .querySelectorAll<HTMLElement>(".ML__keyboard .MLK__keycap[data-tooltip]:not(.practice-enter)")
+    .forEach((key) => {
+      if (key.getAttribute("aria-label") !== key.dataset.tooltip)
+        key.setAttribute("aria-label", key.dataset.tooltip!);
+    });
+}
 function syncKeyboardShiftState() {
   document.querySelectorAll<HTMLElement>(".ML__keyboard .practice-shift").forEach((key) => {
     const keyboard = key.closest<HTMLElement>(".ML__keyboard");
@@ -931,6 +941,7 @@ new MutationObserver(() => {
     });
   if (added) syncKeyboardControls();
   syncKeyboardShiftState();
+  syncKeycapNames();
 }).observe(document.body, { childList: true, subtree: true });
 // Our keys and buttons in the math keyboard are handled here, in the capture phase, and
 // hidden from MathLive: when MathLive also processes the tap it runs a command on the

@@ -57,9 +57,6 @@
   --dur-press: 100ms;
   --dur-fast: 150ms;
   --dur-base: 200ms;
-  /* Long-press feedback gets a brief entrance and a quicker cancel fade. */
-  --dur-key-bubble-in: 120ms;
-  --dur-key-bubble-out: 80ms;
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
   --shadow-card: 0 4px 24px color-mix(in srgb, var(--label) 2%, transparent);
@@ -1238,8 +1235,8 @@ dialog h2[tabindex="-1"]:focus {
   transform: translate(-50%, -100%) scale(0.95);
   transform-origin: 50% 100%;
   transition:
-    opacity var(--dur-key-bubble-in) var(--ease-out),
-    transform var(--dur-key-bubble-in) var(--ease-out);
+    opacity var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
 }
 .practice-alt-bubble.is-visible {
   opacity: 1;
@@ -1248,7 +1245,7 @@ dialog h2[tabindex="-1"]:focus {
 .practice-alt-bubble.is-canceling {
   opacity: 0;
   transform: translate(-50%, -100%) scale(1);
-  transition: opacity var(--dur-key-bubble-out) var(--ease-out);
+  transition: opacity var(--dur-press) var(--ease-out);
 }
 /* Check / Next: the one primary action while the keyboard is open. */
 .ML__keyboard .MLK__rows > .MLK__row > div.practice-enter {
@@ -1652,13 +1649,13 @@ dialog h2[tabindex="-1"]:focus {
   }
   .practice-alt-bubble {
     transform: translate(-50%, -100%);
-    transition: opacity var(--dur-key-bubble-in) var(--ease-out);
+    transition: opacity var(--dur-fast) var(--ease-out);
   }
   .practice-alt-bubble.is-visible,
   .practice-alt-bubble.is-canceling {
     transform: translate(-50%, -100%);
   }
   .practice-alt-bubble.is-canceling {
-    transition: opacity var(--dur-key-bubble-out) var(--ease-out);
+    transition: opacity var(--dur-press) var(--ease-out);
   }
 }
