@@ -1414,3 +1414,42 @@ for (const view of [
     }
   });
 }
+
+// On an iPhone, opening IndexedDB sometimes hung ("Opening your practice…" forever) or failed
+// (straight into a temporary session). Both now ask for a reload first (task
+// 2026-09-27-iphone-viewport-storage G1, S3).
+for (const failure of ['hangs', 'fails'] as const) {
+  test(`when opening saved progress ${failure}, practice asks for a reload`, async ({ page, browserName }) => {
+    test.skip(browserName !== 'chromium', 'Storage start-up is verified once in Chromium.');
+    await page.addInitScript((mode) => {
+      if (mode === 'fails') {
+        const open = indexedDB.open.bind(indexedDB);
+        indexedDB.open = ((name: string, version?: number) => {
+          if (name === 'derivative-studio') throw new DOMException('Simulated failure', 'UnknownError');
+          return open(name, version);
+        }) as typeof indexedDB.open;
+        return;
+      }
+      // A real hang: an earlier open keeps its upgrade transaction busy forever, so the app's
+      // own open of the same database is queued behind it and never completes.
+      const blocker = indexedDB.open('derivative-studio', 1);
+      blocker.onupgradeneeded = () => {
+        const store = blocker.result.createObjectStore('state');
+        const spin = () => { store.get('spin').onsuccess = spin; };
+        spin();
+      };
+    }, failure);
+    await page.goto('/');
+    if (failure === 'hangs') {
+      // Still waiting before the timeout, as the page used to do forever.
+      await page.waitForTimeout(3000);
+      await expect(page.locator('.boot')).toBeVisible();
+    }
+    await expect(page.getByRole('heading', { name: 'We couldn’t open your saved progress.' }))
+      .toBeVisible({ timeout: failure === 'hangs' ? 8000 : 3000 });
+    await expect(page.getByRole('button', { name: 'Reload' })).toBeVisible();
+    await page.getByRole('button', { name: 'Continue without saving' }).click();
+    await expect(page.locator('#notice')).toContainText('Temporary session');
+    await expect(page.getByRole('button', { name: /Start practicing|Continue practicing/ })).toBeVisible();
+  });
+}

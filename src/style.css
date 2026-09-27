@@ -194,6 +194,12 @@ body {
 .boot-error h1 {
   font-size: var(--t-error-title);
 }
+.boot-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+}
 .brand-mark {
   width: 37px;
   height: 37px;
@@ -1299,6 +1305,12 @@ body > .ML__keyboard {
   width: calc(9 * var(--keycap-width) - var(--keycap-gap));
   max-width: none;
   margin-inline: auto;
+  /* The row is 44 px from the start (the buttons' touch height), not MathLive's 32 px until our
+     buttons arrive: MathLive measures the key block when it builds the keyboard, and a row that
+     grew afterwards left that measurement stale, pushing the last row 13 px off an iPhone screen
+     (task 2026-09-27-iphone-viewport-storage R4). */
+  box-sizing: border-box;
+  height: 44px;
 }
 .ML__keyboard .kb-tool {
   min-height: 44px;

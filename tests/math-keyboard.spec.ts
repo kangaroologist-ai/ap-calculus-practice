@@ -411,3 +411,25 @@ test('the keyboard layer follows the visible height, so the last row stays on sc
     expect(overshoot).toBeLessThanOrEqual(1);
   }
 });
+
+// MathLive measures the key block when it builds the keyboard; our top-row buttons made that row
+// grow afterwards (32 → 44 px), so after a few questions the stale height pushed the last row
+// 13 px below the screen (task 2026-09-27-iphone-viewport-storage R4).
+test('the key block stays on screen across several questions', async ({ page }) => {
+  await openPracticeKeyboard(page);
+  for (let question = 1; question <= 4; question += 1) {
+    const geometry = await page.evaluate(() => {
+      const plate = document.querySelector('.ML__keyboard .MLK__plate')!.getBoundingClientRect();
+      const backdrop = document.querySelector('.ML__keyboard .MLK__backdrop')!.getBoundingClientRect();
+      return { overshoot: plate.bottom - window.innerHeight, backdropGap: window.innerHeight - backdrop.bottom };
+    });
+    expect(geometry.overshoot, `key block past the screen on question ${question}`).toBeLessThanOrEqual(1);
+    expect(Math.abs(geometry.backdropGap), `backdrop not at the bottom on question ${question}`).toBeLessThanOrEqual(1);
+    // Skip rebuilds the keyboard for the next question without depending on the answer.
+    const prompt = await page.locator('.question-body .formula').first().getAttribute('aria-label');
+    await page.locator('.ML__keyboard .kb-tool[data-act="skip"]').click();
+    await expect.poll(() => page.locator('.question-body .formula').first().getAttribute('aria-label')).not.toBe(prompt);
+    await expect.poll(() => page.evaluate(() => window.mathVirtualKeyboard.visible)).toBe(true);
+    await page.waitForTimeout(300);
+  }
+});

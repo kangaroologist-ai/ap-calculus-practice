@@ -909,7 +909,32 @@ if (new URLSearchParams(location.search).get("debug") === "viewport") {
       `scrollY ${scrollY.toFixed(1)} / max ${(document.documentElement.scrollHeight - innerHeight).toFixed(1)}`,
       `kb ${kb.visible ? "open" : "closed"} top ${plate?.top.toFixed(1)} bottom ${plate?.bottom.toFixed(1)}`,
       `layer h ${document.querySelector<HTMLElement>("body > .ML__keyboard")?.getBoundingClientRect().height.toFixed(1)} var ${getComputedStyle(document.documentElement).getPropertyValue("--practice-viewport-height")}`,
+      ...keyboardLayout(),
+      ...plateMoves.slice(-3),
     ].join("\n");
+  };
+  // Which part moves when the keys sink (task 2026-09-27-iphone-viewport-storage R3): the layer,
+  // the backdrop MathLive sizes once on show, or the plate inside it.
+  const safeArea = document.createElement("div");
+  safeArea.style.cssText = "position:fixed;visibility:hidden;height:env(safe-area-inset-bottom)";
+  document.body.append(safeArea);
+  const plateMoves: string[] = [];
+  let lastPlateBottom: number | undefined;
+  const keyboardLayout = () => {
+    const layer = document.querySelector<HTMLElement>("body > .ML__keyboard")?.getBoundingClientRect();
+    const backdrop = document.querySelector<HTMLElement>(".ML__keyboard .MLK__backdrop");
+    const b = backdrop?.getBoundingClientRect();
+    const plate = document.querySelector(".ML__keyboard .MLK__plate")?.getBoundingClientRect();
+    if (plate && plate.bottom !== lastPlateBottom) {
+      if (lastPlateBottom !== undefined)
+        plateMoves.push(`${new Date().toISOString().slice(14, 23)} plate ${lastPlateBottom.toFixed(0)}→${plate.bottom.toFixed(0)} h ${plate.height.toFixed(0)}`);
+      lastPlateBottom = plate.bottom;
+    }
+    return [
+      `layer ${layer?.top.toFixed(1)}–${layer?.bottom.toFixed(1)}  safe-bottom ${safeArea.getBoundingClientRect().height}`,
+      `backdrop ${b?.top.toFixed(1)}–${b?.bottom.toFixed(1)} h ${b?.height.toFixed(1)} padB ${backdrop ? getComputedStyle(backdrop).paddingBottom : "-"}`,
+      `plate h ${plate?.height.toFixed(1)}`,
+    ];
   };
   document.body.append(panel);
   for (const target of [window, window.visualViewport]) {
@@ -1440,6 +1465,23 @@ window.addEventListener("pagehide", () => {
   clearTimeout(saveTimer);
   void persist();
 });
+const STORAGE_TIMEOUT_MS = 5000;
+function loadStateWithin(ms: number) {
+  return Promise.race([
+    loadState(),
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(Error("Opening saved progress timed out.")), ms),
+    ),
+  ]);
+}
+// Resolves only if the student chooses to continue without saving; Reload reloads the page.
+function chooseAfterStorageFailure() {
+  return new Promise<void>((resolve) => {
+    app.innerHTML = `<main class="boot-error"><h1>We couldn’t open your saved progress.</h1><p>This sometimes happens in Safari. Reloading the page usually fixes it. Your saved progress has not been changed.</p><div class="boot-actions">${button("reload-page", "Reload", "button primary")}${button("continue-unsaved", "Continue without saving", "text-button")}</div></main>`;
+    on("reload-page", () => location.reload());
+    on("continue-unsaved", () => resolve());
+  });
+}
 async function boot() {
   const progressLink = location.hash.startsWith("#progress=")
     ? location.href
@@ -1454,8 +1496,12 @@ async function boot() {
     config = validateConfig(await response.json());
     let saved: AppState | undefined;
     try {
-      saved = await loadState();
+      saved = await loadStateWithin(STORAGE_TIMEOUT_MS);
     } catch {
+      // On an iPhone, opening storage sometimes hangs or fails until the page is reloaded; ask
+      // for a reload rather than silently practising without saving (task
+      // 2026-09-27-iphone-viewport-storage G1).
+      await chooseAfterStorageFailure();
       temporary = true;
     }
     if (saved) {
