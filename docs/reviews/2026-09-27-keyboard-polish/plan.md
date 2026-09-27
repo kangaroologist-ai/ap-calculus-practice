@@ -170,6 +170,9 @@ P4 评审的回头追问（2026-09-27，loop-back，按第 9 轮规则：与 Spe
 |---|---|---|---|---|
 | G27 | 地址栏挡键盘（R22）和这次的 “卡在 Opening” （R25）都还没查清，1.2.0 是否等它们 | **现在发布 1.2.0**：1–5 项已真机通过；这两个问题都不是这次改动引入的迹象（键盘固定在底部、存储打开方式都没改），另开任务查；诊断面板保留在线上（不链接到任何地方）以便取数据 / 等查清再发布 | 待答 | 2026-09-27 |
 
+第 16 轮（2026-09-27，原话）：“可以 release。现在截图到了，你看一下问题”（附两张 `?debug=viewport` 截图）。
+→ **G27 定案：现在发布 1.2.0；R22、R25 另开任务。** 截图分析见 R26。
+
 Default assumptions (not answered):
 - D1：版本号保持 1.2.0，直接修改尚未发布的 1.2.0 What's new 条目（上一轮同样处理）。
 - D2：t 题、θ 题中，Main 页 “x” 的位置显示本题变量（t 或 θ），与现在一样。
@@ -366,6 +369,13 @@ Labels: **[F]** fact (source), **[I]** inference, **[U]** unknown, **[P]** pre-e
 - **[I]** 推测：iOS Safari 的 IndexedDB 偶尔在页面加载后打开无响应、重新载入标签页才恢复（在同一标签页里改地址再打开时较常见）。这与 `?debug` 参数本身无关；若属实，正常地址也可能偶发，属于既有问题 **[P]**。**[U]** 需要负责人试：① 卡住时下拉刷新能否进入；② 在新标签页打开同一个带参数的地址能否进入。
 - **[I]** 修法方向（另开任务）：给打开数据库加超时，超时后显示 “重新载入” 的提示而不是一直停在启动文字；并用诊断面板继续取 R22 的数据。
 
+### R26. 真机截图：键盘超出可见区域 13 px；存储打开失败进入临时模式（第 16 轮）
+
+- **[F]** 两张截图的诊断数据：`inner 402x714`、`client 714`、`vv h 714.0 top 0.0`、`scrollY 228 / 146`（页面已滚动）、`kb open top 491 bottom 727`。键盘底部 727 > 可见高度 714，超出 13 px；截图里最后一行键只露出约 31 / 44 px，底部浮动地址栏在可见区域之外，并没有盖住页面。仿真（WebKit 390 × 664）下同一数值为 bottom 665 对 innerHeight 664，只差 1 px。
+- **[F]** MathLive 把键盘层设为 `body > .ML__keyboard { position: fixed }`、`.ML__keyboard { top: 0; height: 100% }`，键区贴在这一层的底部（`mathlive.mjs:13700-13760`）。
+- **[I]** 在 iOS Safari 带浮动地址栏时，固定定位元素的 100% 高度按 “大视口” 计算，比当前可见高度多出 13 px，于是键区底部落在可见区域之外。R22 “被地址栏挡住” 的实际原因是这个，而不是地址栏覆盖。候选修法：`body > .ML__keyboard { height: 100dvh }`（动态视口高度），或用 `visualViewport.height` 设置高度；仿真无法复现，需要在预览上用诊断面板真机核对。
+- **[F]** 第二张截图顶部有 “Temporary session: export progress before leaving”，即 `loadState()` 抛错后 `boot` 进入临时模式——与 R25（打开存储时卡住）同属真机上 IndexedDB 打开不正常，这次表现为失败而非卡住。
+
 ## Spec
 
 保持不变：4 行 × 9 个单位；← → 在底行左侧，⌫ 在第 3 行右侧，Check / Next 在右下角；判分、进度、3 秒倒计时；手机上键盘打开时不显示页面下方的按钮栏。
@@ -468,13 +478,18 @@ Luna 步骤（第 8 轮后重排，负责人要求多交给 Luna max）：
   **结果**：`docs/reviews/2026-09-27-coefficients/plan.md` 已建（Grill 起点、R1 已知事实），phase 为 grill。
 
 Project obligations:
-- [ ] **P1** README 与 `help.html` 同步：applies — README 第 36、38 段，`help.html` 的 Correct、Not quite 与 Typing formulas。*Owner:* Claude（文档不委派）
-- [ ] **P2** 版本与 What's new：applies，不提升版本（D1）— 改写 `src/whats-new.ts` 的 1.2.0 条目（单页键盘、⇧ 与长按、框内结果）。*Owner:* Claude
-- [ ] **P3** DESIGN.md：applies — 5.2 / 5.3（框内显示对所有设备生效、无效 / 无法判定的短标签与框下小字）、第 9 节文案；`review-workflow.md` 第 6 节 “颜色以外的图标” 改为 “颜色以外的区分（符号或文字）”（R10）、6.1（单页布局表、规则改写，D8）、6.3（字体、alt 小字、⇧、气泡）、6.4（读屏名称）、6.5（长按借用 shift 的注意事项）。*Owner:* Claude
+- [x] **P1** README 与 `help.html` 同步：applies — README 第 36、38 段，`help.html` 的 Correct、Not quite 与 Typing formulas。*Owner:* Claude（文档不委派）
+  **结果**：README 第 36、38 段与设计审核段、`help.html` 的结果说明与 Typing formulas 已按最终代码核对（alt、⇧、长按、700 px 角标、框内结果、Check your input、1.5 秒）；检索旧说法（More 页、÷ 分式、×、Couldn’t check、three-second）为 0。
+- [x] **P2** 版本与 What's new：applies，不提升版本（D1）— 改写 `src/whats-new.ts` 的 1.2.0 条目（单页键盘、⇧ 与长按、框内结果）。*Owner:* Claude
+  **结果**：版本保持 1.2.0；`src/whats-new.ts` 1.2.0 条目 4 条，日期改为发布日 2026-09-27；What's new 单元测试通过。
+- [x] **P3** DESIGN.md：applies — 5.2 / 5.3（框内显示对所有设备生效、无效 / 无法判定的短标签与框下小字）、第 9 节文案；`review-workflow.md` 第 6 节 “颜色以外的图标” 改为 “颜色以外的区分（符号或文字）”（R10）、6.1（单页布局表、规则改写，D8）、6.3（字体、alt 小字、⇧、气泡）、6.4（读屏名称）、6.5（长按借用 shift 的注意事项）。*Owner:* Claude
+  **结果**：5.3、6.1–6.5、7、8、10 与 `review-workflow.md` 已随各步骤更新并按最终代码核对。
   **进展（P1–P3，未勾选）**：Luna 跑 L1、L2 期间，Claude 按最终 Spec 起草了 README 第 36、38 段、`help.html` 的结果说明与 Typing formulas、`src/whats-new.ts` 1.2.0 条目（4 条，What's new 单元测试 6 项通过；日期在发布时更新）、DESIGN.md 5.3、6.1–6.5、7、8 与 `review-workflow.md` 的清单。实现完成后逐条对照代码核对（尤其气泡时长、44 px 顶栏是否增加键盘高度、`w30` 是否删除），再勾选。
-- [ ] **P4** 设计审核：applies。按第 9–11 轮改为**合并式审核**，派全局子代理 `design-reviewer`（Sonnet、medium，预载 `design-review` 技能）：Claude 运行 `npm run design:capture`（L4 更新后的状态），一个 Sonnet 只读评审者在一次评审中调用三套视角的技能（`design:design-critique` / `design:accessibility-review` / `design:ux-copy`，`emil-design-eng` / `apple-design`，`impeccable` 的 critique 与 polish，不运行 impeccable 检测器），只看本次改动的状态（键盘三态与长按、四种结果、框下原因、顶栏与首次提示，390 深浅色、1280）；共同背景沿用 `reviews/context.md` 并更新为实现后的状态；报告存 `reviews/`。Claude 核实、定级：与 Spec 不冲突的 P0 / P1 修复后复测；**与 Spec 冲突的结论先回 Grill 问负责人**。*Owner:* Sonnet 评审 + Claude 综合 - 负责人指定
+- [x] **P4** 设计审核：applies。按第 9–11 轮改为**合并式审核**，派全局子代理 `design-reviewer`（Sonnet、medium，预载 `design-review` 技能）：Claude 运行 `npm run design:capture`（L4 更新后的状态），一个 Sonnet 只读评审者在一次评审中调用三套视角的技能（`design:design-critique` / `design:accessibility-review` / `design:ux-copy`，`emil-design-eng` / `apple-design`，`impeccable` 的 critique 与 polish，不运行 impeccable 检测器），只看本次改动的状态（键盘三态与长按、四种结果、框下原因、顶栏与首次提示，390 深浅色、1280）；共同背景沿用 `reviews/context.md` 并更新为实现后的状态；报告存 `reviews/`。Claude 核实、定级：与 Spec 不冲突的 P0 / P1 修复后复测；**与 Spec 冲突的结论先回 Grill 问负责人**。*Owner:* Sonnet 评审 + Claude 综合 - 负责人指定
+  **结果**：合并式审核完成（`reviews/review-post.md`）；P1 已修（T3f），G23 负责人选 A（保持），无遗留 P0 / P1。
   **进展（未勾选，等 G23）**：`npm run design:capture` 重新生成 45 张截图（先清掉了旧编号的残留截图）；派 `design-reviewer`（Sonnet、medium），报告与 Claude 的核实存 `reviews/review-post.md`。无 P0；P1 一项（1280 px 键上印着 alt，R18）已由 T3f 修复并加测试；P3 三项：#2 已接受、#4 留作遗留项、#3 与 Spec 冲突 → G23。另记 P3：1280 px 下键帽字形偏小。
-- [ ] **P5** iPhone 真机确认（第 15 轮：1–5 项通过；第 6 项转为 R25 / G27）：applies — 键盘排布、长按（含没有系统菜单）、⇧ 三态、首次提示。*Owner:* 负责人
+- [x] **P5** iPhone 真机确认（第 15 轮：1–5 项通过；第 6 项转为 R25 / G27）：applies — 键盘排布、长按（含没有系统菜单）、⇧ 三态、首次提示。*Owner:* 负责人
+  **结果**：第 15 轮负责人确认 1–5 项通过；第 6 项转为 R25、R26，另开任务（G27）。
 - [ ] **P6** 部署与线上核对：applies — 重新部署预览 → 负责人 iPhone 确认 → 合并 `main` → 部署 → 确认线上 `/` 与 `/help` 为新版（接续 `2026-09-26-keyboard-followups` 的 F-8）。*Owner:* Claude + 负责人
   **进展**：负责人要预览链接（2026-09-27）。`npm run build` 后 `wrangler pages deploy dist --branch design-keyboard-1.2`（提交 `77f86c3`）：部署 https://2f52e608.ap-calculus-practice.pages.dev ，别名 https://design-keyboard-1-2-dh6k.ap-calculus-practice.pages.dev ，两者都返回 `main-DuJWLhnV.js`，与本地构建一致。注意：Cloudflare 这次给的别名带后缀，上一轮的 `design-keyboard-1-2.ap-calculus-practice.pages.dev` 仍是旧构建（`main-6ChDpAWy.js`）。正式站点未动。等负责人 iPhone 确认（P5）。 第二次预览（第 12 轮修正后，提交 `2545f37`）：https://88c2b53d.ap-calculus-practice.pages.dev ，别名同上 https://design-keyboard-1-2-dh6k.ap-calculus-practice.pages.dev ，均返回 `main-B6MAfquY.js`，与本地构建一致；正式站点未动。 第三次预览（第 14 轮，提交 `8bb6ce9`）：https://df2007f6.ap-calculus-practice.pages.dev ，别名同上；部署后别名约 20 秒内仍返回旧构建，随后两者都返回 `main-BM5o0949.js`，与本地构建一致；正式站点仍为 `main-jvVkbN6_.js`。
 

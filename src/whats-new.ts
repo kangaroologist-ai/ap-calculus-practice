@@ -8,7 +8,7 @@ export type WhatsNewEntry = {
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
     version: "1.2.0",
-    date: "2026-09-26",
+    date: "2026-09-27",
     title: "A new math keyboard",
     items: [
       "The math keyboard is now one page, laid out like a calculator, in the same math font as the questions. Empty boxes show where you type next.",
