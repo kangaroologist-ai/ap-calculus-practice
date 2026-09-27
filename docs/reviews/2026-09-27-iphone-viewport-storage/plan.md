@@ -1,10 +1,11 @@
 ---
 task: iphone-viewport-storage
-phase: implement      # grill | research | spec | todo | implement | acceptance | done
+phase: done            # grill | research | spec | todo | implement | acceptance | done
 scope: ap-calculus-practice / iPhone Safari：键盘超出可见区域；本地存储打开不正常
 branch: fix-iphone-keyboard-viewport
 version: 1.2.0 → 1.2.1（预计，用户可见的修复）
 commits:
+  - 3206cb7: release prep 1.2.1 (What's new, diagnostic panel removed); unit 355, Playwright 204 pass; released, CI Verify 36323669997 success
   - 45834ee: skip MathLive's hidden-input selection while the keyboard is open (T14), racy test fix (T15); unit 355, Playwright 203 pass
   - 33d07a6: undo Safari's own scroll after an editing key (T11); unit 355, Playwright 201 pass
   - 86f261f: onScrollIntoView → keepAnswerVisible (T8), scroll event log (T7); unit 355, Playwright 198 pass
@@ -194,11 +195,23 @@ Project obligations:
   第 3–8 轮的改动（T8、T11、T14、T16）只改滚动行为和删除调试代码，不改任何界面外观；R7 的逐帧录屏（`evidence-r7/`）与真机确认覆盖了可见效果。仍为常规审核，无 P0 / P1。
 - [x] **P5** iPhone 真机确认：applies — 键盘底部读数与最后一行可见；输入时不跳动。
   **结果**：S1 第 3 轮真机通过；S3 由负责人第 2 轮定案、预览中可用；S4 第 8 轮 “没问题了，上线吧”（第五次预览，提交 `45834ee`）。
-- [ ] **P6** 部署与线上核对：applies — 预览 → 真机确认 → 合并 `main` → 部署 → 线上 `/` 与 `/help`。
+- [x] **P6** 部署与线上核对：applies — 预览 → 真机确认 → 合并 `main` → 部署 → 线上 `/` 与 `/help`。
+  **结果**：负责人第 8 轮同意发布。`main` 从 `caa8c42` 快进到 `3206cb7`（含此前只在本地 `main` 上的 `396808d`，已核对）并推送；`wrangler pages deploy dist --branch main` → https://f2176b67.ap-calculus-practice.pages.dev ；线上 https://ap-calculus-practice.pages.dev 返回 `main-DPotAs16.js`，与本地构建一致，包内版本 `1.2.1`、含 “page no longer jumps”；`/help` 200，含 “couldn’t open your saved progress … Reload”。推送后 GitHub Actions “Verify” 运行 36323669997：成功。
   **进展**：预览（提交 `8e85af7`）https://fix-iphone-keyboard-viewport.ap-calculus-practice.pages.dev ，部署 `6cb8c958`，返回 `main-D6IQTFAP.js`，与本地构建一致；正式站点仍为 1.2.0。等负责人真机确认（P5）。 第二次预览（第 2 轮修正后，提交 `82ff58f`）：部署 `cabe3a6f`，别名同上，均返回 `main-BOy_zPim.js`，与本地构建一致；正式站点仍为 1.2.0（`main-DKL8AnjN.js`）。
 
 诊断面板（`?debug=viewport`）随 1.2.0 上线，本任务结束时删除（T16 已删）。
 
 ## Acceptance
 
-待填写。
+| Spec | To Do | Evidence | Result |
+|---|---|---|---|
+| S1 键盘底部在可见区域内 | T1、T2、T4、T6 | 测试 “the keyboard layer follows the visible height…”、“the key block stays on screen across several questions”（三种引擎）；负责人第 3 轮真机 “键盘已经不会挡住了”；第 5–8 轮截图 `kb open … bottom 715.0`、`layer h 714` | pass |
+| S3 存储打不开时提示重新载入 | T5 | 测试 “when opening saved progress hangs / fails, practice asks for a reload”（真实的卡住与失败）；README、`help.html`、DESIGN.md 6.5；线上 `/help` 含 Reload 说明 | pass（真机上未再遇到存储故障，无法在真机上触发；负责人第 2 轮定案的方案按测试验收） |
+| S4 输入时页面不跳动 | T7、T8、T11、T14、T16 | 测试 “typing a power or a root does not scroll the page…”、“a scroll the browser makes by itself…”、“keys that select a placeholder leave the hidden input alone…”；模拟器逐帧 `evidence-r7/report.md`；负责人第 8 轮真机 “没问题了” | pass |
+| S2 版本与文档 | T3、T10 | `package.json` 1.2.1；What's new 1.2.1 三条（What's new 单元测试通过）；DESIGN.md 6.5；README / `help.html` 核对 | pass |
+
+- **与 Spec 的差异**：S4 的验收原写 “事件记录里没有 `scrollY` 变化”；诊断面板按计划在发布前删除（T16），所以 S4 以第五次预览（带面板）的真机确认和模拟器逐帧证据为准，删除面板只去掉调试代码、不改行为。
+- **保留的兜底**：`heldScroll`（T11）仍在，负责人确认时它在场；如以后发现它干扰正常滚动，再单独评估删除。
+- **依赖 MathLive 内部字段**：`_mathfield.keyboardDelegate`（T14），升级 MathLive 时守护测试会提示。
+- **未做**：R7 中 T14 之后的幂键逐帧录屏与 `&mlscroll=1` 对照未补录（模拟器 Safari 卡住）；负责人真机已覆盖幂键。
+- **[P] 遗留**：`package-lock.json` 版本号仍是 1.1.1（1.2.0 起未同步）；`src/main.ts` 不符合 Prettier 格式（`main` 上原本如此，项目未强制）。
