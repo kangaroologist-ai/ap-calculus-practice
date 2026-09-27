@@ -23,6 +23,9 @@ Recon：键盘任务里已做的真机取数与分析，见 Research。
 - D1：这是学生能看到的修复，按 `AGENTS.md` 升级为 1.2.1，并加一条 What's new（英文 1 条）。
 - D2：修法先部署预览，请负责人用 `?debug=viewport` 在 iPhone 上确认读数（键盘底部 ≤ 可见高度）后再发布。
 
+第 5 轮（2026-09-27，负责人在第三次预览上真机试用，原话）：“不会每次输入x幂和根号x时跳了。现在变成每次打开键盘第一次输入会跳。首次键盘后再打开，再输入还会跳一小下。分式、幂好像都会，别的不确定。你复现一下，看能不能解决。别忘了GRST”（附事件记录截图 `round5-iphone-eventlog.webp`）
+→ T8 部分有效（连续输入不再每次跳）；剩下 “打开键盘后的第一次输入跳一下” → R6，回到 Research。S4 保持不变。
+
 | # | Question | Options (recommendation first) | Owner's answer | Date |
 |---|---|---|---|---|
 | G1 | 存储打开超时或失败后怎么处理 | **显示 “无法打开已保存的进度，请重新载入页面” 与重新载入按钮，不自动进入临时模式**（避免学生在不保存的模式里做题）/ 超时后自动进入临时模式（现有的失败路径） | 第 2 轮：“local-storage problem uses "please reload"” → 推荐方案 | 2026-09-27 |
@@ -84,6 +87,21 @@ Recon：键盘任务里已做的真机取数与分析，见 Research。
 - 对 H1、H3：给答题框设置 `onScrollIntoView`，改用本站自己的 `keepAnswerVisible()`（只在答题框真的被键盘挡住时滚，留 16 px 余量，不滚答题框内部的上下方向）。这也让页面滚动只有一个来源。
 - 对 H2：若是 iOS 原生滚动，需要另找办法（例如让输入元素的位置固定在答题框内、或在滚动后立即还原）；先看数据。
 
+### R6. 修法后仍有的跳动：打开键盘后的第一次输入（第 5 轮）
+
+- **[F]** 真机事件记录（`round5-iphone-eventlog.webp`，iPhone 402×714，键盘已打开，页面 scrollY 83–91）：`key sin`、`key power` 后不动；第二次 `key power` 后 `scrollY 83→91`，100 ms 内唯一的页面级调用是 `math-field#answer-0.scroll`（MathLive 的 ③）；约 1.5 s 后（按 `exponential` 之后，负责人可能收起了键盘）`scrollY 91→83 native`；之后 `key power` 又 `83→91`。每次都是 **8 px**，`vv top` 与答题框高度都没有变化。记录里没有 `window.scrollBy`，说明 `keepAnswerVisible()` 没有滚动。
+- **[F]** MathLive 接收输入的 `.ML__keyboard-sink` 是答题框里的 `contenteditable`，`position: fixed` 但没有设 `top` / `left`（停在答题框里的静态位置），用 `clip-path: inset(50%)` 隐藏（`mathlive.mjs:13159-13175`）。
+- **[I]** 候选：H4 ③ 的 `host.scroll({ top })` 在 iOS 上把页面滚了（答题框不是滚动容器时，本应没有效果）；H5 iOS 为了露出获得焦点的 `contenteditable` 里的光标，原生滚动页面，恰好与 ③ 同时发生（记录只按 100 ms 内的调用归因）。“native 91→83” 可能是收起键盘后页面变短、`scrollY` 被夹回。
+- **[F]** 负责人补充（原话）：“好像把输入清空后再收起弹出键盘比较容易复现”；“试试分式键”。
+- **[F]** **iOS 模拟器复现**（iPhone 17 Pro，iOS 26.5，402×714，与负责人手机相同；本地开发服务器 `?debug=viewport`）：清空答题框 → 收起键盘 → 用 Math keyboard 重新打开 → 按分式：`scrollY 72→84 math-field#answer-0.scroll`，同一时刻键区 `715→703→715`（固定层在滚动中被 iOS 临时移位），答题框 66→84 px。此前在同一页面依次按 x、幂、根号、分式、2（不经过清空 + 重开），都没有滚动。WebKit 桌面仿真（Playwright）从未复现。
+- **[I]** 触发条件：答题框变高（分式、上标让公式变高）的那一次按键里，MathLive 的 ③ 调用了 `host.scroll({ top })`。答题框不是滚动容器，按规范这次调用不应有效果，但 iOS 上页面被滚动了（H4 成立的可能性最大）。
+- **[F]** 排除 H4：把答题框实例的 `scroll()` 换成空操作后，同样步骤仍然 `scrollY 0→12 native`（答题框 66→84 之后约 80 ms）。改动已撤回。
+- **[F]** 不是 “打开后的第一次输入”：清空 → 收起 → 重开后先按 2（不变高），再按分式（66→80），仍然 `12→24 native`。共同点是**答题框变高**；此前答题框已经较高时再变高（84→113）没有滚动。
+- **[F]** 不是滚动锚定：模拟器 Safari `CSS.supports("overflow-anchor", "none")` 为 false。
+- **[F]** 负责人问 “为什么要有个隐藏按钮？”——指 `.ML__keyboard-sink`：不是按钮，是 MathLive 自带的隐藏可编辑元素，用来持有焦点、接收实体键盘 / 粘贴 / 读屏输入；去掉会让这些输入失效。它在滚动前后都停在视口 362 px（固定定位）。
+- **[I]** 原因是 iOS Safari 自己的滚动：聚焦的可编辑内容所在的答题框变高后，Safari 把页面滚了约 12 px（具体规则未公开，模拟器与真机一致）。无法从页面关掉这一行为。
+- **修法（T11）**：按键后把页面位置恢复到 “应该在的位置”：按下键盘键时记下 `scrollY`；本站的 `keepAnswerVisible()` 滚动后更新这个值；之后 500 ms 内（每次答题框 `input` 重新计时）若页面位置变了且不是本站滚动的，立即 `scrollTo` 回去。只在手机键盘打开时生效。风险：iOS 滚动与还原之间可能露出一帧；需要模拟器与真机确认。
+
 ### R2. 本地存储（IndexedDB）打开卡住或失败
 
 - **[F]** 一次停在 “Opening your practice…”（`boot()` 没有到第一次 `render()`），一次出现 “Temporary session: export progress before leaving”（`loadState()` 抛错后的临时模式）。仿真与已部署预览都无法复现。
@@ -113,6 +131,8 @@ Recon：键盘任务里已做的真机取数与分析，见 Research。
   **结果**：诊断面板末尾的 “events” 最近 10 条：键名、`scrollY a→b` 加最近 100 ms 内的页面级滚动调用（`window.*`、`page.*`、`math-field.*`，没有就是 `native`）、`vv top` 变化、答题框高度 / `scrollTop` 变化；只记页面级调用，因为 MathLive 每键都会横向滚动自己的内部 `field`。WebKit iPhone 13（答题框被推到键盘下）：修法后 `scrollY 0→600 window.scrollBy+…`；`&mlscroll=1` 时 `page.scrollBy+…scrollIntoView` 并紧跟一次 592→593，来源区分得开（`eventlog.png`、`eventlog-mlscroll.png`，会话 scratchpad）。面板改为自动换行，长行不再被截掉。
 - [x] **T8** (S4) `src/main.ts`：答题框设置 `onScrollIntoView`：手机键盘打开时交给 `keepAnswerVisible()`（只在被挡时滚），其余情况保持 MathLive 的 `scrollIntoView({ block: "nearest" })`；`?debug=viewport&mlscroll=1` 时不设置（D4）。`tests/math-keyboard.spec.ts`：答题框可见时输入幂与根号页面不滚、MathLive 的 `scrollBy` 不再被调用；答题框被键盘挡住时输入仍滚到位。*Verify:* 新测试在未设置时失败、设置后三种引擎通过；预览真机 S4。*Owner:* Claude - 小改动，依赖真机验证
   **结果**：`mountInputs()` 里设置 `mf.onScrollIntoView`；`keepMathLiveScroll` 读 `?debug=viewport&mlscroll=1`。新测试 “typing a power or a root does not scroll the page unless the keyboard covers the answer”：去掉修法时答题框的 `scrollIntoView` 被调用 14 次、三种引擎失败；修法后 0 次、`scrollY` 不变，答题框被推到键盘下时按一键后距键盘 ≥ 15 px，三种引擎通过。全套：unit 355、Playwright 198 通过（60 跳过）。真机效果待 T9。
+- [x] **T11** (S4) `src/main.ts`：R6 的 “按键后还原页面位置”（`?debug=viewport&mlscroll=1` 时关闭，与 T8 一起）；诊断面板保留答题框 / sink 位置与 `overflow-anchor` 支持两项读数。`tests/math-keyboard.spec.ts`：按键后 500 ms 内页面被外部滚动会被还原；本站因遮挡而滚动的位置不被还原。*Verify:* 新测试在无修法时失败；iOS 模拟器按 R6 步骤 `scrollY` 不变或当帧还原；预览真机 S4。*Owner:* Claude - 依赖模拟器与真机验证
+  **结果**：`heldScroll`、`holdScrollAfterKey()`（`src/main.ts`）：按下编辑键（不含 Check / Next 键和顶栏按钮）时记下位置，`keepAnswerVisible()` 滚动后更新，答题框 `input` 时延长 500 ms；按到键盘以外的地方即取消。iOS 模拟器按 R6 步骤：`key fraction` 后三次 `scrollY 0→0 …window.scrollTo`（iOS 连续滚了三帧，每次都被还原），`scrollY` 保持 0，键区不再出现 `715→703` 的临时移位；是否有一帧闪动只能真机看。新测试 “a scroll the browser makes by itself right after a key is undone” 去掉修法时三种引擎失败，恢复后通过；全套 unit 355、Playwright 201 通过（60 跳过）。诊断面板新增 `anchor`（`overflow-anchor` 支持）与答题框 / sink 位置读数，以及 `&anchor=none` 实验开关。
 - [ ] **T10** (S2、S4) `src/whats-new.ts` 1.2.1 加第三条（输入时页面不再跳动），真机确认 S4 后再写，以免写了没做到的事；`docs/design/DESIGN.md` 6.5 加一条输入时滚动的规则（已写）；README / `help.html`：检索后没有关于输入时滚动的说法，无需修改。*Owner:* Claude - 文档不委派
 - [ ] **T9** (S4) 部署预览（D4），请负责人真机按 R5 的方法截图（修法后；需要时加 `&mlscroll=1` 录修法前）。*Owner:* Claude
   **进展**：第三次预览（提交 `86f261f`）：部署 `c39ac23c`，别名与部署都返回 `main-B_ee2kt_.js`，与本地构建一致，包内含 `mlscroll`。等负责人真机截图。

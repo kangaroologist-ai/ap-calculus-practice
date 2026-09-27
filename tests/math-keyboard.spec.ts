@@ -471,3 +471,18 @@ test('typing a power or a root does not scroll the page unless the keyboard cove
   );
   expect(gap).toBeGreaterThanOrEqual(15);
 });
+
+// iOS Safari scrolls the page by itself (about 12 px) when a fraction or a power makes the
+// focused answer field taller. Right after a key, the page goes back to where it was; later
+// scrolls belong to the student (task 2026-09-27-iphone-viewport-storage R6).
+test('a scroll the browser makes by itself right after a key is undone', async ({ page }) => {
+  await openPracticeKeyboard(page);
+  const before = await page.evaluate(() => window.scrollY);
+  await pointerPressKey(page, 'fraction');
+  await page.evaluate(() => window.scrollBy({ top: 12, behavior: 'instant' }));
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(before);
+  await page.waitForTimeout(600);
+  await page.evaluate(() => window.scrollBy({ top: 12, behavior: 'instant' }));
+  await page.waitForTimeout(100);
+  expect(await page.evaluate(() => window.scrollY)).toBe(before + 12);
+});

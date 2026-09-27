@@ -94,7 +94,37 @@ function keepAnswerVisible() {
     window.scrollBy({ top: needed - bottom, behavior: "instant" });
   else if (bounds.top < 16)
     window.scrollBy({ top: bounds.top - 16, behavior: "instant" });
+  if (heldScroll) heldScroll.top = window.scrollY;
 }
+// iOS Safari scrolls the page by itself (about 12 px) when the focused answer field grows, as a
+// fraction or a power does (task 2026-09-27-iphone-viewport-storage R6). With the phone keyboard
+// open, a key should move the page only through keepAnswerVisible(), so put the page back.
+let heldScroll: { top: number; until: number } | undefined;
+function holdScrollAfterKey() {
+  if (
+    keepMathLiveScroll ||
+    !window.mathVirtualKeyboard.visible ||
+    !matchMedia("(max-width: 700px)").matches
+  )
+    return;
+  heldScroll = { top: heldScroll?.top ?? window.scrollY, until: performance.now() + 500 };
+}
+window.addEventListener(
+  "pointerdown",
+  (event) => {
+    // Check / Next may render a new question, which scrolls on purpose.
+    const key = (event.target as Element | null)?.closest?.(".ML__keyboard .MLK__keycap");
+    heldScroll = undefined;
+    if (key && !key.classList.contains("practice-enter")) holdScrollAfterKey();
+  },
+  true,
+);
+window.addEventListener("scroll", () => {
+  if (!heldScroll) return;
+  if (performance.now() > heldScroll.until) heldScroll = undefined;
+  else if (Math.abs(window.scrollY - heldScroll.top) >= 1)
+    window.scrollTo({ top: heldScroll.top, behavior: "instant" });
+});
 // A new hint renders below the answer, near or under the phone keyboard. Scroll just
 // enough to show its start, so the answer field stays in view where possible.
 function revealNewHint() {
@@ -375,6 +405,7 @@ function mountInputs() {
     mf.setAttribute("inputmode", "none");
     mf.value = c.draft[i] ?? "";
     mf.addEventListener("input", () => {
+      if (heldScroll) holdScrollAfterKey();
       if (c.verdict?.status === "correct") cancelAutoNext();
       // An edited answer is no longer the one that was checked (a correct one still leads to Next).
       else renderAnswerVerdict(true);
@@ -908,6 +939,7 @@ window.visualViewport?.addEventListener("resize", syncViewportHeight);
 // ?debug=viewport shows the numbers needed to diagnose the keyboard sliding under Safari's
 // address bar on an iPhone (plan R22). Not linked anywhere; remove once that is fixed.
 if (debugParams.get("debug") === "viewport") {
+  if (debugParams.get("anchor") === "none") document.documentElement.style.overflowAnchor = "none";
   const panel = document.createElement("pre");
   panel.setAttribute("aria-hidden", "true");
   panel.style.cssText =
@@ -917,7 +949,7 @@ if (debugParams.get("debug") === "viewport") {
     const kb = window.mathVirtualKeyboard;
     const plate = document.querySelector(".ML__keyboard .MLK__plate")?.getBoundingClientRect();
     panel.textContent = [
-      `inner ${innerWidth}x${innerHeight}  client ${document.documentElement.clientHeight}`,
+      `inner ${innerWidth}x${innerHeight}  client ${document.documentElement.clientHeight}  anchor ${CSS.supports("overflow-anchor", "none") ? getComputedStyle(document.documentElement).overflowAnchor : "n/a"}`,
       `vv h ${vv?.height.toFixed(1)} top ${vv?.offsetTop.toFixed(1)} pageTop ${vv?.pageTop.toFixed(1)}`,
       `scrollY ${scrollY.toFixed(1)} / max ${(document.documentElement.scrollHeight - innerHeight).toFixed(1)}`,
       `kb ${kb.visible ? "open" : "closed"} top ${plate?.top.toFixed(1)} bottom ${plate?.bottom.toFixed(1)}`,
@@ -997,7 +1029,8 @@ if (debugParams.get("debug") === "viewport") {
   const checkField = () => {
     const field = activeMathfield?.isConnected ? activeMathfield : document.querySelector("math-field");
     if (!field) return;
-    const now = `h ${field.getBoundingClientRect().height.toFixed(0)} scrollTop ${field.scrollTop.toFixed(0)}`;
+    const sink = field.shadowRoot?.querySelector(".ML__keyboard-sink")?.getBoundingClientRect();
+    const now = `h ${field.getBoundingClientRect().height.toFixed(0)} top ${field.getBoundingClientRect().top.toFixed(0)} sink ${sink?.top.toFixed(0)}+${sink?.height.toFixed(0)}`;
     if (lastField && now !== lastField) log(`field ${lastField} → ${now}`);
     lastField = now;
   };
