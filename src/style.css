@@ -1147,6 +1147,11 @@ dialog h2[tabindex="-1"]:focus {
 }
 
 /* Components — keyboard */
+/* The fixed keyboard layer takes the visible height, not MathLive's 100% (the large viewport
+   on an iPhone with Safari's floating address bar); src/main.ts keeps the variable current. */
+body > .ML__keyboard {
+  height: var(--practice-viewport-height, 100%);
+}
 .ML__keyboard {
   --keyboard-zindex: 1000;
   color: var(--label);

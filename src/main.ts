@@ -882,6 +882,16 @@ window.addEventListener("pointermove", onKeyboardPointerMove, true);
 window.addEventListener("pointerleave", onKeyboardPointerLeave, true);
 window.addEventListener("pointerup", onKeyboardPointerUp, true);
 window.addEventListener("pointercancel", onKeyboardPointerCancel, true);
+// MathLive's keyboard layer is fixed with height: 100%. With Safari's floating address bar on
+// an iPhone, that 100% is the large viewport, 13 px taller than what is visible, so the last
+// row of keys sat below the screen (task 2026-09-27-iphone-viewport-storage R1). Size the layer
+// to the visible height instead.
+function syncViewportHeight() {
+  document.documentElement.style.setProperty("--practice-viewport-height", `${window.innerHeight}px`);
+}
+syncViewportHeight();
+window.addEventListener("resize", syncViewportHeight);
+window.visualViewport?.addEventListener("resize", syncViewportHeight);
 // ?debug=viewport shows the numbers needed to diagnose the keyboard sliding under Safari's
 // address bar on an iPhone (plan R22). Not linked anywhere; remove once that is fixed.
 if (new URLSearchParams(location.search).get("debug") === "viewport") {
@@ -898,6 +908,7 @@ if (new URLSearchParams(location.search).get("debug") === "viewport") {
       `vv h ${vv?.height.toFixed(1)} top ${vv?.offsetTop.toFixed(1)} pageTop ${vv?.pageTop.toFixed(1)}`,
       `scrollY ${scrollY.toFixed(1)} / max ${(document.documentElement.scrollHeight - innerHeight).toFixed(1)}`,
       `kb ${kb.visible ? "open" : "closed"} top ${plate?.top.toFixed(1)} bottom ${plate?.bottom.toFixed(1)}`,
+      `layer h ${document.querySelector<HTMLElement>("body > .ML__keyboard")?.getBoundingClientRect().height.toFixed(1)} var ${getComputedStyle(document.documentElement).getPropertyValue("--practice-viewport-height")}`,
     ].join("\n");
   };
   document.body.append(panel);

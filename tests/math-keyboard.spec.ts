@@ -382,3 +382,32 @@ test('a finger tap on shift survives the compatibility mouseup iOS sends', async
     await context.close();
   }
 });
+
+// On an iPhone with Safari's floating address bar, MathLive's fixed layer at height: 100% was
+// 13 px taller than the visible area, hiding most of the last row. The layer now follows
+// window.innerHeight (task 2026-09-27-iphone-viewport-storage R1).
+test('the keyboard layer follows the visible height, so the last row stays on screen', async ({ page }) => {
+  await openPracticeKeyboard(page);
+  for (const height of [844, 700, 760]) {
+    await page.setViewportSize({ width: 390, height });
+    // Emulated browsers never make 100% taller than innerHeight, so also check the mechanism:
+    // the variable tracks innerHeight and the layer takes its height from it.
+    await expect.poll(() => page.evaluate(() =>
+      document.documentElement.style.getPropertyValue('--practice-viewport-height'),
+    )).toBe(`${height}px`);
+    await page.evaluate(() => document.documentElement.style.setProperty('--practice-viewport-height', '500px'));
+    expect(await page.evaluate(() =>
+      Math.round(document.querySelector<HTMLElement>('body > .ML__keyboard')!.getBoundingClientRect().height),
+    )).toBe(500);
+    await page.evaluate(() => window.dispatchEvent(new Event('resize')));
+    await expect.poll(() => page.evaluate(() => {
+      const layer = document.querySelector<HTMLElement>('body > .ML__keyboard')!.getBoundingClientRect();
+      return Math.round(layer.height) - window.innerHeight;
+    })).toBe(0);
+    const overshoot = await page.evaluate(() =>
+      document.querySelector('.ML__keyboard .MLK__plate')!.getBoundingClientRect().bottom - window.innerHeight,
+    );
+    // MathLive's plate border sits 1 px past the layer in every browser; more means the row is cut.
+    expect(overshoot).toBeLessThanOrEqual(1);
+  }
+});

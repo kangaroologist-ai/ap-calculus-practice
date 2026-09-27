@@ -292,6 +292,7 @@ MathLive 把键帽的 `tooltip` 优先用作 `aria-label`，所以 `tooltip` 只
 
 - alt 只能靠触摸 / 鼠标长按或 ⇧ 取得；MathLive 的虚拟键盘本身没有键盘焦点顺序，读屏或开关控制用户无法从虚拟键盘取得 alt。替代路径是用实体键盘直接输入（`arcsin`、`/`、`^`、`sqrt` 等，见帮助页的 Typing formulas）。
 - **长按借用 MathLive 的内部字段**：长按到时直接写 `_shiftPressCount = 1`，因为公开的 `shiftPressCount` setter 会调用 `render()`，清掉被按住键的按下状态，松手就不会输入 alt。这依赖 MathLive 0.110 的内部实现；升级 MathLive 时，守护测试会失败，需要重新检查（任务文档 `2026-09-27-keyboard-polish` R12）。
+- **iPhone 上键盘层的高度**：MathLive 把键盘层设为固定定位、`height: 100%`。iOS Safari 带底部浮动地址栏时，这个 100% 按 “大视口” 计算，比可见高度多约 13 px，键盘最后一行被挤出屏幕（2026-09-27 真机读数：可见 714 px，键盘底边 727 px）。`src/main.ts` 把 `window.innerHeight` 写进 `--practice-viewport-height`（`resize` 与 `visualViewport` 的 `resize` 时更新），`body > .ML__keyboard` 用它作高度。仿真无法复现这个差值，改动键盘定位时需要真机确认（任务文档 `2026-09-27-iphone-viewport-storage`）。
 - iOS Safari 不支持 `navigator.vibrate()`，网页无法触发触觉反馈。
 - WebKit 仿真不能完全复现 iOS 点按后的悬停残留；与键盘有关的改动需要真机确认。
 - **MathLive 的焦点记录**：MathLive 另外记着“当前在输入的答题框”，只有浏览器焦点真正移到别的元素上才会清除，它自己的 `blur()` 不会清除。如果一个仍被记为聚焦的答题框被删掉，下一个答题框获得焦点时就会报错。因此换题前要把焦点移到 Next 按钮上（`next()` 中已处理）。另外，答题框有焦点且键盘打开时，把它设为只读会让 MathLive 收起键盘，所以这种情况下改用 `beforeinput` 拦截编辑。
