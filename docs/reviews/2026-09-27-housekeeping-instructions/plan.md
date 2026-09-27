@@ -1,10 +1,12 @@
 ---
 task: housekeeping-instructions
-phase: implement         # grill | research | spec | todo | implement | acceptance | done
+phase: done              # grill | research | spec | todo | implement | acceptance | done
 scope: ap-calculus-practice 仓库杂项；项目指令 ../AGENTS.md；全局指令 ~/.claude/CLAUDE.md
 branch: housekeeping-instructions
 version: n/a（不影响学生）
-commits: []
+commits:
+  - 64df08f: lock version 1.2.1, instruction diffs recorded
+  - cdca3c3: Prettier removed; unit 355, build pass; CI Verify 36324999938 success
 ---
 
 # 遗留问题收尾，并把 iPhone 视口任务的经验写进指令
@@ -62,13 +64,14 @@ Project obligations:
 - [x] **P1** README / `help.html`：not applicable - 学生看不到任何变化。
 - [x] **P2** 版本与 What's new：not applicable - 不影响学生。
 - [x] **P3** DESIGN.md、设计审核、真机确认：not applicable - 不改界面。
-- [ ] **P4** 提交与推送：applies - 本仓库改动合并 `main` 并推送；`../AGENTS.md` 与 `~/.claude/CLAUDE.md` 不在仓库内，只在任务文档记录。
+- [x] **P4** 提交与推送：applies - 本仓库改动合并 `main` 并推送；`../AGENTS.md` 与 `~/.claude/CLAUDE.md` 不在仓库内，只在任务文档记录。
+  **结果**：`git fetch` 后本地 `main` 与 `origin/main` 同为 `e7335b3`；`git merge --ff-only` 到 `cdca3c3` 并推送；CI “Verify” 36324999938 成功（含 `npm ci`）。
 
 ## Acceptance
 
 | Spec | To Do | Evidence | Result |
 |---|---|---|---|
-| S1 锁文件版本一致 | T1 | `package-lock.json` 两处 1.2.1；推送后 CI `npm ci` | pass（CI 见 P4） |
+| S1 锁文件版本一致 | T1 | `package-lock.json` 两处 1.2.1；推送后 CI `npm ci` | pass（CI 36324999938 成功） |
 | S2 项目指令 | T2 | `AGENTS.md.diff` | pass |
 | S3 全局指令 | T3 | `CLAUDE.md.diff` | pass |
 | S4 去掉 Prettier | T4 | 检索为 0；unit 355、构建 | pass |
