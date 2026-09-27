@@ -1,0 +1,8 @@
+140a141
+> - 提升版本号用 `npm version <新版本> --no-git-tag-version`，它会同时改 `package.json` 和 `package-lock.json`；只手改 `package.json` 会让锁文件停在旧版本（1.2.0、1.2.1 都出过这个问题）。
+150a152,156
+> 
+> ## 练习网站发布与取证文件
+> 
+> - 发布前先 `git fetch`，核对本地 `main` 与 `origin/main` 各自有哪些提交；只用快进移动 `main`（`git merge --ff-only <任务分支>`），不要用 `git branch -f` 或强推。本地 `main` 上可能有还没推送的提交，强行移动会把它们丢掉。
+> - 真机截图、录屏和逐帧图是取证材料：任务目录（`docs/reviews/<任务>/`）只放报告和几张关键帧；视频与完整的帧序列放会话 scratchpad，不进仓库。一次录屏取证就可能有上百 MB。

@@ -1,0 +1,10 @@
+18a19,27
+> 
+> # Subagents and shared environments
+> 
+> - When a subagent is working against a shared dev server, simulator, or browser, tell it (SendMessage) before you change code it is exercising, and ask it to label its runs before and after the change. Hot reload silently changes what it is measuring.
+> - In iOS Simulator tasks, tell the subagent that `xcrun simctl openurl` opens a new Safari tab every time; reload in one tab, or terminate Safari (`xcrun simctl terminate booted com.apple.mobilesafari`) before reopening, so tabs don't pile up and the tab switcher doesn't take over.
+> 
+> # Device-only bugs: gather evidence before fixing
+> 
+> When a bug shows only on the owner's real device and emulation can't reproduce it, don't guess a fix. First add a debug-only diagnostic (shown only behind a URL parameter such as `?debug=...`) that logs the relevant events with their source: which input happened, what changed, and which call caused it, or "native" when page code made no call. Have the owner reproduce it and send a screenshot, choose the fix from that data, and delete the diagnostic when the task closes. A fix that only undoes a symptom afterwards (for example scrolling back after the browser scrolled) can still be visible; look for the trigger.
