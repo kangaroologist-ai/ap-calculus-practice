@@ -221,7 +221,7 @@ MathLive `math-field`，边框 `--control-border`，聚焦时 3 px `--focus` 外
 
 - sin⁻¹、cos⁻¹、tan⁻¹ 只是键帽，输入的是 `\arcsin` 等：判分器接受 arcsin，不接受 `\sin^{-1}`。
 - **取得 alt 的两种方式**：① 按住有 alt 的键 450 ms，键上方弹出气泡显示将输入的内容，松手输入；手指移动超过约 8 px 或移出键外则取消。② 点 ⇧：点一次只对下一个键生效，然后自动恢复；连点两次锁定，再点一次解除。⇧ 打开时，有 alt 的键换成 alt 并变为 `--tint` 色，没有 alt 的键保持原样（不变淡：它们仍然可以按，变淡会低于 4.5:1）。
-- 键上**不印** alt（负责人试过角标小字后否决：太挤）。发现方式：键盘第一次打开时，顶栏中间显示一行 “Hold a key or tap ⇧ for more”，第一次用过长按或 ⇧ 后不再显示（本机记录 `apcalc.keyboardAltTipSeen`）；帮助页与 What's new 说明。
+- **手机上键上不印 alt**（负责人试过角标小字后否决：太挤）；**宽度 ≥ 700 px 时在键的右上角印淡蓝小字**（11 px、`--tint`、60% 不透明；← → ⌫ 与确认键不印），此时键宽约 60 px 以上，放得下（2026-09-27 第 14 轮）。发现方式：键盘第一次打开时，顶栏中间显示一行 “Hold a key or tap ⇧ for more”，第一次用过长按或 ⇧ 后不再显示（本机记录 `apcalc.keyboardAltTipSeen`）；帮助页与 What's new 说明。
 - **顶栏**（原页签行）：左侧 **Hint?**、**Skip**，右侧收起键盘图标按钮，触控高度 44 px。提示用完时隐藏 Hint?；答对后隐藏 Hint? 与 Skip。MathLive 每次重建键盘都会清空这一行，由 `src/main.ts` 用 `MutationObserver` 自动补回。
 
 规则（由 `tests/math-keyboard-layout.test.ts` 检查）：
@@ -253,7 +253,7 @@ MathLive `math-field`，边框 `--control-border`，聚焦时 3 px `--focus` 外
 ### 6.3 外观与反馈
 
 - 键帽 `--surface`，底板 `--fill`，功能键使用 MathLive 的次级样式。
-- **键上不印 alt，任何宽度都一样**：MathLive 默认在键的右上角画 alt 小字，只在宽度 ≤ 414 px 时隐藏；样式表用不限宽度的 `.ML__keyboard .MLK__shift { display: none }` 关掉它（任务文档 R18：只按手机宽度检查时，桌面上漏掉过）。
+- **alt 角标只在 ≥ 700 px 显示**：MathLive 默认在键的右上角画 alt 小字，只在宽度 ≤ 414 px 时隐藏，所以样式表先在所有宽度隐藏 `.MLK__shift`，再在 `min-width: 700px` 下对没有 `hide-shift` 类的键按上面的样式显示（任务文档 R18 与第 14 轮；只按手机宽度检查时，桌面上漏掉过）。由 `tests/math-keyboard.spec.ts` 在 390 / 600 / 700 / 1280 px 检查。
 - **字体**：所有数学键帽用 LaTeX 键面，由 MathLive 以 KaTeX 字体绘制，与题目公式同一套字形（变量斜体、函数名直立）；确认键与顶栏按钮用界面字体。乘号显示 `·`，减号显示 `−`。
 - 按下时背景变为 `--separator`，不缩放、不加过渡（P2）。确认键与顶栏按钮由 app 自己处理点按（MathLive 在键盘里取消了 pointerdown，触屏上不会产生 click），按下状态由 `.is-pressed` 类绘制。
 - **⇧ 三态**照 iOS 键盘的 shift：关 = 功能键灰底、空心箭头；一次性 = 白底（`--surface`）、实心箭头；锁定 = 白底、实心箭头加下方横线。打开与锁定时箭头为 `--tint`，与变蓝的 alt 键帽一致。

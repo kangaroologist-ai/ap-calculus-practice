@@ -159,6 +159,9 @@ P4 评审的回头追问（2026-09-27，loop-back，按第 9 轮规则：与 Spe
 第 13 轮（2026-09-27，原话）：“3 处都按你推荐”
 → **G24 定案：宽度 ≥ 700 px 时印 alt（右上角 11 px、`--tint`、约 60% 不透明），手机不印；先出样机再改。G25 定案：1.5 秒。G26 定案：系数范围单独立任务，1.2.0 发布后做。**
 
+第 14 轮（2026-09-27，原话）：“A，alt 看着也没问题”
+→ **收起键盘图标定为样机 A（键盘加 V 形，线宽 1.6、圆角，与 ⇧ 同风格）；桌面 alt 角标按样机实现（≥ 700 px，右上角 11 px、`--tint`、60% 不透明，← → ⌫ 与确认键不印）。**
+
 Default assumptions (not answered):
 - D1：版本号保持 1.2.0，直接修改尚未发布的 1.2.0 What's new 条目（上一轮同样处理）。
 - D2：t 题、θ 题中，Main 页 “x” 的位置显示本题变量（t 或 θ），与现在一样。
@@ -435,13 +438,15 @@ Luna 步骤（第 8 轮后重排，负责人要求多交给 Luna max）：
   **结果**：顶栏宽度设为 `9 × --keycap-width − --keycap-gap` 并居中，Hint? 左侧与收起图标右侧去掉内边距。Chromium 实测 320 / 390 / 700 / 1280 / 2000 px：Hint? 文字左缘与第一列键左缘、收起图标右缘与最后一列键右缘相差 ≤ 0.1 px；Hint? 点按区域 46 × 44 px。`t13-1280-aligned.png`。
 - [x] **T14** (S9③) `src/main.ts`：R23。*Verify:* 幂、log、绝对值三个气泡截图。*Owner:* Claude - 一行修复
   **结果**：气泡渲染前把 `\\placeholder{}` 换成 `\\square`；幂、log、绝对值三个气泡都有空框（WebKit 390，`t14-bubbles.png`）。
-- [ ] **T15** (S9④) 收起键盘图标样机（不改仓库代码）→ 负责人选定后改 `src/main.ts` 的 `HIDE_KEYBOARD_ICON`。*Verify:* 负责人确认。*Owner:* Claude - 设计决定
+- [x] **T15** (S9④) 收起键盘图标样机（不改仓库代码）→ 负责人选定后改 `src/main.ts` 的 `HIDE_KEYBOARD_ICON`。*Verify:* 负责人确认。*Owner:* Claude - 设计决定
+  **结果**：负责人第 14 轮选 A；`HIDE_KEYBOARD_ICON` 换为样机 A（24 px，线宽 1.6、圆角）。截图 `t14-390-light.png`、`t14-1280-dark.png`。
   **进展（未勾选）**：三个样机 `t15-hide-icon-options.png`（现状、A 键盘加 V 形重画、B 只有 V 形、C 简化键盘加 V 形；在真实顶栏里渲染，浅色 / 深色）。等负责人选。
 - [ ] **T16** (S9⑤) `src/main.ts`：`?debug=viewport` 诊断面板（只在带参数时出现），部署预览请负责人截图；拿到数据后另加修复条目。*Verify:* 面板显示所需数值。*Owner:* Claude - 需要真机数据
   **进展（未勾选）**：`?debug=viewport` 面板已加（`src/main.ts`），WebKit 390 下显示 inner / visualViewport / scroll / 键盘位置；随下一次预览部署，请负责人在键盘被挡时截图。
 - [x] **T17** (S9⑥) 等待时间 1.5 秒：`src/main.ts` 的倒计时（3000 ms → 1500 ms，文字 “Next in 2s” 等同步）、相关测试、README / `help.html` / DESIGN.md / What's new 中 “3 秒 / three-second” 的说法。*Verify:* 测试；检索旧说法为 0。*Owner:* Claude - 小改动，涉及多处文档
   **结果**：`AUTO_NEXT_MS = 1500` 同时驱动倒计时与框底线；隐藏文字改为 “Next in 2s”；`tests/flow.spec.ts` 的倒计时测试改为 1.5 秒；README、`help.html`（“the short countdown”）、DESIGN.md 5.3 同步；检索 “3 秒 / three-second / Next in 3s” 为 0。全量测试见本轮提交。
-- [ ] **T18** (S9⑥) 桌面 alt 角标：先出样机（不改代码）→ 负责人确认 → `src/style.css`（≥ 700 px 显示 `.MLK__shift`，改写 T3f 的全宽度隐藏）、`tests/math-keyboard.spec.ts`（T3f 的测试改为 “< 700 px 不印、≥ 700 px 印”）、DESIGN.md 6.1 / 6.3、README / help 的说法。*Owner:* Claude - 视觉决定
+- [x] **T18** (S9⑥) 桌面 alt 角标：先出样机（不改代码）→ 负责人确认 → `src/style.css`（≥ 700 px 显示 `.MLK__shift`，改写 T3f 的全宽度隐藏）、`tests/math-keyboard.spec.ts`（T3f 的测试改为 “< 700 px 不印、≥ 700 px 印”）、DESIGN.md 6.1 / 6.3、README / help 的说法。*Owner:* Claude - 视觉决定
+  **结果**：负责人第 14 轮确认样机；`src/style.css` 先全宽度隐藏、再在 `min-width: 700px` 下对非 `hide-shift` 键显示（11 px、`--tint`、0.6）；测试改为 “alts are printed on keys only from 700 px, and never on action keys”（390 / 600 px 为 0，700 / 1280 px 等于有 alt 的键数 23，且不含动作键）；写测试时两次写错（硬编码 20、正则 `/action/` 匹配到 fraction），已改正，键盘测试 24 项三种引擎通过。DESIGN.md 6.1 / 6.3、README、`help.html` 同步。
   **进展（未勾选）**：样机 `t18-desktop-alt-proto.png`（1280，浅色 / 深色；≥ 700 px 时右上角 11 px、`--tint`、60% 不透明；← → ⌫ 不印）。等负责人确认后实现。
 - [x] **T19** (—) 新建系数范围任务文档（`docs/reviews/<日期>-coefficients/plan.md`，只写 Grill 起点与 R24 的事实），1.2.0 发布后开始。*Owner:* Claude - 负责人第 13 轮决定
   **结果**：`docs/reviews/2026-09-27-coefficients/plan.md` 已建（Grill 起点、R1 已知事实），phase 为 grill。

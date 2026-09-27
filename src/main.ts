@@ -624,7 +624,8 @@ function renderAnswerVerdict(clear = false) {
 }
 // Check / Next, Hint?, Skip and hide keyboard stay usable while MathLive rebuilds its toolbar.
 const HIDE_KEYBOARD_ICON =
-  '<svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="11" rx="2"/><path d="M6.5 8h1m3 0h1m3 0h1m3 0h1M8.5 11.5h7M9 18.5l3 3 3-3"/></svg>';
+  // Owner's pick from the icon prototypes (plan T15, option A): same 1.6 stroke and rounding as ⇧.
+  '<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="3" width="19" height="13" rx="2.5"/><path d="M6 7h.01M9.3 7h.01M12.6 7h.01M15.9 7h.01M18 7h.01M6 10h.01M9.3 10h.01M12.6 10h.01M15.9 10h.01M18 10h.01M8 13h8"/><path d="m9 19.5 3 2.5 3-2.5"/></svg>';
 const ALT_TIP_SEEN_KEY = "apcalc.keyboardAltTipSeen";
 let altTipSeen = (() => {
   try {

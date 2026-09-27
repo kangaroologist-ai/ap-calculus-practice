@@ -342,18 +342,22 @@ test('Shift leaves delete, cursor-left, and Check actions unchanged', async ({ p
   await expect(appKeyboardKey(page, 'shift')).toHaveAttribute('aria-pressed', 'false');
 });
 
-// Alts are never printed on keys (plan S3). MathLive hides its corner label only below
-// 415 px, which a phone-only check missed (plan R18).
-test('no key prints its alt at phone, tablet or desktop width', async ({ page }) => {
+// Phones never print alts on keys (plan S3); MathLive hides its corner label only below 415 px,
+// which a phone-only check missed (R18). From 700 px the owner wants a faint label (round 14),
+// never on arrows, delete or Check.
+test('alts are printed on keys only from 700 px, and never on action keys', async ({ page }) => {
   await openPracticeKeyboard(page);
-  for (const width of [390, 600, 1280]) {
+  const keysWithAlt = await page.locator('.ML__keyboard .MLK__layer.is-visible .practice-has-alt').count();
+  expect(keysWithAlt).toBeGreaterThan(0);
+  for (const [width, expected] of [[390, 0], [600, 0], [700, keysWithAlt], [1280, keysWithAlt]] as const) {
     await page.setViewportSize({ width, height: 844 });
     const printed = await page.evaluate(() =>
-      [...document.querySelectorAll('.ML__keyboard .MLK__layer.is-visible .MLK__shift')].filter(
-        (label) => getComputedStyle(label).display !== 'none',
-      ).length,
+      [...document.querySelectorAll('.ML__keyboard .MLK__layer.is-visible .MLK__shift')]
+        .filter((label) => getComputedStyle(label).display !== 'none')
+        .map((label) => label.parentElement!.className),
     );
-    expect(printed, `alt labels printed on keys at ${width} px`).toBe(0);
+    expect(printed, `alt labels printed on keys at ${width} px`).toHaveLength(expected);
+    expect(printed.some((name) => /(^|\s)(hide-shift|action)(\s|$)/.test(name))).toBe(false);
   }
 });
 
