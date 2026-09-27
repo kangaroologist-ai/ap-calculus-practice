@@ -953,6 +953,10 @@ function keyboardControl(event: Event) {
   return (event.target as Element | null)?.closest?.<HTMLElement>(KEYBOARD_CONTROL) ?? null;
 }
 function runKeyboardControl(target: HTMLElement) {
+  // MathLive never sees these taps, so it can't consume a one-shot ⇧; do it here so the
+  // next key doesn't type its alt (plan R17). A locked ⇧ (count 2) stays on.
+  const keyboard = keyboardShiftAccess();
+  if (keyboard.shiftPressCount === 1) keyboard.shiftPressCount = 0;
   const c = state.session?.current;
   if (target.classList.contains("practice-enter")) {
     if (c?.verdict?.status === "correct") void next();

@@ -17,6 +17,7 @@ import type { Config, Question } from "../src/types";
 
 type Scheme = "light" | "dark";
 type FeedbackState = "correct" | "incorrect" | "invalid";
+type KeyboardCaptureMode = "open" | "tap" | "shift" | "shift-locked" | "long-press";
 
 interface KeyGeometry {
   label: string;
@@ -217,7 +218,24 @@ async function submitForFeedback(
   await hideKeyboard(page, true);
   await page.waitForFunction(() => !window.mathVirtualKeyboard.visible);
   await page.getByRole("button", { name: "Check answer" }).click();
-  await page.locator(`#feedback.${expected}`).waitFor({ state: "visible" });
+  await page.locator(`#feedback.${expected}`).waitFor({ state: "attached" });
+  await page.waitForFunction((status) => {
+    const feedback = document.querySelector<HTMLElement>("#feedback");
+    return Boolean(feedback?.classList.contains(status) && !feedback.hidden);
+  }, expected);
+  const expectedLabel = {
+    correct: "✓ Correct",
+    incorrect: "! Not quite",
+    invalid: "Check your input",
+  }[expected];
+  await page.waitForFunction(
+    (label) => document.querySelector(".answer-verdict")?.textContent === label,
+    expectedLabel,
+  );
+  await page.locator(".answer-verdict").waitFor({ state: "visible" });
+  if (expected === "invalid") {
+    await page.locator("#answer-message:not([hidden])").waitFor({ state: "visible" });
+  }
   await page.waitForTimeout(600);
 }
 
@@ -332,7 +350,7 @@ async function captureKeyboard(
   scheme: Scheme,
   index: number,
   state: string,
-  mode: "open" | "tap" | "second-page",
+  mode: KeyboardCaptureMode,
 ): Promise<void> {
   await inFreshPage(browser, options, async (page) => {
     await startQuestion(page, base);
@@ -351,21 +369,42 @@ async function captureKeyboard(
       await key.tap();
       await page.waitForTimeout(1500);
       await page.locator(".ML__keyboard").waitFor({ state: "visible" });
-    } else if (mode === "second-page") {
-      const firstLayer = await page
-        .locator(".ML__keyboard .MLK__layer.is-visible")
-        .getAttribute("id");
-      const secondTab = page.locator(
-        ".ML__keyboard .MLK__layer.is-visible .MLK__toolbar .left > div",
-      ).nth(1);
-      await secondTab.waitFor({ state: "visible" });
-      await secondTab.click();
+    } else if (mode === "shift" || mode === "shift-locked") {
+      const shift = page.locator(".ML__keyboard .MLK__layer.is-visible .practice-shift");
+      const box = await shift.boundingBox();
+      if (!box) throw new Error("The Shift key has no visible box in the keyboard capture.");
+      const x = box.x + box.width / 2;
+      const y = box.y + box.height / 2;
+      const press = async () => {
+        await page.mouse.move(x, y);
+        await page.mouse.down();
+        await page.mouse.up();
+        await page.waitForTimeout(120);
+      };
+      await press();
+      if (mode === "shift-locked") await press();
       await page.waitForFunction(
-        (previousLayer) =>
-          document.querySelector(".ML__keyboard .MLK__layer.is-visible")?.id !==
-          previousLayer,
-        firstLayer,
+        (expected) =>
+          (window.mathVirtualKeyboard as typeof window.mathVirtualKeyboard & { shiftPressCount: number })
+            .shiftPressCount === expected,
+        mode === "shift" ? 1 : 2,
       );
+    } else if (mode === "long-press") {
+      const sin = page.locator(".ML__keyboard .MLK__layer.is-visible .practice-key-sin");
+      const box = await sin.boundingBox();
+      if (!box) throw new Error("The sin key has no visible box in the long-press capture.");
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+      await page.mouse.down();
+      try {
+        await page.waitForTimeout(600);
+        await page.locator(".practice-alt-bubble").waitFor({ state: "visible" });
+        const imageName = await saveImage(page, out, width, scheme, index, state);
+        geometry[imageName] = await readKeyboardGeometry(page);
+      } finally {
+        await page.mouse.up();
+      }
+      await page.waitForTimeout(150);
+      return;
     }
     const imageName = await saveImage(page, out, width, scheme, index, state);
     geometry[imageName] = await readKeyboardGeometry(page);
@@ -430,11 +469,11 @@ async function captureHint(
         .locator("#hints .hint-panel .eyebrow")
         .filter({ hasText: "WORKED SOLUTION" })
         .waitFor({ state: "visible" });
-      await saveImage(page, out, width, scheme, 10, "worked-solution");
+      await saveImage(page, out, width, scheme, 12, "worked-solution");
     } else {
       await pressHint(page);
       await page.locator("#hints .hint-panel").waitFor({ state: "visible" });
-      await saveImage(page, out, width, scheme, 9, "first-hint");
+      await saveImage(page, out, width, scheme, 11, "first-hint");
     }
   });
 }
@@ -451,7 +490,7 @@ async function capturePath(
     await page.locator(".progress-summary").click();
     await page.locator(".path-level").first().locator("summary").click();
     await page.locator(".journey[open]").waitFor({ state: "visible" });
-    await saveImage(page, out, 390, scheme, 11, "progress-path");
+    await saveImage(page, out, 390, scheme, 13, "progress-path");
   });
 }
 
@@ -467,7 +506,7 @@ async function captureMoveDialog(
     await openCandidate(page, base);
     await page.getByRole("button", { name: "Move progress" }).click();
     await page.locator("#dialog").waitFor({ state: "visible" });
-    await saveImage(page, out, width, scheme, 12, "move-progress");
+    await saveImage(page, out, width, scheme, 14, "move-progress");
   });
 }
 
@@ -483,7 +522,7 @@ async function captureWhatsNew(
     await openCandidate(page, base);
     await page.locator("#whats-new").click();
     await page.locator("#dialog.whats-new").waitFor({ state: "visible" });
-    await saveImage(page, out, width, scheme, 13, "whats-new");
+    await saveImage(page, out, width, scheme, 15, "whats-new");
   });
 }
 
@@ -497,7 +536,7 @@ async function captureHelp(
   await inFreshPage(browser, options, async (page) => {
     await page.goto(new URL("help.html", base).href);
     await page.locator("body").waitFor({ state: "visible" });
-    await saveImage(page, out, 390, scheme, 14, "help");
+    await saveImage(page, out, 390, scheme, 16, "help");
   });
 }
 
@@ -540,8 +579,30 @@ async function capturePhoneScheme(
     390,
     scheme,
     5,
-    "keyboard-second-page",
-    "second-page",
+    "keyboard-shift",
+    "shift",
+  );
+  await captureKeyboard(
+    browser,
+    options,
+    base,
+    out,
+    390,
+    scheme,
+    6,
+    "keyboard-shift-locked",
+    "shift-locked",
+  );
+  await captureKeyboard(
+    browser,
+    options,
+    base,
+    out,
+    390,
+    scheme,
+    7,
+    "keyboard-long-press",
+    "long-press",
   );
   await captureFeedback(
     browser,
@@ -550,7 +611,7 @@ async function capturePhoneScheme(
     out,
     390,
     scheme,
-    6,
+    8,
     "correct-feedback",
     "correct",
   );
@@ -561,7 +622,7 @@ async function capturePhoneScheme(
     out,
     390,
     scheme,
-    7,
+    9,
     "incorrect-feedback",
     "incorrect",
   );
@@ -572,7 +633,7 @@ async function capturePhoneScheme(
     out,
     390,
     scheme,
-    8,
+    10,
     "invalid-input",
     "invalid",
   );
@@ -590,7 +651,7 @@ async function capturePhoneScheme(
       out,
       390,
       scheme,
-      15,
+      17,
       "question-reduced-motion",
     );
   }

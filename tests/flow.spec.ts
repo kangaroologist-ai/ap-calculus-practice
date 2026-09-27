@@ -14,6 +14,14 @@ mkdirSync(screenshotDir, { recursive: true });
 
 const FIXED_NOW = Date.UTC(2026, 8, 19, 0, 0, 0);
 
+async function expectVisuallyHidden(page: Page, selector: string): Promise<void> {
+  const element = page.locator(selector);
+  await expect(element).toBeAttached();
+  const box = await element.boundingBox();
+  expect(box?.width ?? 0).toBeLessThanOrEqual(1);
+  expect(box?.height ?? 0).toBeLessThanOrEqual(1);
+}
+
 function flowConfig(): Config {
   return {
     schemaVersion: 1,
@@ -191,7 +199,7 @@ test.describe('session transition flows', () => {
     await setMathfield(page.locator('math-field').first(), await currentAnswer(page));
     await page.getByRole('button', { name: 'Check answer' }).click();
     await expect(page.locator('#feedback')).toContainText('Correct');
-    await expect(page.locator('#auto-next')).toBeVisible();
+    await expectVisuallyHidden(page, '#auto-next');
     await expect(page.locator('#next')).toBeEnabled();
     await expect.poll(() => sessionCompleted(page)).toBe(0);
 
@@ -215,8 +223,11 @@ test.describe('session transition flows', () => {
     const field = page.locator('math-field').first();
     await setMathfield(field, '1');
     await page.getByRole('button', { name: 'Check answer' }).click();
-    await expect(page.locator('#feedback')).toBeVisible();
-    await expect(page.locator('#feedback')).not.toContainText('Correct');
+    const feedback = page.locator('#feedback');
+    await expect(feedback).toHaveJSProperty('hidden', false);
+    await expectVisuallyHidden(page, '#feedback');
+    await expect(feedback).toContainText('Not quite');
+    await expect(feedback).not.toContainText('Correct');
     await expect(page.locator('#streak')).toContainText('0 in a row');
     await expect(page.locator('#today-count')).toContainText('1 practiced today');
     await expect(field).toBeFocused();
@@ -288,7 +299,7 @@ test.describe('session transition flows', () => {
     await setMathfield(page.locator('math-field').first(), await currentAnswer(page));
     await page.getByRole('button', { name: 'Check answer' }).click();
     await expect(page.locator('#feedback')).toContainText('Correct');
-    await expect(page.locator('#auto-next')).toBeVisible();
+    await expectVisuallyHidden(page, '#auto-next');
     await expect(page.locator('#next')).toBeEnabled();
 
     await page.getByRole('button', { name: 'Input guide' }).click();
@@ -311,7 +322,7 @@ test.describe('session transition flows', () => {
       const field = page.locator('math-field').first();
       await setMathfield(field, await currentAnswer(page));
       await page.getByRole('button', {name:'Check answer'}).click();
-      await expect(page.locator('#auto-next')).toBeVisible();
+      await expectVisuallyHidden(page, '#auto-next');
       if (interruption === 'editing') await field.focus();
       else {
         await page.evaluate(() => {

@@ -182,6 +182,41 @@ async function hideMathKeyboard(page: Page): Promise<void> {
   await page.evaluate(() => window.mathVirtualKeyboard?.hide());
 }
 
+async function expectVisuallyHidden(page: Page, selector: string): Promise<void> {
+  const element = page.locator(selector);
+  await expect(element).toBeAttached();
+  const box = await element.boundingBox();
+  expect(box?.width ?? 0).toBeLessThanOrEqual(1);
+  expect(box?.height ?? 0).toBeLessThanOrEqual(1);
+}
+
+async function pressMathKey(page: Page, id: string): Promise<void> {
+  const keyClass = id === 'shift' ? 'practice-shift' : `practice-key-${id}`;
+  await page.locator(`.ML__keyboard .MLK__layer.is-visible .${keyClass}`).click();
+}
+
+async function holdMathKey(page: Page, id: string, duration = 600): Promise<void> {
+  const key = page.locator(`.ML__keyboard .MLK__layer.is-visible .practice-key-${id}`);
+  await expect(key).toBeVisible();
+  const box = await key.boundingBox();
+  if (!box) throw new Error(`Math keyboard key ${id} has no visible box.`);
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  try {
+    await page.waitForTimeout(duration);
+  } finally {
+    await page.mouse.up();
+  }
+  await page.waitForTimeout(150);
+}
+
+async function keyboardShiftPressCount(page: Page): Promise<number> {
+  return page.evaluate(() =>
+    (window.mathVirtualKeyboard as typeof window.mathVirtualKeyboard & { shiftPressCount: number })
+      .shiftPressCount,
+  );
+}
+
 async function screenshot(page: Page, name: string): Promise<void> {
   const browserName = page.context().browser()?.browserType().name() ?? 'unknown';
   await page.screenshot({
@@ -224,7 +259,9 @@ test('correct answers make Next the sole primary action and Enter continues', as
   await page.clock.pauseAt(new Date(Date.now() + 1000));
   await setMathfield(page.locator('math-field').first(), '0');
   await page.locator('#submit').click();
-  await expect(page.locator('#feedback.correct')).toBeVisible();
+  await expect(page.locator('#feedback.correct')).toHaveJSProperty('hidden', false);
+  await expect(page.locator('#feedback')).toContainText('Correct');
+  await expectVisuallyHidden(page, '#feedback');
   await expect(page.locator('#submit')).toBeHidden();
   await expect(page.locator('#hint')).toBeHidden();
   await expect(page.locator('#next')).toBeVisible();
@@ -247,7 +284,8 @@ for (const [status, answer] of [['incorrect', '5'], ['invalid', '']] as const) {
     const field = page.locator('math-field').first();
     await setMathfield(field, answer);
     await page.locator('#submit').click();
-    await expect(page.locator(`#feedback.${status}`)).toBeVisible();
+    await expect(page.locator(`#feedback.${status}`)).toHaveJSProperty('hidden', false);
+    await expectVisuallyHidden(page, '#feedback');
     await expect(page.locator('#submit')).toBeVisible();
     await expect(page.locator('#submit')).toBeEnabled();
     await expect(page.locator('#submit')).toHaveClass('button primary');
@@ -526,7 +564,8 @@ for (const item of levelCases) {
     // Submit as part of the UI path so worker grading and the feedback region
     // are exercised for one-field and multi-field questions alike.
     await page.getByRole('button', { name: 'Check answer' }).click();
-    await expect(page.locator('#feedback')).toBeVisible();
+    await expect(page.locator('#feedback')).toHaveJSProperty('hidden', false);
+    await expectVisuallyHidden(page, '#feedback');
   });
 }
 
@@ -748,7 +787,8 @@ test('Level 2 remediation round trip preserves FSRS and due across contexts', as
     await setMathfield(desktop.locator('math-field').first(), '0');
     await desktop.locator('.question-body h2').click();
     await desktop.getByRole('button', { name: 'Check answer' }).click();
-    await expect(desktop.locator('#feedback')).toBeVisible();
+    await expect(desktop.locator('#feedback')).toHaveJSProperty('hidden', false);
+    await expectVisuallyHidden(desktop, '#feedback');
     await expect(desktop.locator('#feedback')).not.toContainText('Correct');
     const relearning = await readStoredProgress(desktop);
     const relearningSkill = relearning.skills.exp;
@@ -1010,7 +1050,7 @@ test('phone keyboard keeps the in-field verdict and new hints above the keyboard
     await expect(feedback).not.toHaveAttribute('aria-hidden', 'true');
     await expect(feedback).toContainText('Not quite.');
     expect((await feedback.innerText()).trim().length).toBeGreaterThan('Not quite.'.length);
-    await screenshot(page, 'mobile-keyboard-incorrect-feedback-visible');
+    await screenshot(page, 'mobile-keyboard-incorrect-feedback-hidden');
 
     await page.locator('.MLK__layer.is-visible .kb-tool[data-act="hint"]:visible').tap();
     const hintPanel = page.locator('#hints .hint-panel');
@@ -1117,9 +1157,16 @@ test('phone keyboard tab-row controls preserve focus and skip to another questio
 
     const visibleTools = page.locator('.MLK__layer.is-visible .kb-tool:visible');
     await expect(visibleTools).toHaveCount(3);
-    await expect(page.locator('.MLK__layer.is-visible .kb-tool[data-act="hint"]')).toHaveText('Hint?');
-    await expect(page.locator('.MLK__layer.is-visible .kb-tool[data-act="skip"]')).toHaveText('Skip');
-    await expect(page.locator('.MLK__layer.is-visible .kb-tool[data-act="hide"]')).toHaveAttribute('aria-label', 'Hide keyboard');
+    const hintTool = page.locator('.ML__keyboard .MLK__toolbar > .left .kb-tool[data-act="hint"]');
+    const skipTool = page.locator('.ML__keyboard .MLK__toolbar > .left .kb-tool[data-act="skip"]');
+    const hideTool = page.locator('.ML__keyboard .ML__edit-toolbar .kb-tool[data-act="hide"]');
+    await expect(hintTool).toHaveText('Hint?');
+    await expect(skipTool).toHaveText('Skip');
+    await expect(hideTool).toHaveAttribute('aria-label', 'Hide keyboard');
+    for (const tool of [hintTool, skipTool, hideTool]) {
+      const box = await tool.boundingBox();
+      expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
+    }
 
     // Skip first: this configuration has only two questions due, so skipping after the
     // second would end the session (which rightly closes the keyboard).
@@ -1188,7 +1235,7 @@ test('phone keyboard enter key grades and advances in two taps', async ({ browse
   }
 });
 
-test('More math keyboard exposes y and inverse-trig insertion', async ({ page, browserName }) => {
+test('one-page math keyboard exposes y and inverse-trig through shift and long press', async ({ page, browserName }) => {
   test.skip(browserName !== 'chromium', 'MathLive keyboard insertion is verified in the Chromium representative.');
   await openApp(page, onlySkill('implicit', 5), { width: 390, height: 844 });
   await page.getByRole('button', { name: /Start practicing|Continue practicing/ }).click();
@@ -1196,36 +1243,174 @@ test('More math keyboard exposes y and inverse-trig insertion', async ({ page, b
   await field.focus();
   await page.getByRole('button', { name: 'Math keyboard' }).click();
   await expect(page.locator('.ML__keyboard')).toBeVisible();
+  await expect(page.locator('.MLK__layer.is-visible')).toHaveCount(1);
+  await expect(page.locator('.ML__keyboard .MLK__toolbar .layer-switch')).toHaveCount(0);
 
-  const visibleLayer = page.locator('.MLK__layer.is-visible');
-  const mainKeys = await visibleLayer.locator('.MLK__keycap:visible').evaluateAll((keys) =>
-    keys.map((key) => key.getAttribute('aria-label')),
-  );
-  expect(mainKeys).toEqual([
-    'sine', 'cosine', 'tangent', '7', '8', '9', 'fraction', 'left parenthesis', 'right parenthesis',
-    'secant', 'cosecant', 'cotangent', '4', '5', '6', 'times', 'power', 'square root',
-    'e to the power', 'natural log', 'x', '1', '2', '3', 'minus',
-    'y', '0', 'decimal point', 'plus',
-  ]);
-  await expect(visibleLayer.locator('.MLK__toolbar .selected')).toHaveText('Main');
-
-  await visibleLayer.locator('.MLK__toolbar .layer-switch').filter({ hasText: 'More' }).click();
-  await expect(page.locator('.MLK__layer.is-visible .MLK__toolbar .selected')).toHaveText('More');
-  const moreLayer = page.locator('.MLK__layer.is-visible');
-  const moreKeys = await moreLayer.locator('.MLK__keycap:visible').evaluateAll((keys) =>
-    keys.map((key) => key.getAttribute('aria-label')),
-  );
-  expect(moreKeys).toEqual([
-    'inverse sine', 'inverse cosine', 'inverse tangent',
-    'log base', 'cube root', 'pi',
-    'y', 't', 'theta',
-  ]);
-
-  await moreLayer.locator('.MLK__keycap[aria-label="y"]').click();
+  await pressMathKey(page, 'shift');
+  await pressMathKey(page, '8');
   await expect(field).toHaveJSProperty('value', 'y');
-  await moreLayer.locator('.MLK__keycap[aria-label="inverse sine"]').click();
-  const inserted = await field.evaluate((element) => (element as HTMLElement & { value: string }).value);
-  expect(inserted).toContain('arcsin');
-  expect(inserted).toContain('y');
-  await screenshot(page, 'mobile-more-keyboard-insertion');
+  await expect.poll(() => keyboardShiftPressCount(page)).toBe(0);
+
+  await setMathfield(field, '');
+  await holdMathKey(page, '8');
+  await expect(field).toHaveJSProperty('value', 'y');
+  await expect.poll(() => keyboardShiftPressCount(page)).toBe(0);
+
+  await setMathfield(field, '');
+  await pressMathKey(page, 'shift');
+  await pressMathKey(page, 'sin');
+  await expect(field).toHaveJSProperty('value', '\\arcsin');
+  await expect.poll(() => keyboardShiftPressCount(page)).toBe(0);
+
+  await setMathfield(field, '');
+  await holdMathKey(page, 'sin');
+  await expect(field).toHaveJSProperty('value', '\\arcsin');
+  await expect.poll(() => keyboardShiftPressCount(page)).toBe(0);
+  await screenshot(page, 'mobile-one-page-keyboard-alternates');
 });
+
+test('first-use keyboard alt tip disappears after Shift and stays dismissed after reload', async ({ browser, browserName }) => {
+  test.skip(browserName !== 'chromium', 'Phone keyboard onboarding is verified once in Chromium.');
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true });
+  try {
+    const page = await context.newPage();
+    await openApp(page, onlySkill('constant', 1));
+    expect(await page.evaluate(() => localStorage.getItem('apcalc.keyboardAltTipSeen'))).toBeNull();
+    await page.getByRole('button', { name: /Start practicing|Continue practicing/ }).click();
+    const field = page.locator('math-field').first();
+    await field.focus();
+    await page.evaluate(() => window.mathVirtualKeyboard.show());
+
+    const tip = page.locator('.ML__keyboard .MLK__toolbar > .left .kb-alt-tip');
+    await expect(tip).toHaveText('Hold a key or tap ⇧ for more');
+    await expect(tip).toBeVisible();
+    await page.locator('.ML__keyboard .MLK__layer.is-visible .practice-shift').tap();
+    await expect(tip).toHaveCount(0);
+    expect(await page.evaluate(() => localStorage.getItem('apcalc.keyboardAltTipSeen'))).toBe('true');
+
+    await page.reload();
+    const resume = page.getByRole('button', { name: /Start practicing|Continue practicing/ });
+    if (await resume.count()) await resume.click();
+    const resumedField = page.locator('math-field').first();
+    await resumedField.waitFor({ state: 'visible' });
+    await resumedField.focus();
+    await page.evaluate(() => window.mathVirtualKeyboard.show());
+    await expect(page.locator('.ML__keyboard .MLK__toolbar > .left .kb-alt-tip')).toHaveCount(0);
+    expect(await page.evaluate(() => localStorage.getItem('apcalc.keyboardAltTipSeen'))).toBe('true');
+  } finally {
+    await context.close();
+  }
+});
+
+for (const view of [
+  { name: 'desktop keyboard closed', width: 1280, height: 860, phone: false, keyboardOpen: false },
+  { name: 'phone keyboard closed', width: 390, height: 844, phone: true, keyboardOpen: false },
+  { name: 'phone keyboard open', width: 390, height: 844, phone: true, keyboardOpen: true },
+] as const) {
+  test(`answer-box results remain visible with ${view.name}`, async ({ browser, browserName }) => {
+    test.skip(browserName !== 'chromium', 'Answer-box result states are verified once in Chromium.');
+    const context = await browser.newContext({
+      viewport: { width: view.width, height: view.height },
+      hasTouch: view.phone,
+    });
+    try {
+      const page = await context.newPage();
+      await openApp(page, onlySkill('constant', 1, 5), { width: view.width, height: view.height });
+      await page.getByRole('button', { name: /Start practicing|Continue practicing/ }).click();
+      const field = page.locator('math-field').first();
+      const verdict = page.locator('.answer-verdict');
+      const message = page.locator('#answer-message');
+      const feedback = page.locator('#feedback');
+      const autoNext = page.locator('#auto-next');
+      const actions = page.locator('.actions');
+
+      async function restoreKeyboardState(): Promise<void> {
+        if (view.keyboardOpen) {
+          await field.focus();
+          await page.evaluate(() => window.mathVirtualKeyboard.show());
+        } else {
+          // MathLive focuses asynchronously; if the keyboard is hidden before that focus lands,
+          // the field's focus handler reopens it on a touch device. Let it land first.
+          await expect.poll(() => page.evaluate(() => document.activeElement?.tagName)).toBe('MATH-FIELD');
+          await page.locator('.question-body h2').click();
+          await page.evaluate(() => window.mathVirtualKeyboard.hide());
+        }
+        await expect.poll(() => page.evaluate(() => window.mathVirtualKeyboard.visible))
+          .toBe(view.keyboardOpen);
+      }
+
+      async function submit(): Promise<void> {
+        if (view.keyboardOpen) {
+          await page.locator('.ML__keyboard .practice-enter:visible').tap();
+        } else {
+          await page.locator('#submit').click();
+        }
+      }
+
+      async function expectActionsVisibility(): Promise<void> {
+        if (view.keyboardOpen) {
+          const actionBox = await actions.boundingBox();
+          expect(actionBox?.width ?? 0).toBeLessThanOrEqual(1);
+          expect(actionBox?.height ?? 0).toBeLessThanOrEqual(1);
+        } else {
+          await expect(actions).toBeVisible();
+        }
+      }
+
+      await field.focus();
+      await restoreKeyboardState();
+      const borderBeforeVerdict = await field.evaluate((element) =>
+        getComputedStyle(element).borderTopColor,
+      );
+      await setMathfield(field, '');
+      await restoreKeyboardState();
+      await submit();
+      await expect(page.locator('.answer-box')).toHaveAttribute('data-verdict', 'invalid');
+      await expect(verdict).toHaveText('Check your input');
+      await expect(message).toBeVisible();
+      await expect(message).toContainText('Enter an answer first.');
+      expect(await field.evaluate((element) => getComputedStyle(element).borderTopColor))
+        .toBe(borderBeforeVerdict);
+      await expect(feedback).toHaveJSProperty('hidden', false);
+      const invalidReason = (await message.textContent())?.trim() ?? '';
+      expect(invalidReason).not.toBe('');
+      await expect(feedback).toContainText(invalidReason);
+      await expectVisuallyHidden(page, '#feedback');
+      await expectVisuallyHidden(page, '#auto-next');
+      if (view.keyboardOpen) {
+        const captionBottom = await message.evaluate((element) => element.getBoundingClientRect().bottom);
+        const keyboardTop = await page.evaluate(() => window.mathVirtualKeyboard.boundingRect.top);
+        expect(captionBottom).toBeLessThanOrEqual(keyboardTop);
+      }
+      await expectActionsVisibility();
+
+      await setMathfield(field, '1');
+      await expect(page.locator('.answer-box')).not.toHaveAttribute('data-verdict');
+      await expect(verdict).toBeEmpty();
+      await expect(message).toBeHidden();
+      await restoreKeyboardState();
+      await submit();
+      await expect(page.locator('.answer-box')).toHaveAttribute('data-verdict', 'incorrect');
+      await expect(verdict).toHaveText('! Not quite');
+      await expect(feedback).toContainText('Check the rule for each part.');
+      await expectVisuallyHidden(page, '#feedback');
+      await expectVisuallyHidden(page, '#auto-next');
+      await expectActionsVisibility();
+
+      await setMathfield(field, '0');
+      await expect(page.locator('.answer-box')).not.toHaveAttribute('data-verdict');
+      await expect(verdict).toBeEmpty();
+      await restoreKeyboardState();
+      await submit();
+      await expect(page.locator('.answer-box')).toHaveAttribute('data-verdict', 'correct');
+      await expect(verdict).toHaveText('✓ Correct');
+      await expect(page.locator('.answer-meter')).toBeVisible();
+      await expect(feedback).toContainText('Correct');
+      await expectVisuallyHidden(page, '#feedback');
+      await expectVisuallyHidden(page, '#auto-next');
+      await expectActionsVisibility();
+    } finally {
+      await context.close();
+    }
+  });
+}

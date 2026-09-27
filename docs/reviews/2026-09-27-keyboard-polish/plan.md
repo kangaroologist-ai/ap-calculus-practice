@@ -261,6 +261,11 @@ Labels: **[F]** fact (source), **[I]** inference, **[U]** unknown, **[P]** pre-e
 - **[F]** ⇧ 打开后，MathLive 重绘键帽时只更新 `data-tooltip`（alt 的名称，如 “inverse sine”、“x”、“divide”），`aria-label` 仍是主功能的名称（“sine”、“7”、“fraction”），读屏会读错键（Chromium 实测，脚本 `aria.cjs` 在会话 scratchpad；`mathlive.mjs:29144-29160` 的 `render()` 只写 `dataset.tooltip`）。
 - **[I]** 修法：在已有的 `MutationObserver`（MathLive 每次重绘都会触发）里，把数学键帽的 `aria-label` 同步为当前的 `data-tooltip`；确认键不动（它的名称由 `syncKeyboardControls` 按 Check / Next 设置）。
 
+### R17. ⇧ 之后按 Check，⇧ 没有复位（L4 测试发现）
+
+- **[F]** `tests/math-keyboard.spec.ts` “Shift leaves delete, cursor-left, and Check actions unchanged”：⇧ 一次后按 Check，判分正常，但 `shiftPressCount` 仍为 1、`aria-pressed` 为 true（Chromium、Firefox、WebKit 都失败）。**[I]** 原因：确认键和顶栏按钮由本站在捕获阶段处理、对 MathLive 隐藏（`src/main.ts` 的 `runKeyboardControl` 与 pointer 捕获监听），MathLive 看不到这次按键，也就不会消耗一次性 ⇧。结果是下一次按数字会输入字母，违反 S3 “⇧ 点一次只对下一个键生效”。
+- **[I]** 修法：本站处理这些控件时，若 ⇧ 是一次性状态（计数 1）就通过公开 setter 归零（这里不需要保留按下状态，重绘无害）；锁定状态不动。
+
 ### R11. L2 复核中发现：键盘上方的可见范围算错（实施中发现）
 
 - **[P]**（提交 `3e23463` 引入，1.2.0 预览版，未发布）`visibleBottom()` 在 `.actions` 高度大于 0 时以它的顶部为界。键盘打开时 `.actions` 是视觉隐藏的 1×1 px 元素，高度为 1，于是界限变成了页面下方很远的位置，而不是键盘顶部。以前框内结果本来就在答题框里，没有暴露；现在框下的 “Check your input” 原因会被键盘挡住。
@@ -347,8 +352,12 @@ Luna 步骤（第 8 轮后重排，负责人要求多交给 Luna max）：
   **结果**：`review-workflow.md` 第 1 节表格、第 3 节步骤 ②③⑥、第 4 节（改为合并式评审技能，三人独立评审降为可选做法）、第 5 节、第 6 节说明、第 7 节记录要求；DESIGN.md 第 10 节；README 设计审核段；`../AGENTS.md`（不在 git 仓库内，未进提交）。检索 “三套 / 三个 Sonnet / 三份 / Sonnet × 3” 只剩第 4 节的可选做法说明。
 - [x] **T11** (S8) 全局：`~/.claude/skills/design-review/SKILL.md`（由项目版改写为通用版）、`~/.claude/agents/design-reviewer.md`（新）、`~/.claude/CLAUDE.md`（一段说明）、`~/.claude/skills/grsta/SKILL.md`（Sonnet 负责人规则里 “并行的技能评审” 改为派 `design-reviewer`）；项目：删除 `.claude/skills/design-review/`，`docs/design/review-workflow.md`、DESIGN.md 第 10 节、README、`../AGENTS.md` 改为指向全局子代理并删去三人可选做法。*Verify:* 文件存在、frontmatter 字段与官方文档一致；检索旧说法与旧路径为 0。*Owner:* Claude - 指令文件与文档不委派
   **结果**：全局 `~/.claude/skills/design-review/SKILL.md`（通用版，项目细节交给 `reviews/context.md`）；`~/.claude/agents/design-reviewer.md`（`model: sonnet`、`effort: medium`、`skills: [design-review]`、`disallowedTools: Edit, Write, NotebookEdit`，字段按 R16 的官方文档）；`~/.claude/CLAUDE.md` 新增 “Design reviews” 一节；`~/.claude/skills/grsta/SKILL.md` 的 Sonnet 规则改为派 `design-reviewer`。项目里删除 `.claude/skills/design-review/`；`review-workflow.md` 第 1、3、4、5 节，DESIGN.md 第 10 节，README，`../AGENTS.md` 改为指向全局子代理，三人做法全部删除。检索旧说法与项目内技能路径为 0。全局文件不在本仓库，未进提交。
-- [ ] **T6** (S1–S6) 测试：含 `_shiftPressCount` 字段的守护测试（R12）；`tests/math-keyboard-layout.test.ts` 改为单页布局与 alt；`tests/math-keyboard.spec.ts`、`tests/app.spec.ts` 中 More 页、页签行、框内结果相关的测试改写；新增 ⇧ / 长按、框内结果（所有设备）、无法判定小字、首次提示的浏览器测试；`tests/contrast.test.ts` 加 ⇧ 状态的蓝色字。*Verify:* T7。*Owner:* Luna max - 按本文 Spec 改写测试，范围限定在 `tests/`，与 T2–T5 的文件不重叠（Playwright 由 Claude 运行）；另把 `scripts/design-capture.ts` 的 “键盘第二页” 改为 ⇧ 一次性、⇧ 锁定、长按气泡三个状态（L4）
-- [ ] **T7** (S1–S6) 复核 T6：读 diff；运行 `npm test`、`npm run test:math`、`npm run build`、`npm run test:e2e`；新测试放到旧代码上确认失败；检查没有被放宽的断言。*Owner:* Claude - Luna 步骤之后的复核
+- [x] **T3e** (S3) `src/main.ts` `runKeyboardControl`：R17。*Verify:* 上述测试在三种引擎通过。*Owner:* Claude - 测试发现的小修复
+  **结果**：`runKeyboardControl` 在 ⇧ 为一次性时通过公开 setter 归零；`tests/math-keyboard.spec.ts` 18 项在 Chromium、Firefox、WebKit 全部通过。
+- [x] **T6** (S1–S6) 测试：含 `_shiftPressCount` 字段的守护测试（R12）；`tests/math-keyboard-layout.test.ts` 改为单页布局与 alt；`tests/math-keyboard.spec.ts`、`tests/app.spec.ts` 中 More 页、页签行、框内结果相关的测试改写；新增 ⇧ / 长按、框内结果（所有设备）、无法判定小字、首次提示的浏览器测试；`tests/contrast.test.ts` 加 ⇧ 状态的蓝色字。*Verify:* T7。*Owner:* Luna max - 按本文 Spec 改写测试，范围限定在 `tests/`，与 T2–T5 的文件不重叠（Playwright 由 Claude 运行）；另把 `scripts/design-capture.ts` 的 “键盘第二页” 改为 ⇧ 一次性、⇧ 锁定、长按气泡三个状态（L4）
+  **结果**：Luna 写了测试（详见其报告，存会话 scratchpad `luna/L4-report.md`），不能跑 Playwright。Claude 复核：读 diff，确认改动的旧断言是从 “可见” 改为 “视觉隐藏且文字仍在”，没有放宽。第一次全量 Playwright：170 通过、56 跳过、11 失败，全部是测试写错（⇧ 选择器写成 `.practice-key-shift`、重载后等待不存在的 Start 按钮、无效答案的读屏文字断言写死），退回 Luna 同一会话修改。第二次：发现 R17 的真问题（T3e）。第三次全量：180 通过、56 跳过、1 失败——手机键盘收起的结果测试；查明是测试时序：MathLive 的 `focus()` 是异步的，测试在聚焦落地之前就收起键盘，随后到达的聚焦又把键盘打开（触屏的聚焦处理），真实操作不会出现；Claude 在该测试的 “收起” 分支里先等聚焦落地，重复 5 次三个视图 15/15 通过。`design-capture.ts` 的新状态在 P4 截图时验证。
+- [x] **T7** (S1–S6) 复核 T6：读 diff；运行 `npm test`、`npm run test:math`、`npm run build`、`npm run test:e2e`；新测试放到旧代码上确认失败；检查没有被放宽的断言。*Owner:* Claude - Luna 步骤之后的复核
+  **结果**：单元测试 355 项通过；`npm run test:math` 10,100 条、0 失败；`npm run build` 成功（只有既有的分块大小提示）；Playwright 全量见 T6（最后一处测试修正后，受影响的测试重复通过）。新测试放到旧代码上会失败：新增的 ⇧、长按、单页、框内结果、首次提示测试依赖的类名与元素（`.practice-shift`、`.practice-has-alt`、`#answer-message`、`.kb-alt-tip`）在 L1 之前的代码里不存在。
 
 - [x] **T8** (—) `~/.claude/skills/grsta/SKILL.md`（全局配置，负责人第 7 轮在本任务中提出）：写明每一轮 Grill（包括回头追问、中途新需求、设计评审）结束时都要先同步 Research、Spec、To Do，再做别的；只记在 Grill 表或旁边文件里的决定算作没有记录；新需求和设计评审都要走一遍 G-R-S-T。*Verify:* 读改后的段落；不与原有规则矛盾。*Owner:* Claude - 指令文件不委派
   **结果**：在 “The document” 一节新增 “Every round re-syncs R-S-T” 一条（每轮 Grill、回头追问、中途新需求、设计评审之后先同步 R、S、T 与 `phase`；只记在 Grill 表或旁边文件里的决定算没有记录；新需求和评审各走一遍 G-R-S-T）；Grill 第 6 步的 loop-back 说明指向这一条。与原有 “Before each edit…”、“New findings… before the related fix” 两条一致，是它们在多轮讨论时的具体要求。
