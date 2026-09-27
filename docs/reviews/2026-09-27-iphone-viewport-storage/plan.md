@@ -1,6 +1,6 @@
 ---
 task: iphone-viewport-storage
-phase: implement      # grill | research | spec | todo | implement | acceptance | done
+phase: research       # grill | research | spec | todo | implement | acceptance | done
 scope: ap-calculus-practice / iPhone Safari：键盘超出可见区域；本地存储打开不正常
 branch: fix-iphone-keyboard-viewport
 version: 1.2.0 → 1.2.1（预计，用户可见的修复）
@@ -30,6 +30,9 @@ Recon：键盘任务里已做的真机取数与分析，见 Research。
 → S1 未通过，回到 Research（R3）。G1 定案。未另问、按默认处理：
 - D3：存储打开**超时或失败**都显示 “请重新载入” 与 Reload 按钮；按钮下保留一个次要的 “Continue without saving” 链接进入现有的临时模式，以免存储长期不可用（如某些隐私模式）时学生完全进不去。
 
+第 3 轮（2026-09-27，负责人在第二次预览上真机试用，原话）：“每次输入幂和根号的时候屏幕会跳动一下，但是键盘已经不会挡住了。能调查到原因嘛？写好文档就行，后面再 implement”
+→ **S1 真机通过**（键盘不再被挡）。新问题：输入幂和根号时页面跳动 → R5；本轮只调查并写文档，不改代码。
+
 ## Research
 
 ### R1. 键盘超出可见区域 13 px（已查明原因，待真机验证修法）
@@ -52,6 +55,28 @@ Recon：键盘任务里已做的真机取数与分析，见 Research。
 - **[I]** R1 的 “100% 是大视口” 在真机上也成立（修复前层高 727 以上），但主要原因是这里：修 R1 之后层高已正确，键区仍因高度过时而下沉。修法：让顶栏从一开始就是 44 px 的固定高度，MathLive 任何时候测到的都是最终高度；R1 的修复保留。
 - **[I]** 1.2.0 之前页签行里的按钮是 40 px，与 MathLive 自己的高度差得少；第 12 轮把点按高度改到 44 px（C-F6）后差值变大，问题才明显。
 
+### R5. 输入幂和根号时页面跳一下（第 3 轮，只调查）
+
+**现象（真机）**：负责人在 1.2.1 第二次预览上输入幂（▫^▫）和根号（√▫）时，“屏幕会跳动一下”；键盘不再遮挡。
+
+**已查明的事实**
+- **[F]** 仿真里没有复现：WebKit iPhone 13 与 iPhone 15 Pro Max，页面在顶部或先滚到 scrollY 150，依次按 3、x、幂、2、→、+、根号、x，`scrollY`、答题框位置与高度（66 px）、答题框内部 `scrollTop`、公式位置都不变（脚本 `jump.cjs`、`jump2.cjs`，会话 scratchpad）。所以是 iOS 真机特有的行为。
+- **[F]** MathLive 每次按键后都调用答题框的 `scrollIntoView()`（仿真里一次按键 1–3 次，`jump.cjs` 计数）。它会做三件事（`mathlive.mjs:39720-39785`）：① `host.scrollIntoView({ block: "nearest" })`；② 若答题框底边低于键盘顶边，再 `scrollBy(底边 − 键盘顶边 + 8)` 滚动整页；③ 按光标或选区的位置，距答题框上下边缘不足 20 px 时滚动答题框内部，左右同理。
+- **[F]** 幂与根号的共同点：按下后 MathLive 选中一个空的占位框（选区不为空），③ 就改用选区的上下边界计算；上标和根号的占位框位置比正文高。其他常用键（数字、变量、运算符）之后光标是折叠的。
+- **[F]** MathLive 用一个固定定位、裁剪掉的 `contenteditable` 元素（`.ML__keyboard-sink`）接收输入，并在命令后把焦点留在它上面（`mathlive.mjs:13159-13171`、`39180`）。
+- **[F]** MathLive 提供 `onScrollIntoView` 选项：设置后完全不做上面的 ①②③，改由页面自己决定怎么滚（`mathlive.mjs:39724`）。
+
+**推测（按可能性）**
+- **[I] H1**：真机上 KaTeX 字形或行高与仿真略有差别，加了上标或根号后答题框内容变高几像素，底边越过 “键盘顶边 − 8 px”，触发 ②，整页被滚动一下。与 “只有幂和根号” 最吻合。
+- **[I] H2**：选中占位框后，iOS 为了 “露出” 聚焦的可编辑元素里的选区，做了原生滚动（仿真不模拟这一行为）。
+- **[I] H3**：③ 让答题框内部上下滚了一下，公式在框里跳动（看起来像 “屏幕跳”）。
+
+**取证方法（待实施）**：诊断面板（`?debug=viewport`）加一个事件记录，按时间列出：最近按的键、`scrollY` 变化及来源（`window.scrollBy` / `scrollingElement.scrollBy` / `scrollIntoView` 调用 / 无调用的原生滚动）、答题框高度与内部 `scrollTop` 的变化、`visualViewport.offsetTop` 的变化。请负责人输入 “x 幂 2” 与 “根号 x” 后截图，就能区分 H1–H3。
+
+**修法候选（取证后选定）**
+- 对 H1、H3：给答题框设置 `onScrollIntoView`，改用本站自己的 `keepAnswerVisible()`（只在答题框真的被键盘挡住时滚，留 16 px 余量，不滚答题框内部的上下方向）。这也让页面滚动只有一个来源。
+- 对 H2：若是 iOS 原生滚动，需要另找办法（例如让输入元素的位置固定在答题框内、或在滚动后立即还原）；先看数据。
+
 ### R2. 本地存储（IndexedDB）打开卡住或失败
 
 - **[F]** 一次停在 “Opening your practice…”（`boot()` 没有到第一次 `render()`），一次出现 “Temporary session: export progress before leaving”（`loadState()` 抛错后的临时模式）。仿真与已部署预览都无法复现。
@@ -62,6 +87,7 @@ Recon：键盘任务里已做的真机取数与分析，见 Research。
 
 - **S1 键盘底部在可见区域内。** 手机上键盘打开时，键盘的底边不超过当前可见高度（`window.innerHeight`），最后一行完整可见；地址栏展开、收起、页面滚动后都成立。*Accept:* 浏览器测试（键盘层高度等于 `innerHeight`，键区底边 ≤ `innerHeight` + 1）；负责人 iPhone 上 `?debug=viewport` 读数与截图。*From:* R1、第 1 轮
 - **S3 存储打不开时提示重新载入（G1、D3）。** 启动时本地存储约 5 秒内没有打开，或打开失败，页面不再停在 “Opening your practice…” 或直接进入临时模式，而是说明无法打开已保存的进度，给出 Reload 按钮，以及次要的 “Continue without saving”。*Accept:* 浏览器测试模拟超时与失败两种情况；真机确认。*From:* R2、G1、D3
+- **S4 输入时页面不跳动（第 3 轮）。** 在键盘打开时输入任何键（包括幂、根号、分式），页面与答题框内的公式都不跳动；只有答题框确实被键盘挡住时才滚动，且只滚一次到位。*Accept:* 真机上 `?debug=viewport` 的事件记录里输入幂、根号时没有 `scrollY` 或答题框内部滚动；负责人确认。*From:* R5、第 3 轮
 - **S2 版本与文档。** 1.2.1，What's new 一条；README / help 如有相关说法同步（预计无需改动，核对后写明）；DESIGN.md 6.5 记录这条限制与修法。*Accept:* What's new 测试；检索。*From:* D1、`AGENTS.md`
 
 ## To Do
@@ -76,6 +102,8 @@ Recon：键盘任务里已做的真机取数与分析，见 Research。
   **结果**：诊断面板加了层 / 背板 / 键区高度、背板下内边距、`env(safe-area-inset-bottom)` 实测值和键区底边的最近 3 次变动；靠它在仿真里定位了 R4，真机读数随下一次预览再取。
 - [x] **T5** (S3) `src/main.ts`、`src/storage.ts`（如需）、`src/style.css`：存储打开加超时（约 5 秒）；超时或失败时显示 “Couldn’t open your saved progress.” 说明、Reload 按钮和次要的 “Continue without saving”（进入现有临时模式）。测试：模拟打开超时与失败。*Owner:* Claude - 涉及启动流程与数据安全
   **结果**：`loadStateWithin(5000)` 与 `chooseAfterStorageFailure()`（`src/main.ts`），`.boot-actions`（`src/style.css`）。测试 “when opening saved progress hangs / fails, practice asks for a reload”：卡住用真实的 IndexedDB 升级事务阻塞模拟（第一次用假的请求对象，`idb` 立即失败，并没有测到卡住，已改），失败用 `indexedDB.open` 抛错；两者在旧代码上失败、修正后通过。README、`help.html`、What's new 1.2.1 第二条、DESIGN.md 6.5 同步。
+- [ ] **T7** (S4) `src/main.ts`：R5 的诊断事件记录（只在 `?debug=viewport` 时），部署预览，请负责人截图。*Verify:* 仿真里能记录到键名与滚动来源。*Owner:* Claude - 需要真机数据（负责人第 3 轮：先写文档，稍后实施）
+- [ ] **T8** (S4) 按 T7 的数据实施修法（预计：答题框设置 `onScrollIntoView` 并交给 `keepAnswerVisible()`），加测试（`scrollIntoView` 被调用时页面不滚、键盘遮挡时仍然滚到位）。*Owner:* Claude - 待取证后细化
 - [x] **T3** (S2) `package.json` 1.2.1、`src/whats-new.ts` 新条目、DESIGN.md 6.5、README / help 核对。*Owner:* Claude - 文档不委派
   **结果**：`package.json` 1.2.1；What's new 1.2.1 两条（项目规则要求 2–6 条，第一次写 1 条被 What's new 单元测试拦下后补了第二条）；DESIGN.md 6.5 新增一条。另记 **[P]**：`package-lock.json` 的版本仍是 1.1.1，1.2.0 时就没同步，本次不改。
 
