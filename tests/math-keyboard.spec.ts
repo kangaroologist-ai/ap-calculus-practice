@@ -356,3 +356,25 @@ test('no key prints its alt at phone, tablet or desktop width', async ({ page })
     expect(printed, `alt labels printed on keys at ${width} px`).toBe(0);
   }
 });
+
+// iOS Safari sends a compatibility mouseup after a finger tap even though MathLive cancels
+// pointerdown, and MathLive resets shift on any window mouseup (plan R19). Touch emulation
+// doesn't produce that mouseup, so the test sends one.
+test('a finger tap on shift survives the compatibility mouseup iOS sends', async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true });
+  try {
+    const page = await context.newPage();
+    await openPracticeKeyboard(page);
+    const shift = appKeyboardKey(page, 'shift');
+    const box = (await shift.boundingBox())!;
+    await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2);
+    await shift.dispatchEvent('mouseup', { bubbles: true });
+    expect(await shiftPressCount(page)).toBe(1);
+    await expect(shift).toHaveAttribute('aria-pressed', 'true');
+    // A mouseup outside the keyboard still cancels a one-shot shift.
+    await page.locator('.question-body h2').dispatchEvent('mouseup', { bubbles: true });
+    expect(await shiftPressCount(page)).toBe(0);
+  } finally {
+    await context.close();
+  }
+});

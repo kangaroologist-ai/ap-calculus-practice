@@ -182,8 +182,8 @@ MathLive `math-field`，边框 `--control-border`，聚焦时 3 px `--focus` 外
 
 - 颜色之外的区分（WCAG 1.4.1）：答对、答错靠 ✓ / ! 符号，无法判分的两种情况靠文字本身（“Check your input” 加框下原因）。
 - 框内文字下垫一层 `--surface` 底色，向左约 32 px 渐变为透明，长答案的末尾淡出但仍可见。修改答案后，答错类标签和框下小字随即清除。
-- 页面下方的反馈框 `#feedback` 与 “Next in 3s” 条 `#auto-next` 在所有情况下**视觉隐藏**：元素仍在页面中，`#feedback` 是 `aria-live` 区域，读屏软件照常读出结果和答错说明句。不能用 `display: none`。
-- 键盘收起时（包括桌面），答题框下方是操作区：答对后 `Check answer` 与 `Need a hint?` 隐藏，`Next question →` 显示为主按钮并获得焦点；3 秒自动前进与 Enter 继续保持不变（`updateControls()`；`tests/app.spec.ts`）。
+- 页面下方的反馈框 `#feedback` 与倒计时条 `#auto-next` 在所有情况下**视觉隐藏**：元素仍在页面中，`#feedback` 是 `aria-live` 区域，读屏软件照常读出结果和答错说明句。不能用 `display: none`。
+- 键盘收起时（包括桌面），答题框下方是操作区：答对后 `Check answer` 与 `Need a hint?` 隐藏，`Next question →` 显示为主按钮并获得焦点；1.5 秒自动前进（2026-09-27 起，此前 3 秒）与 Enter 继续保持不变（`updateControls()`；`tests/app.spec.ts`）。
 - **手机上键盘打开时**（宽度 ≤ 700 px）：操作区也视觉隐藏（答对后焦点要移到 Next 按钮，MathLive 才会释放旧答题框，所以同样不能用 `display: none`）；主操作在键盘里：确认键判分前显示 Check、答对后显示 Next；Hint?、Skip 在键盘顶栏左侧，收起键盘在右侧（见 6.1）。页面为键盘留出底部空间（键盘高度加 16 px）；答题框和框下小字保持在键盘上方；新出现的提示面板至少露出开头。
 - 落实位置：`src/main.ts` 的 `renderAnswerVerdict`、`syncKeyboardControls`、`runKeyboardControl`、`keepAnswerVisible`、`revealNewHint`；`src/style.css` 的 `.answer-box`、`.answer-verdict`、`.answer-meter` 与 `.keyboard-open` 规则；`tests/app.spec.ts`、`tests/flow.spec.ts`。
 

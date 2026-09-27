@@ -138,6 +138,7 @@ function focusAnswer(keepKeyboard = false, retry = false) {
   if (keepKeyboard) window.mathVirtualKeyboard.show();
   requestAnimationFrame(keepAnswerVisible);
 }
+const AUTO_NEXT_MS = 1500;
 function startAutoNext() {
   cancelAutoNext();
   const current = state.session?.current;
@@ -155,13 +156,14 @@ function startAutoNext() {
       cancelAutoNext();
       return;
     }
-    const remaining = Math.max(0, 3000 - (performance.now() - started));
+    // 1.5 s after a correct answer (owner, plan G25; was 3 s).
+    const remaining = Math.max(0, AUTO_NEXT_MS - (performance.now() - started));
     panel.querySelector("span")!.textContent =
       `Next in ${Math.ceil(remaining / 1000)}s`;
     (panel.querySelector("i") as HTMLElement).style.width =
-      `${remaining / 30}%`;
+      `${(remaining / AUTO_NEXT_MS) * 100}%`;
     const meter = document.querySelector<HTMLElement>(".answer-meter i");
-    if (meter) meter.style.width = `${remaining / 30}%`;
+    if (meter) meter.style.width = `${(remaining / AUTO_NEXT_MS) * 100}%`;
     if (remaining === 0) {
       cancelAutoNext();
       void next();
@@ -343,7 +345,7 @@ function questionView() {
   const s = state.session!,
     c = s.current!,
     q = c.question;
-  return `<div class="card-top practice-status" aria-label="Practice activity"><span class="streak" id="streak" aria-live="polite"><strong>${state.progress.streak ?? 0}</strong> in a row</span><span id="today-count" class="muted">${todayCount(state.progress)} practiced today</span></div><div class="question-body"><h2>${esc(q.title)}</h2>${math(q.prompt)}${q.domainText.startsWith("Use radians.") ? "" : `<p class="domain">${esc(q.domainText)}</p>`}<div id="answer-fields">${q.labels.map((label, i) => `<label class="answer-label" for="answer-${i}"><span class="answer-equation">${answerLabel(label, i)}</span><span class="answer-box"><math-field id="answer-${i}" aria-label="${esc(label)}"></math-field>${i === 0 ? '<span class="answer-verdict" aria-hidden="true"></span><span class="answer-meter" aria-hidden="true"><i></i></span>' : ""}</span></label>`).join("")}</div><p id="answer-message" class="answer-message" aria-hidden="true" hidden></p><div class="input-caption"><span>Equivalent forms are welcome.</span>${button("keyboard", '<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="vertical-align:-3px"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M5 9h2m2 0h2m2 0h2m2 0h2M5 12h2m2 0h2m2 0h2m2 0h2M7 15h10"/></svg> Math keyboard', "text-button")}</div><div id="feedback" class="feedback${c.verdict ? ` ${c.verdict.status}` : ""}" aria-live="polite" ${c.verdict ? "" : "hidden"}>${c.verdict ? feedback(c.verdict, q) : ""}</div><div id="auto-next" class="auto-next" hidden><span>Next in 3s</span><div><i></i></div></div><div class="actions">${button("submit", "Check answer", "button primary")}${button("hint", c.hintsUsed >= 3 ? "Solution shown" : c.hintsUsed === 2 ? "Show solution" : c.hintsUsed === 1 ? "Show next hint" : "Need a hint?", "button subtle")}${button("next", c.verdict?.status === "correct" || c.hintsUsed >= 3 ? "Next question →" : "Skip", "text-button next")}</div><div id="hints">${hintContent()}</div>${state.progress.skills[q.primarySkill]?.failureStreak >= 3 ? '<p class="notice">Let’s rebuild the idea. Review the rule, then try the quick checks that come next.</p>' : ""}</div>`;
+  return `<div class="card-top practice-status" aria-label="Practice activity"><span class="streak" id="streak" aria-live="polite"><strong>${state.progress.streak ?? 0}</strong> in a row</span><span id="today-count" class="muted">${todayCount(state.progress)} practiced today</span></div><div class="question-body"><h2>${esc(q.title)}</h2>${math(q.prompt)}${q.domainText.startsWith("Use radians.") ? "" : `<p class="domain">${esc(q.domainText)}</p>`}<div id="answer-fields">${q.labels.map((label, i) => `<label class="answer-label" for="answer-${i}"><span class="answer-equation">${answerLabel(label, i)}</span><span class="answer-box"><math-field id="answer-${i}" aria-label="${esc(label)}"></math-field>${i === 0 ? '<span class="answer-verdict" aria-hidden="true"></span><span class="answer-meter" aria-hidden="true"><i></i></span>' : ""}</span></label>`).join("")}</div><p id="answer-message" class="answer-message" aria-hidden="true" hidden></p><div class="input-caption"><span>Equivalent forms are welcome.</span>${button("keyboard", '<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="vertical-align:-3px"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M5 9h2m2 0h2m2 0h2m2 0h2M5 12h2m2 0h2m2 0h2m2 0h2M7 15h10"/></svg> Math keyboard', "text-button")}</div><div id="feedback" class="feedback${c.verdict ? ` ${c.verdict.status}` : ""}" aria-live="polite" ${c.verdict ? "" : "hidden"}>${c.verdict ? feedback(c.verdict, q) : ""}</div><div id="auto-next" class="auto-next" hidden><span>Next in 2s</span><div><i></i></div></div><div class="actions">${button("submit", "Check answer", "button primary")}${button("hint", c.hintsUsed >= 3 ? "Solution shown" : c.hintsUsed === 2 ? "Show solution" : c.hintsUsed === 1 ? "Show next hint" : "Need a hint?", "button subtle")}${button("next", c.verdict?.status === "correct" || c.hintsUsed >= 3 ? "Next question →" : "Skip", "text-button next")}</div><div id="hints">${hintContent()}</div>${state.progress.skills[q.primarySkill]?.failureStreak >= 3 ? '<p class="notice">Let’s rebuild the idea. Review the rule, then try the quick checks that come next.</p>' : ""}</div>`;
 }
 function feedback(v: Verdict, q: Question) {
   switch (v.status) {
@@ -712,7 +714,8 @@ function showAltBubble(press: AltPress) {
   const bubble = document.createElement("div");
   bubble.className = "practice-alt-bubble";
   bubble.setAttribute("aria-hidden", "true");
-  bubble.innerHTML = convertLatexToMarkup(press.latex);
+  // Static markup drops \placeholder{}, which left x^▫ showing just "x" (plan R23).
+  bubble.innerHTML = convertLatexToMarkup(press.latex.replaceAll("\\placeholder{}", "\\square"));
   document.body.append(bubble);
   const bounds = press.keycap.getBoundingClientRect();
   const width = bubble.getBoundingClientRect().width;
@@ -878,6 +881,54 @@ window.addEventListener("pointermove", onKeyboardPointerMove, true);
 window.addEventListener("pointerleave", onKeyboardPointerLeave, true);
 window.addEventListener("pointerup", onKeyboardPointerUp, true);
 window.addEventListener("pointercancel", onKeyboardPointerCancel, true);
+// ?debug=viewport shows the numbers needed to diagnose the keyboard sliding under Safari's
+// address bar on an iPhone (plan R22). Not linked anywhere; remove once that is fixed.
+if (new URLSearchParams(location.search).get("debug") === "viewport") {
+  const panel = document.createElement("pre");
+  panel.setAttribute("aria-hidden", "true");
+  panel.style.cssText =
+    "position:fixed;top:env(safe-area-inset-top);left:0;z-index:2000;margin:0;padding:4px 6px;font:11px/1.3 ui-monospace,monospace;background:rgba(0,0,0,.75);color:#fff;pointer-events:none";
+  const update = () => {
+    const vv = window.visualViewport;
+    const kb = window.mathVirtualKeyboard;
+    const plate = document.querySelector(".ML__keyboard .MLK__plate")?.getBoundingClientRect();
+    panel.textContent = [
+      `inner ${innerWidth}x${innerHeight}  client ${document.documentElement.clientHeight}`,
+      `vv h ${vv?.height.toFixed(1)} top ${vv?.offsetTop.toFixed(1)} pageTop ${vv?.pageTop.toFixed(1)}`,
+      `scrollY ${scrollY.toFixed(1)} / max ${(document.documentElement.scrollHeight - innerHeight).toFixed(1)}`,
+      `kb ${kb.visible ? "open" : "closed"} top ${plate?.top.toFixed(1)} bottom ${plate?.bottom.toFixed(1)}`,
+    ].join("\n");
+  };
+  document.body.append(panel);
+  for (const target of [window, window.visualViewport]) {
+    target?.addEventListener("resize", update);
+    target?.addEventListener("scroll", update);
+  }
+  window.mathVirtualKeyboard.addEventListener("geometrychange", update);
+  setInterval(update, 500);
+  update();
+}
+// MathLive resets shift on any window mouseup. iOS Safari sends a compatibility mouseup after
+// a finger tap even though MathLive cancels pointerdown, so a tap on ⇧ undid itself on release
+// (plan R19). Keep that mouseup from reaching MathLive when it follows a touch on the keyboard;
+// a mouseup elsewhere still cancels ⇧.
+let lastKeyboardTouch = 0;
+window.addEventListener(
+  "pointerup",
+  (event) => {
+    if (event.pointerType === "touch" && keycapFromEvent(event, ".ML__keyboard"))
+      lastKeyboardTouch = performance.now();
+  },
+  true,
+);
+window.addEventListener(
+  "mouseup",
+  (event) => {
+    if (keycapFromEvent(event, ".ML__keyboard") && performance.now() - lastKeyboardTouch < 1000)
+      event.stopImmediatePropagation();
+  },
+  true,
+);
 window.addEventListener(
   "contextmenu",
   (event) => {

@@ -428,14 +428,22 @@ Luna 步骤（第 8 轮后重排，负责人要求多交给 Luna max）：
 - [x] **T3f** (S3) `src/style.css`、DESIGN.md 6.3、`tests/math-keyboard.spec.ts`：R18，任何宽度都隐藏 MathLive 的 alt 角标，并加测试。*Verify:* 1280 与 600 px 无角标；390 不变。*Owner:* Claude - 评审发现的一行修复
   **事后补记**：R18 写入 Research 时，插入这条 To Do 的锚点（未勾选的 T6）已不存在，插入静默失败，修改先于这条条目完成；提交 `233e26a` 后核对时发现并补上。**结果**：390 / 600 / 1280 px 可见角标均为 0（Chromium）；`p4-1280-alt-labels-after.png`；新测试在旧样式下失败、修正后在 Chromium、Firefox、WebKit 通过。
 
-- [ ] **T12** (S9①) `src/main.ts`、`tests/math-keyboard.spec.ts`：R19。*Verify:* 新测试旧代码失败、新代码通过；P5 真机。*Owner:* Claude - 与 MathLive 内部事件相关，改动小
-- [ ] **T13** (S9②) `src/style.css`：R20。*Verify:* 三种宽度实测。*Owner:* Claude - 视觉细节
-- [ ] **T14** (S9③) `src/main.ts`：R23。*Verify:* 幂、log、绝对值三个气泡截图。*Owner:* Claude - 一行修复
+- [x] **T12** (S9①) `src/main.ts`、`tests/math-keyboard.spec.ts`：R19。*Verify:* 新测试旧代码失败、新代码通过；P5 真机。*Owner:* Claude - 与 MathLive 内部事件相关，改动小
+  **结果**：捕获阶段记录键盘内触摸的 pointerup，1 秒内键盘内的 `mouseup` 用 `stopImmediatePropagation` 挡在 MathLive 的 window 监听之前；键盘外的 mouseup 仍会取消 ⇧。新测试 “a finger tap on shift survives the compatibility mouseup iOS sends” 在旧代码上失败（期望 1，实际 0），修正后键盘测试 24 项在三种引擎通过。真机确认仍在 P5。
+- [x] **T13** (S9②) `src/style.css`：R20。*Verify:* 三种宽度实测。*Owner:* Claude - 视觉细节
+  **结果**：顶栏宽度设为 `9 × --keycap-width − --keycap-gap` 并居中，Hint? 左侧与收起图标右侧去掉内边距。Chromium 实测 320 / 390 / 700 / 1280 / 2000 px：Hint? 文字左缘与第一列键左缘、收起图标右缘与最后一列键右缘相差 ≤ 0.1 px；Hint? 点按区域 46 × 44 px。`t13-1280-aligned.png`。
+- [x] **T14** (S9③) `src/main.ts`：R23。*Verify:* 幂、log、绝对值三个气泡截图。*Owner:* Claude - 一行修复
+  **结果**：气泡渲染前把 `\\placeholder{}` 换成 `\\square`；幂、log、绝对值三个气泡都有空框（WebKit 390，`t14-bubbles.png`）。
 - [ ] **T15** (S9④) 收起键盘图标样机（不改仓库代码）→ 负责人选定后改 `src/main.ts` 的 `HIDE_KEYBOARD_ICON`。*Verify:* 负责人确认。*Owner:* Claude - 设计决定
+  **进展（未勾选）**：三个样机 `t15-hide-icon-options.png`（现状、A 键盘加 V 形重画、B 只有 V 形、C 简化键盘加 V 形；在真实顶栏里渲染，浅色 / 深色）。等负责人选。
 - [ ] **T16** (S9⑤) `src/main.ts`：`?debug=viewport` 诊断面板（只在带参数时出现），部署预览请负责人截图；拿到数据后另加修复条目。*Verify:* 面板显示所需数值。*Owner:* Claude - 需要真机数据
-- [ ] **T17** (S9⑥) 等待时间 1.5 秒：`src/main.ts` 的倒计时（3000 ms → 1500 ms，文字 “Next in 2s” 等同步）、相关测试、README / `help.html` / DESIGN.md / What's new 中 “3 秒 / three-second” 的说法。*Verify:* 测试；检索旧说法为 0。*Owner:* Claude - 小改动，涉及多处文档
+  **进展（未勾选）**：`?debug=viewport` 面板已加（`src/main.ts`），WebKit 390 下显示 inner / visualViewport / scroll / 键盘位置；随下一次预览部署，请负责人在键盘被挡时截图。
+- [x] **T17** (S9⑥) 等待时间 1.5 秒：`src/main.ts` 的倒计时（3000 ms → 1500 ms，文字 “Next in 2s” 等同步）、相关测试、README / `help.html` / DESIGN.md / What's new 中 “3 秒 / three-second” 的说法。*Verify:* 测试；检索旧说法为 0。*Owner:* Claude - 小改动，涉及多处文档
+  **结果**：`AUTO_NEXT_MS = 1500` 同时驱动倒计时与框底线；隐藏文字改为 “Next in 2s”；`tests/flow.spec.ts` 的倒计时测试改为 1.5 秒；README、`help.html`（“the short countdown”）、DESIGN.md 5.3 同步；检索 “3 秒 / three-second / Next in 3s” 为 0。全量测试见本轮提交。
 - [ ] **T18** (S9⑥) 桌面 alt 角标：先出样机（不改代码）→ 负责人确认 → `src/style.css`（≥ 700 px 显示 `.MLK__shift`，改写 T3f 的全宽度隐藏）、`tests/math-keyboard.spec.ts`（T3f 的测试改为 “< 700 px 不印、≥ 700 px 印”）、DESIGN.md 6.1 / 6.3、README / help 的说法。*Owner:* Claude - 视觉决定
-- [ ] **T19** (—) 新建系数范围任务文档（`docs/reviews/<日期>-coefficients/plan.md`，只写 Grill 起点与 R24 的事实），1.2.0 发布后开始。*Owner:* Claude - 负责人第 13 轮决定
+  **进展（未勾选）**：样机 `t18-desktop-alt-proto.png`（1280，浅色 / 深色；≥ 700 px 时右上角 11 px、`--tint`、60% 不透明；← → ⌫ 不印）。等负责人确认后实现。
+- [x] **T19** (—) 新建系数范围任务文档（`docs/reviews/<日期>-coefficients/plan.md`，只写 Grill 起点与 R24 的事实），1.2.0 发布后开始。*Owner:* Claude - 负责人第 13 轮决定
+  **结果**：`docs/reviews/2026-09-27-coefficients/plan.md` 已建（Grill 起点、R1 已知事实），phase 为 grill。
 
 Project obligations:
 - [ ] **P1** README 与 `help.html` 同步：applies — README 第 36、38 段，`help.html` 的 Correct、Not quite 与 Typing formulas。*Owner:* Claude（文档不委派）

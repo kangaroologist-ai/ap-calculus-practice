@@ -189,7 +189,7 @@ test.describe('session transition flows', () => {
     await expect(page.locator('#next')).toBeFocused();
   });
 
-  test('the three-second countdown advances only once', async ({ page }) => {
+  test('the 1.5-second countdown advances only once', async ({ page }) => {
     const config = flowConfig();
     await page.clock.install({ time: FIXED_NOW });
     await openApp(page, config);
@@ -203,12 +203,12 @@ test.describe('session transition flows', () => {
     await expect(page.locator('#next')).toBeEnabled();
     await expect.poll(() => sessionCompleted(page)).toBe(0);
 
-    await page.clock.fastForward(3_001);
+    await page.clock.fastForward(1_501);
     await expect.poll(() => currentPrimarySkill(page)).toBe('constant');
     await expect.poll(() => sessionCompleted(page)).toBe(1);
 
     // A cleared interval must not finish the same question a second time.
-    await page.clock.fastForward(3_001);
+    await page.clock.fastForward(1_501);
     await expect.poll(() => sessionCompleted(page)).toBe(1);
     await expect.poll(() => currentPrimarySkill(page)).toBe('constant');
   });

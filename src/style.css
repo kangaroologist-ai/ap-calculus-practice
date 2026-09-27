@@ -1272,7 +1272,15 @@ dialog h2[tabindex="-1"]:focus {
   display: flex;
   align-items: center;
   gap: var(--space-1);
-  padding-right: var(--space-2);
+  padding-right: 0;
+}
+/* The top row spans exactly the key grid (9 units less one gap) so Hint? starts at the first
+   key's left edge and hide ends at the last key's right edge (plan R20). MathLive caps the
+   toolbar at its own width instead. */
+.ML__keyboard .MLK__layer > .MLK__toolbar {
+  width: calc(9 * var(--keycap-width) - var(--keycap-gap));
+  max-width: none;
+  margin-inline: auto;
 }
 .ML__keyboard .kb-tool {
   min-height: 44px;
@@ -1290,8 +1298,9 @@ dialog h2[tabindex="-1"]:focus {
 }
 .ML__keyboard .kb-hide {
   display: grid;
-  place-items: center;
+  place-items: center end;
   min-width: 44px;
+  padding-right: 0;
   color: var(--label-2);
 }
 /* Tooltips double as accessible names; the hover bubble sticks after a tap on iOS. */
@@ -1312,10 +1321,13 @@ dialog h2[tabindex="-1"]:focus {
   flex: 1;
   min-width: 0;
   align-items: center;
-  padding-left: 8px;
+  padding-left: 0;
 }
 .ML__keyboard .MLK__toolbar > .left > .kb-tool {
   padding: 0 var(--space-2);
+}
+.ML__keyboard .MLK__toolbar > .left > .kb-tool:first-child {
+  padding-left: 0;
 }
 .ML__keyboard .MLK__toolbar > .left > div {
   padding: 4px 12px;
