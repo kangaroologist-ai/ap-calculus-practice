@@ -5,6 +5,7 @@ scope: ap-calculus-practice / iPhone Safari：键盘超出可见区域；本地�
 branch: fix-iphone-keyboard-viewport
 version: 1.2.0 → 1.2.1（预计，用户可见的修复）
 commits:
+  - 86f261f: onScrollIntoView → keepAnswerVisible (T8), scroll event log (T7); unit 355, Playwright 198 pass
   - 82ff58f: 44 px top row from the start (R4), storage timeout and reload screen (S3); unit 355, Playwright 195 pass
   - 8e85af7: keyboard layer follows innerHeight; 1.2.1; unit 355, Playwright 190 pass
 ---
@@ -114,6 +115,7 @@ Recon：键盘任务里已做的真机取数与分析，见 Research。
   **结果**：`mountInputs()` 里设置 `mf.onScrollIntoView`；`keepMathLiveScroll` 读 `?debug=viewport&mlscroll=1`。新测试 “typing a power or a root does not scroll the page unless the keyboard covers the answer”：去掉修法时答题框的 `scrollIntoView` 被调用 14 次、三种引擎失败；修法后 0 次、`scrollY` 不变，答题框被推到键盘下时按一键后距键盘 ≥ 15 px，三种引擎通过。全套：unit 355、Playwright 198 通过（60 跳过）。真机效果待 T9。
 - [ ] **T10** (S2、S4) `src/whats-new.ts` 1.2.1 加第三条（输入时页面不再跳动），真机确认 S4 后再写，以免写了没做到的事；`docs/design/DESIGN.md` 6.5 加一条输入时滚动的规则（已写）；README / `help.html`：检索后没有关于输入时滚动的说法，无需修改。*Owner:* Claude - 文档不委派
 - [ ] **T9** (S4) 部署预览（D4），请负责人真机按 R5 的方法截图（修法后；需要时加 `&mlscroll=1` 录修法前）。*Owner:* Claude
+  **进展**：第三次预览（提交 `86f261f`）：部署 `c39ac23c`，别名与部署都返回 `main-B_ee2kt_.js`，与本地构建一致，包内含 `mlscroll`。等负责人真机截图。
 - [x] **T3** (S2) `package.json` 1.2.1、`src/whats-new.ts` 新条目、DESIGN.md 6.5、README / help 核对。*Owner:* Claude - 文档不委派
   **结果**：`package.json` 1.2.1；What's new 1.2.1 两条（项目规则要求 2–6 条，第一次写 1 条被 What's new 单元测试拦下后补了第二条）；DESIGN.md 6.5 新增一条。另记 **[P]**：`package-lock.json` 的版本仍是 1.1.1，1.2.0 时就没同步，本次不改。
 
