@@ -1169,6 +1169,11 @@ dialog h2[tabindex="-1"]:focus {
 .ML__keyboard .MLK__rows > .MLK__row > div[class*="practice-key-"] {
   font-size: 19px;
 }
+/* Alts are never printed on the keys (plan S3). MathLive hides its corner label only below
+   415 px, so hide it at every width (plan R18). */
+.ML__keyboard .MLK__shift {
+  display: none;
+}
 .ML__keyboard .MLK__rows > .MLK__row > div.practice-key-fraction:not(.practice-alt-on),
 .ML__keyboard .MLK__rows > .MLK__row > div.practice-key-power,
 .ML__keyboard .MLK__rows > .MLK__row > div.practice-key-sqrt,

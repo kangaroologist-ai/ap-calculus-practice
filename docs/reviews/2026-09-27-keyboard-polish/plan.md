@@ -266,6 +266,11 @@ Labels: **[F]** fact (source), **[I]** inference, **[U]** unknown, **[P]** pre-e
 - **[F]** `tests/math-keyboard.spec.ts` “Shift leaves delete, cursor-left, and Check actions unchanged”：⇧ 一次后按 Check，判分正常，但 `shiftPressCount` 仍为 1、`aria-pressed` 为 true（Chromium、Firefox、WebKit 都失败）。**[I]** 原因：确认键和顶栏按钮由本站在捕获阶段处理、对 MathLive 隐藏（`src/main.ts` 的 `runKeyboardControl` 与 pointer 捕获监听），MathLive 看不到这次按键，也就不会消耗一次性 ⇧。结果是下一次按数字会输入字母，违反 S3 “⇧ 点一次只对下一个键生效”。
 - **[I]** 修法：本站处理这些控件时，若 ⇧ 是一次性状态（计数 1）就通过公开 setter 归零（这里不需要保留按下状态，重绘无害）；锁定状态不动。
 
+### R18. 桌面宽度下 MathLive 自带的 alt 角标仍然显示（P4 评审发现）
+
+- **[F]** 1280 px 下，每个有 alt 的键右上角都印着 alt（sin⁻¹、x、y、÷ 等），正是负责人第 4 轮否决的设计（`p4-1280-alt-labels-before.png`，取自 `artifacts/design/1.2.0/1280-light-03-keyboard-open.png`）。**[I]** 原因：R9 已记下 MathLive 只在 `max-width: 414px` 时隐藏 `.MLK__shift`；本站从未加全宽度的隐藏规则，L1 的浏览器检查只看了 390 px，所以没有发现。
+- **[I]** 修法：`.ML__keyboard .MLK__shift { display: none }`，不限宽度；DESIGN.md 6.3 写明这条规则必须不限宽度。
+
 ### R11. L2 复核中发现：键盘上方的可见范围算错（实施中发现）
 
 - **[P]**（提交 `3e23463` 引入，1.2.0 预览版，未发布）`visibleBottom()` 在 `.actions` 高度大于 0 时以它的顶部为界。键盘打开时 `.actions` 是视觉隐藏的 1×1 px 元素，高度为 1，于是界限变成了页面下方很远的位置，而不是键盘顶部。以前框内结果本来就在答题框里，没有暴露；现在框下的 “Check your input” 原因会被键盘挡住。

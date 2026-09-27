@@ -253,6 +253,7 @@ MathLive `math-field`，边框 `--control-border`，聚焦时 3 px `--focus` 外
 ### 6.3 外观与反馈
 
 - 键帽 `--surface`，底板 `--fill`，功能键使用 MathLive 的次级样式。
+- **键上不印 alt，任何宽度都一样**：MathLive 默认在键的右上角画 alt 小字，只在宽度 ≤ 414 px 时隐藏；样式表用不限宽度的 `.ML__keyboard .MLK__shift { display: none }` 关掉它（任务文档 R18：只按手机宽度检查时，桌面上漏掉过）。
 - **字体**：所有数学键帽用 LaTeX 键面，由 MathLive 以 KaTeX 字体绘制，与题目公式同一套字形（变量斜体、函数名直立）；确认键与顶栏按钮用界面字体。乘号显示 `·`，减号显示 `−`。
 - 按下时背景变为 `--separator`，不缩放、不加过渡（P2）。确认键与顶栏按钮由 app 自己处理点按（MathLive 在键盘里取消了 pointerdown，触屏上不会产生 click），按下状态由 `.is-pressed` 类绘制。
 - **⇧ 三态**照 iOS 键盘的 shift：关 = 功能键灰底、空心箭头；一次性 = 白底（`--surface`）、实心箭头；锁定 = 白底、实心箭头加下方横线。打开与锁定时箭头为 `--tint`，与变蓝的 alt 键帽一致。
