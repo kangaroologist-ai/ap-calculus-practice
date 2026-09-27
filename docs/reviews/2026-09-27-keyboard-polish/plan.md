@@ -1,6 +1,6 @@
 ---
 task: keyboard-polish
-phase: implement         # grill | research | spec | todo | implement | acceptance | done
+phase: grill             # grill | research | spec | todo | implement | acceptance | done
 scope: ap-calculus-practice / 数学键盘、答题框结果显示
 branch: design-keyboard-1.2
 version: 1.2.0 → 1.2.0（未发布，并入同一版本；见 D1）
@@ -137,6 +137,23 @@ P4 评审的回头追问（2026-09-27，loop-back，按第 9 轮规则：与 Spe
 | # | Question | Options (recommendation first) | Owner's answer | Date |
 |---|---|---|---|---|
 | G23 | 评审 #3（P3，ux-copy）：“Check your input” 同时用于无效输入和判分器无法判定，答案看起来没问题的学生可能会去找不存在的输入错误。是否改回两个标签？ | **保持第 8 轮的决定（一个标签，框下原因区分两种情况）**：评审没有提出第 8 轮之外的新证据，框下原因已经说明要 “换一种写法” / 改为两个标签（如 “Check your input” / “Try another form”） | 待答 | 2026-09-27 |
+
+第 12 轮（2026-09-27，负责人在预览 `2f52e608` 上试用后，原话要点，附两张截图：桌面浏览器、iPhone）：
+1. “桌面键盘我觉得可以印 alt，小、蓝、透明那种”→ 桌面改判，见 G24。
+2. “hint、skip、收键盘没对齐啊，看图”→ 缺陷，R20。
+3. “G23 用方案 A”→ **G23 定案：保持一个标签 “Check your input”。**
+4. “手机上 shift 的功能不对，现在是按住 ⇧ 才显示 alt，松开又回去了……按一下显示 alt，选了一个按钮再恢复。按两下可以保持。”→ 缺陷，R19。
+5. “键盘收起的按钮感觉有点走形？”→ R21，先出样机。
+6. “手机上有时候答几道题键盘会被地址栏挡住，见图”→ R22。
+7. “出题的系数尽量不要两位数吧”→ 新需求，范围见 G26。
+8. “答对后等待时间有点长，可以短一点”→ G25。
+9. “幂按住的气泡里 x 的右上角没有框”→ 缺陷，R23。
+
+| # | Question | Options (recommendation first) | Owner's answer | Date |
+|---|---|---|---|---|
+| G24 | 桌面印 alt：从多宽开始、什么样式 | **宽度 ≥ 700 px（本站的桌面断点，此时键宽 ≥ 约 60 px）才印；右上角 11 px、`--tint`、约 60% 不透明；手机不印（第 4 轮不变）。先出样机再定** / 按 “有鼠标指针”（`pointer: fine`）判断 / 所有宽度都印 | 待答 | 2026-09-27 |
+| G25 | 答对后自动下一题的等待时间 | **1.5 秒** / 2 秒 / 1 秒 | 待答 | 2026-09-27 |
+| G26 | 系数不要两位数：本次做还是单独做 | **单独一个任务，在 1.2.0 发布后做**（改动在出题器，会改变同一随机种子生成的题目，要更新冻结的出题基准文件 `tests/fixtures/generator-1.1.0.json` 并核对题目标识与进度，和键盘无关）/ 并入 1.2.0 一起发 | 待答 | 2026-09-27 |
 
 Default assumptions (not answered):
 - D1：版本号保持 1.2.0，直接修改尚未发布的 1.2.0 What's new 条目（上一轮同样处理）。
@@ -295,6 +312,37 @@ Labels: **[F]** fact (source), **[I]** inference, **[U]** unknown, **[P]** pre-e
 - **[F]** `~/.claude/agents/` 目前不存在；全局技能目录已有 `grsta`、`impeccable`、`emil-design-eng`、`apple-design`。
 - **[I]** 所以 “一个 Sonnet medium 运行这个技能” 用一个全局子代理定义实现，而不是每次在提示里说明；评审者要写 Playwright 脚本，保留 Bash，禁用 Edit / Write / NotebookEdit 来保证只读。
 
+### R19. 手机上 ⇧ 松手即复位（第 12 轮第 4 点）
+
+- **[F]** 键盘显示时，MathLive 在 `window` 上监听 `mouseup` 和 `blur`，收到就把 `shiftPressCount` 归零（`mathlive.mjs:29278-29282`）。桌面上 MathLive 取消了 pointerdown，按 Pointer Events 规范随后的兼容 mouseup 不会发出，所以正常；负责人在 iPhone 上看到的是 “按住显示 alt、松手恢复”，符合 iOS Safari 在触摸点按后仍发出兼容 `mouseup` 的情形。
+- **[F]** Playwright 的触摸仿真不产生这个兼容 mouseup（WebKit iPhone 与 Chromium 触摸下点 ⇧，计数都保持 1，事件只有 pointerdown / pointerup / pointerout），所以之前的测试没有发现。
+- **[I]** 修法：在捕获阶段拦下目标在键盘内、且紧跟在触摸指针之后的 `mouseup`，不让它传到 MathLive 的 window 监听；键盘外的 mouseup 仍然复位（点别处取消 ⇧ 是合理的）。测试：触摸点 ⇧ 后手动派发一个 mouseup，旧代码计数归零、新代码保持 1。仍需真机确认（P5）。
+
+### R20. 顶栏与键位没有对齐（第 12 轮第 2 点）
+
+- **[F]** Chromium 实测（左右边缘 px）：1280 宽时 Hint? 从 150 开始，而第一列键从 264 开始；收起按钮右边缘 1130，最后一列键右边缘 1016。390 宽时 Hint? 12 对键 4，收起 378 对键 386。原因：顶栏是 MathLive 的工具栏，宽度与键区不同（键区在桌面上最宽 9 × 84 px 并居中）。
+- **[I]** 修法：顶栏与键区同宽、同样居中；Hint? 的文字左缘对齐第一列键的左缘，收起图标右缘对齐最后一列键的右缘。
+
+### R21. 收起键盘图标 “走形”（第 12 轮第 5 点）
+
+- **[F]** 图标是 24 单位画布里的扁长方形键盘（18 × 11）加下方的 V 形，按 22 px 显示（`src/main.ts` 的 `HIDE_KEYBOARD_ICON`）。**[I]** 扁的键盘框、很短的键位横线和贴得很近的 V 形在小尺寸下显得挤；和 ⇧ 的新图标（线宽 1.6、圆角）放在同一行，风格也不一致。先画两三个版本的样机给负责人看。
+
+### R22. 手机上键盘有时被地址栏挡住（第 12 轮第 6 点）
+
+- **[F]** 截图（iPhone，iOS Safari 底部浮动地址栏）：地址栏浮在键盘最后一行上。页面已有 `viewport-fit=cover`；MathLive 给键盘底部留了 `env(safe-area-inset-bottom)`（`mathlive.mjs:13703`），这只包括 Home 指示条，不包括浮动的地址栏。
+- **[I]** 推测：键盘打开时页面底部为键盘留了空白，答几道题后页面滚到底，Safari 在滚到底时展开地址栏，而固定在底部的键盘不会随之上移。**[U]** iOS 在地址栏展开时是否改变 `visualViewport` 的高度或偏移，决定了能否用它把键盘上移；模拟器无法复现，需要真机数据。
+- **[I]** 路线：先在预览里加一个只在 `?debug=viewport` 时出现的小面板，显示 `innerHeight`、`visualViewport.height / offsetTop`、键盘位置，请负责人在出问题时截图；拿到数据再定修法（跟随 `visualViewport` 上移键盘，或避免页面滚到底）。
+
+### R23. 幂键长按气泡里 x 没有空框（第 12 轮第 9 点）
+
+- **[F]** 气泡用 `convertLatexToMarkup` 渲染 alt 的 LaTeX；静态渲染会丢掉 `\placeholder{}`，所以 `x^{\placeholder{}}` 只剩 “x”（Chromium 实测气泡文字为 “x”）。同样影响 log▫ 与 \|▫\| 的气泡。
+- **[I]** 修法：气泡渲染前把 `\placeholder{}` 换成能静态显示的空框（如 `\square`），键帽本身不变。
+
+### R24. 系数范围（第 12 轮第 7 点，只做了初步调查）
+
+- **[F]** 出题器的参数范围多为 `int(c, 2, 15)`、指数 `int(c, 2, 12)` 等（`src/templates.ts:303-375` 一带），答案里两位数系数很常见（如 x¹² → 12x¹¹）。出题结果有冻结的基准文件 `tests/fixtures/generator-1.1.0.json`（`tests/generator-golden.test.ts`），改范围会让同一种子生成不同的题。
+- **[I]** 这是出题器改动，和键盘无关；建议单独立任务（G26）。
+
 ## Spec
 
 保持不变：4 行 × 9 个单位；← → 在底行左侧，⌫ 在第 3 行右侧，Check / Next 在右下角；判分、进度、3 秒倒计时；手机上键盘打开时不显示页面下方的按钮栏。
@@ -317,6 +365,7 @@ Labels: **[F]** fact (source), **[I]** inference, **[U]** unknown, **[P]** pre-e
 - **S5 顶栏。** 左侧 Hint?、Skip，右侧收起键盘；显示规则不变（提示用完隐藏 Hint?，答对后隐藏 Hint? 与 Skip）；这些按钮触控高度 44 px（C-F6）。键盘第一次打开时，顶栏中间显示一行 “Hold a key or tap ⇧ for more”，学生第一次用过长按或 ⇧ 后不再显示，记在本机（G18）。*Accept:* 浏览器测试沿用并更新；截图。*From:* 第 3 轮
 - **S6 答题框内的结果（所有设备）。**（第 5 轮更正后）桌面与手机、键盘开与关，一律使用手机现在的框内显示：答题框右侧显示 “✓ Correct” / “! Not quite” / “i Couldn’t check”，边框分别为 `--success` / `--warning`，答对时框底有倒计时线；修改答案后答错类标签清除（现有行为）。页面下方不再显示反馈框和 “Next in 3s” 条（`#feedback` 保留为读屏 live region）；答错说明句不显示（读屏仍读）。桌面上 Next question 按钮保留。无效输入或无法判定时，框内显示 “Check your input”（G22，不加符号），答题框下方另显示一行小字说明具体原因（G19、G21：`--warning` 色、`--t-footnote`，前面不加符号），修改答案后消失；手机键盘打开时这行也保持在键盘上方。*Accept:* e2e：1280 与 390（键盘开 / 关）三种结果的框内文字可见、`#feedback` 与 `#auto-next` 视觉隐藏且 `#feedback` 文字仍含结果；截图。*From:* 第 5 点、G6、第 5 轮、R5
 - **S8 合并式设计评审（流程）。**（第 11 轮修订）全局有一个评审技能 `design-review` 和一个子代理 `design-reviewer`（Sonnet、medium），完整审核就是派这个子代理一次完成三个视角的审核，全局 `CLAUDE.md` 提到它；报告统一格式并有 “是否与 Spec 冲突” 一栏；`review-workflow.md`、DESIGN.md 第 10 节、README、`AGENTS.md` 都按它描述完整审核（一个评审者、范围为改动状态、冲突回 Grill），不再有 “三个独立评审者” 的做法（包括可选做法）。*Accept:* 技能文件存在且格式正确；逐处检索旧说法；本任务的 P4 用它完成。*From:* 第 9、10 轮、R15
+- **S9 预览试用后的修正（第 12 轮）。** ① 手机上点一下 ⇧ 保持到下一个键，点两下锁定（R19）；② 顶栏与键区同宽对齐（R20）；③ 长按气泡里的空框照常显示（R23）；④ 收起键盘图标按负责人选定的样机重画（R21）；⑤ 键盘不被 Safari 地址栏挡住（R22，先取真机数据）；⑥ 桌面印 alt（G24）、答对后等待时间（G25）按负责人回答。G23 保持现状。*Accept:* ① 触摸加兼容 mouseup 的测试；真机确认；② 390 / 1280 / 2000 px 实测左右边缘差 ≤ 1 px；③ 气泡截图有空框；④ 负责人确认；⑤ 真机确认；⑥ 截图与测试。*From:* 第 12 轮、R19–R23
 - **S7 文档与版本。** README、`help.html`、DESIGN.md、What's new 1.2.0 与代码一致，并说明长按与 ⇧（G18）；DESIGN.md 6.5 写明 alt 只能靠触摸 / 鼠标长按或 ⇧ 取得，物理键盘直接输入是替代路径（A6）；检索不到 More 页、Main / More、÷ 分式、×、“仅手机在框内显示结果” 等旧说法。*Accept:* 逐段核对与检索。*From:* R6、AGENTS.md
 
 ## To Do
@@ -375,6 +424,13 @@ Luna 步骤（第 8 轮后重排，负责人要求多交给 Luna max）：
 
 - [x] **T3f** (S3) `src/style.css`、DESIGN.md 6.3、`tests/math-keyboard.spec.ts`：R18，任何宽度都隐藏 MathLive 的 alt 角标，并加测试。*Verify:* 1280 与 600 px 无角标；390 不变。*Owner:* Claude - 评审发现的一行修复
   **事后补记**：R18 写入 Research 时，插入这条 To Do 的锚点（未勾选的 T6）已不存在，插入静默失败，修改先于这条条目完成；提交 `233e26a` 后核对时发现并补上。**结果**：390 / 600 / 1280 px 可见角标均为 0（Chromium）；`p4-1280-alt-labels-after.png`；新测试在旧样式下失败、修正后在 Chromium、Firefox、WebKit 通过。
+
+- [ ] **T12** (S9①) `src/main.ts`、`tests/math-keyboard.spec.ts`：R19。*Verify:* 新测试旧代码失败、新代码通过；P5 真机。*Owner:* Claude - 与 MathLive 内部事件相关，改动小
+- [ ] **T13** (S9②) `src/style.css`：R20。*Verify:* 三种宽度实测。*Owner:* Claude - 视觉细节
+- [ ] **T14** (S9③) `src/main.ts`：R23。*Verify:* 幂、log、绝对值三个气泡截图。*Owner:* Claude - 一行修复
+- [ ] **T15** (S9④) 收起键盘图标样机（不改仓库代码）→ 负责人选定后改 `src/main.ts` 的 `HIDE_KEYBOARD_ICON`。*Verify:* 负责人确认。*Owner:* Claude - 设计决定
+- [ ] **T16** (S9⑤) `src/main.ts`：`?debug=viewport` 诊断面板（只在带参数时出现），部署预览请负责人截图；拿到数据后另加修复条目。*Verify:* 面板显示所需数值。*Owner:* Claude - 需要真机数据
+- [ ] **T17** (S9⑥) 按 G24、G25 的回答：`src/style.css`（桌面 alt 角标，取代 T3f 在桌面上的效果）、`src/main.ts`（等待时间）、测试、README / help / DESIGN.md 中 “3 秒” 等说法。*Owner:* Claude - 回答后细化
 
 Project obligations:
 - [ ] **P1** README 与 `help.html` 同步：applies — README 第 36、38 段，`help.html` 的 Correct、Not quite 与 Typing formulas。*Owner:* Claude（文档不委派）
