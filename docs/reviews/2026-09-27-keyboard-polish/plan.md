@@ -163,6 +163,13 @@ P4 评审的回头追问（2026-09-27，loop-back，按第 9 轮规则：与 Spe
 第 14 轮（2026-09-27，原话）：“A，alt 看着也没问题”
 → **收起键盘图标定为样机 A（键盘加 V 形，线宽 1.6、圆角，与 ⇧ 同风格）；桌面 alt 角标按样机实现（≥ 700 px，右上角 11 px、`--tint`、60% 不透明，← → ⌫ 与确认键不印）。**
 
+第 15 轮（2026-09-27，负责人 iPhone 真机试用第三次预览，原话）：“1-5 没问题，6 会卡在图里的页面”（附截图：带 `?debug=viewport` 打开时，诊断面板已显示 `inner 402x714`、`vv h 714.0 top 0.0`、`scrollY 0.0 / max 0.0`、`kb closed`，页面停在 “Opening your practice…”）。
+→ P5 的 1–5 项通过（⇧ 点一次保持、长按无系统菜单并输入 alt、幂气泡有框、顶栏对齐、1.5 秒）。第 6 项出现新问题，见 R25。
+
+| # | Question | Options (recommendation first) | Owner's answer | Date |
+|---|---|---|---|---|
+| G27 | 地址栏挡键盘（R22）和这次的 “卡在 Opening” （R25）都还没查清，1.2.0 是否等它们 | **现在发布 1.2.0**：1–5 项已真机通过；这两个问题都不是这次改动引入的迹象（键盘固定在底部、存储打开方式都没改），另开任务查；诊断面板保留在线上（不链接到任何地方）以便取数据 / 等查清再发布 | 待答 | 2026-09-27 |
+
 Default assumptions (not answered):
 - D1：版本号保持 1.2.0，直接修改尚未发布的 1.2.0 What's new 条目（上一轮同样处理）。
 - D2：t 题、θ 题中，Main 页 “x” 的位置显示本题变量（t 或 θ），与现在一样。
@@ -351,6 +358,14 @@ Labels: **[F]** fact (source), **[I]** inference, **[U]** unknown, **[P]** pre-e
 - **[F]** 出题器的参数范围多为 `int(c, 2, 15)`、指数 `int(c, 2, 12)` 等（`src/templates.ts:303-375` 一带），答案里两位数系数很常见（如 x¹² → 12x¹¹）。出题结果有冻结的基准文件 `tests/fixtures/generator-1.1.0.json`（`tests/generator-golden.test.ts`），改范围会让同一种子生成不同的题。
 - **[I]** 这是出题器改动，和键盘无关；建议单独立任务（G26）。
 
+### R25. 真机上带 `?debug=viewport` 打开时卡在 “Opening your practice…”（第 15 轮）
+
+- **[F]** 截图：诊断面板已经渲染，说明模块代码执行到了面板那一段；页面仍是 `index.html` 里的启动文字，说明 `boot()` 没有走到第一次 `render()`（`src/main.ts` 的 `boot`：先 `fetch('/practice-config.json')`，再 `loadState()` 打开 IndexedDB）。
+- **[F]** 无法复现：WebKit iPhone 仿真下，开发服务器与已部署的预览（同一 URL，带或不带参数、全新或已有进度、另开一个标签页正在练习）都能正常进入，没有页面错误或失败请求（脚本 `twotab.cjs`、`prodtab.cjs` 在会话 scratchpad）。
+- **[F]** `src/storage.ts` 用 `idb` 的 `openDB` 打开数据库，没有超时；打开失败时 `boot` 会进入临时模式，但如果打开一直不返回，页面就一直停在启动文字。
+- **[I]** 推测：iOS Safari 的 IndexedDB 偶尔在页面加载后打开无响应、重新载入标签页才恢复（在同一标签页里改地址再打开时较常见）。这与 `?debug` 参数本身无关；若属实，正常地址也可能偶发，属于既有问题 **[P]**。**[U]** 需要负责人试：① 卡住时下拉刷新能否进入；② 在新标签页打开同一个带参数的地址能否进入。
+- **[I]** 修法方向（另开任务）：给打开数据库加超时，超时后显示 “重新载入” 的提示而不是一直停在启动文字；并用诊断面板继续取 R22 的数据。
+
 ## Spec
 
 保持不变：4 行 × 9 个单位；← → 在底行左侧，⌫ 在第 3 行右侧，Check / Next 在右下角；判分、进度、3 秒倒计时；手机上键盘打开时不显示页面下方的按钮栏。
@@ -459,7 +474,7 @@ Project obligations:
   **进展（P1–P3，未勾选）**：Luna 跑 L1、L2 期间，Claude 按最终 Spec 起草了 README 第 36、38 段、`help.html` 的结果说明与 Typing formulas、`src/whats-new.ts` 1.2.0 条目（4 条，What's new 单元测试 6 项通过；日期在发布时更新）、DESIGN.md 5.3、6.1–6.5、7、8 与 `review-workflow.md` 的清单。实现完成后逐条对照代码核对（尤其气泡时长、44 px 顶栏是否增加键盘高度、`w30` 是否删除），再勾选。
 - [ ] **P4** 设计审核：applies。按第 9–11 轮改为**合并式审核**，派全局子代理 `design-reviewer`（Sonnet、medium，预载 `design-review` 技能）：Claude 运行 `npm run design:capture`（L4 更新后的状态），一个 Sonnet 只读评审者在一次评审中调用三套视角的技能（`design:design-critique` / `design:accessibility-review` / `design:ux-copy`，`emil-design-eng` / `apple-design`，`impeccable` 的 critique 与 polish，不运行 impeccable 检测器），只看本次改动的状态（键盘三态与长按、四种结果、框下原因、顶栏与首次提示，390 深浅色、1280）；共同背景沿用 `reviews/context.md` 并更新为实现后的状态；报告存 `reviews/`。Claude 核实、定级：与 Spec 不冲突的 P0 / P1 修复后复测；**与 Spec 冲突的结论先回 Grill 问负责人**。*Owner:* Sonnet 评审 + Claude 综合 - 负责人指定
   **进展（未勾选，等 G23）**：`npm run design:capture` 重新生成 45 张截图（先清掉了旧编号的残留截图）；派 `design-reviewer`（Sonnet、medium），报告与 Claude 的核实存 `reviews/review-post.md`。无 P0；P1 一项（1280 px 键上印着 alt，R18）已由 T3f 修复并加测试；P3 三项：#2 已接受、#4 留作遗留项、#3 与 Spec 冲突 → G23。另记 P3：1280 px 下键帽字形偏小。
-- [ ] **P5** iPhone 真机确认：applies — 键盘排布、长按（含没有系统菜单）、⇧ 三态、首次提示。*Owner:* 负责人
+- [ ] **P5** iPhone 真机确认（第 15 轮：1–5 项通过；第 6 项转为 R25 / G27）：applies — 键盘排布、长按（含没有系统菜单）、⇧ 三态、首次提示。*Owner:* 负责人
 - [ ] **P6** 部署与线上核对：applies — 重新部署预览 → 负责人 iPhone 确认 → 合并 `main` → 部署 → 确认线上 `/` 与 `/help` 为新版（接续 `2026-09-26-keyboard-followups` 的 F-8）。*Owner:* Claude + 负责人
   **进展**：负责人要预览链接（2026-09-27）。`npm run build` 后 `wrangler pages deploy dist --branch design-keyboard-1.2`（提交 `77f86c3`）：部署 https://2f52e608.ap-calculus-practice.pages.dev ，别名 https://design-keyboard-1-2-dh6k.ap-calculus-practice.pages.dev ，两者都返回 `main-DuJWLhnV.js`，与本地构建一致。注意：Cloudflare 这次给的别名带后缀，上一轮的 `design-keyboard-1-2.ap-calculus-practice.pages.dev` 仍是旧构建（`main-6ChDpAWy.js`）。正式站点未动。等负责人 iPhone 确认（P5）。 第二次预览（第 12 轮修正后，提交 `2545f37`）：https://88c2b53d.ap-calculus-practice.pages.dev ，别名同上 https://design-keyboard-1-2-dh6k.ap-calculus-practice.pages.dev ，均返回 `main-B6MAfquY.js`，与本地构建一致；正式站点未动。 第三次预览（第 14 轮，提交 `8bb6ce9`）：https://df2007f6.ap-calculus-practice.pages.dev ，别名同上；部署后别名约 20 秒内仍返回旧构建，随后两者都返回 `main-BM5o0949.js`，与本地构建一致；正式站点仍为 `main-jvVkbN6_.js`。
 
