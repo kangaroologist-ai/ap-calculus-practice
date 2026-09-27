@@ -1,6 +1,6 @@
 ---
 task: keyboard-polish
-phase: grill             # grill | research | spec | todo | implement | acceptance | done
+phase: implement         # grill | research | spec | todo | implement | acceptance | done
 scope: ap-calculus-practice / 数学键盘、答题框结果显示
 branch: design-keyboard-1.2
 version: 1.2.0 → 1.2.0（未发布，并入同一版本；见 D1）
@@ -154,6 +154,9 @@ P4 评审的回头追问（2026-09-27，loop-back，按第 9 轮规则：与 Spe
 | G24 | 桌面印 alt：从多宽开始、什么样式 | **宽度 ≥ 700 px（本站的桌面断点，此时键宽 ≥ 约 60 px）才印；右上角 11 px、`--tint`、约 60% 不透明；手机不印（第 4 轮不变）。先出样机再定** / 按 “有鼠标指针”（`pointer: fine`）判断 / 所有宽度都印 | 待答 | 2026-09-27 |
 | G25 | 答对后自动下一题的等待时间 | **1.5 秒** / 2 秒 / 1 秒 | 待答 | 2026-09-27 |
 | G26 | 系数不要两位数：本次做还是单独做 | **单独一个任务，在 1.2.0 发布后做**（改动在出题器，会改变同一随机种子生成的题目，要更新冻结的出题基准文件 `tests/fixtures/generator-1.1.0.json` 并核对题目标识与进度，和键盘无关）/ 并入 1.2.0 一起发 | 待答 | 2026-09-27 |
+
+第 13 轮（2026-09-27，原话）：“3 处都按你推荐”
+→ **G24 定案：宽度 ≥ 700 px 时印 alt（右上角 11 px、`--tint`、约 60% 不透明），手机不印；先出样机再改。G25 定案：1.5 秒。G26 定案：系数范围单独立任务，1.2.0 发布后做。**
 
 Default assumptions (not answered):
 - D1：版本号保持 1.2.0，直接修改尚未发布的 1.2.0 What's new 条目（上一轮同样处理）。
@@ -365,7 +368,7 @@ Labels: **[F]** fact (source), **[I]** inference, **[U]** unknown, **[P]** pre-e
 - **S5 顶栏。** 左侧 Hint?、Skip，右侧收起键盘；显示规则不变（提示用完隐藏 Hint?，答对后隐藏 Hint? 与 Skip）；这些按钮触控高度 44 px（C-F6）。键盘第一次打开时，顶栏中间显示一行 “Hold a key or tap ⇧ for more”，学生第一次用过长按或 ⇧ 后不再显示，记在本机（G18）。*Accept:* 浏览器测试沿用并更新；截图。*From:* 第 3 轮
 - **S6 答题框内的结果（所有设备）。**（第 5 轮更正后）桌面与手机、键盘开与关，一律使用手机现在的框内显示：答题框右侧显示 “✓ Correct” / “! Not quite” / “i Couldn’t check”，边框分别为 `--success` / `--warning`，答对时框底有倒计时线；修改答案后答错类标签清除（现有行为）。页面下方不再显示反馈框和 “Next in 3s” 条（`#feedback` 保留为读屏 live region）；答错说明句不显示（读屏仍读）。桌面上 Next question 按钮保留。无效输入或无法判定时，框内显示 “Check your input”（G22，不加符号），答题框下方另显示一行小字说明具体原因（G19、G21：`--warning` 色、`--t-footnote`，前面不加符号），修改答案后消失；手机键盘打开时这行也保持在键盘上方。*Accept:* e2e：1280 与 390（键盘开 / 关）三种结果的框内文字可见、`#feedback` 与 `#auto-next` 视觉隐藏且 `#feedback` 文字仍含结果；截图。*From:* 第 5 点、G6、第 5 轮、R5
 - **S8 合并式设计评审（流程）。**（第 11 轮修订）全局有一个评审技能 `design-review` 和一个子代理 `design-reviewer`（Sonnet、medium），完整审核就是派这个子代理一次完成三个视角的审核，全局 `CLAUDE.md` 提到它；报告统一格式并有 “是否与 Spec 冲突” 一栏；`review-workflow.md`、DESIGN.md 第 10 节、README、`AGENTS.md` 都按它描述完整审核（一个评审者、范围为改动状态、冲突回 Grill），不再有 “三个独立评审者” 的做法（包括可选做法）。*Accept:* 技能文件存在且格式正确；逐处检索旧说法；本任务的 P4 用它完成。*From:* 第 9、10 轮、R15
-- **S9 预览试用后的修正（第 12 轮）。** ① 手机上点一下 ⇧ 保持到下一个键，点两下锁定（R19）；② 顶栏与键区同宽对齐（R20）；③ 长按气泡里的空框照常显示（R23）；④ 收起键盘图标按负责人选定的样机重画（R21）；⑤ 键盘不被 Safari 地址栏挡住（R22，先取真机数据）；⑥ 桌面印 alt（G24）、答对后等待时间（G25）按负责人回答。G23 保持现状。*Accept:* ① 触摸加兼容 mouseup 的测试；真机确认；② 390 / 1280 / 2000 px 实测左右边缘差 ≤ 1 px；③ 气泡截图有空框；④ 负责人确认；⑤ 真机确认；⑥ 截图与测试。*From:* 第 12 轮、R19–R23
+- **S9 预览试用后的修正（第 12 轮）。** ① 手机上点一下 ⇧ 保持到下一个键，点两下锁定（R19）；② 顶栏与键区同宽对齐（R20）；③ 长按气泡里的空框照常显示（R23）；④ 收起键盘图标按负责人选定的样机重画（R21）；⑤ 键盘不被 Safari 地址栏挡住（R22，先取真机数据）；⑥ 宽度 ≥ 700 px 时键上印 alt（右上角 11 px、`--tint`、约 60% 不透明；样机经负责人确认后实现；手机不印），答对后 1.5 秒自动下一题（G24、G25）。系数范围不在本任务（G26）。G23 保持现状。*Accept:* ① 触摸加兼容 mouseup 的测试；真机确认；② 390 / 1280 / 2000 px 实测左右边缘差 ≤ 1 px；③ 气泡截图有空框；④ 负责人确认；⑤ 真机确认；⑥ 截图与测试。*From:* 第 12 轮、R19–R23
 - **S7 文档与版本。** README、`help.html`、DESIGN.md、What's new 1.2.0 与代码一致，并说明长按与 ⇧（G18）；DESIGN.md 6.5 写明 alt 只能靠触摸 / 鼠标长按或 ⇧ 取得，物理键盘直接输入是替代路径（A6）；检索不到 More 页、Main / More、÷ 分式、×、“仅手机在框内显示结果” 等旧说法。*Accept:* 逐段核对与检索。*From:* R6、AGENTS.md
 
 ## To Do
@@ -430,7 +433,9 @@ Luna 步骤（第 8 轮后重排，负责人要求多交给 Luna max）：
 - [ ] **T14** (S9③) `src/main.ts`：R23。*Verify:* 幂、log、绝对值三个气泡截图。*Owner:* Claude - 一行修复
 - [ ] **T15** (S9④) 收起键盘图标样机（不改仓库代码）→ 负责人选定后改 `src/main.ts` 的 `HIDE_KEYBOARD_ICON`。*Verify:* 负责人确认。*Owner:* Claude - 设计决定
 - [ ] **T16** (S9⑤) `src/main.ts`：`?debug=viewport` 诊断面板（只在带参数时出现），部署预览请负责人截图；拿到数据后另加修复条目。*Verify:* 面板显示所需数值。*Owner:* Claude - 需要真机数据
-- [ ] **T17** (S9⑥) 按 G24、G25 的回答：`src/style.css`（桌面 alt 角标，取代 T3f 在桌面上的效果）、`src/main.ts`（等待时间）、测试、README / help / DESIGN.md 中 “3 秒” 等说法。*Owner:* Claude - 回答后细化
+- [ ] **T17** (S9⑥) 等待时间 1.5 秒：`src/main.ts` 的倒计时（3000 ms → 1500 ms，文字 “Next in 2s” 等同步）、相关测试、README / `help.html` / DESIGN.md / What's new 中 “3 秒 / three-second” 的说法。*Verify:* 测试；检索旧说法为 0。*Owner:* Claude - 小改动，涉及多处文档
+- [ ] **T18** (S9⑥) 桌面 alt 角标：先出样机（不改代码）→ 负责人确认 → `src/style.css`（≥ 700 px 显示 `.MLK__shift`，改写 T3f 的全宽度隐藏）、`tests/math-keyboard.spec.ts`（T3f 的测试改为 “< 700 px 不印、≥ 700 px 印”）、DESIGN.md 6.1 / 6.3、README / help 的说法。*Owner:* Claude - 视觉决定
+- [ ] **T19** (—) 新建系数范围任务文档（`docs/reviews/<日期>-coefficients/plan.md`，只写 Grill 起点与 R24 的事实），1.2.0 发布后开始。*Owner:* Claude - 负责人第 13 轮决定
 
 Project obligations:
 - [ ] **P1** README 与 `help.html` 同步：applies — README 第 36、38 段，`help.html` 的 Correct、Not quite 与 Typing formulas。*Owner:* Claude（文档不委派）
