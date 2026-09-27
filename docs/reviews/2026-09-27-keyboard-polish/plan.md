@@ -1,6 +1,6 @@
 ---
 task: keyboard-polish
-phase: implement         # grill | research | spec | todo | implement | acceptance | done
+phase: done              # grill | research | spec | todo | implement | acceptance | done
 scope: ap-calculus-practice / 数学键盘、答题框结果显示
 branch: design-keyboard-1.2
 version: 1.2.0 → 1.2.0（未发布，并入同一版本；见 D1）
@@ -9,6 +9,7 @@ commits:
   - 63a8089: L1 one-page keyboard with shift layer (unit 355 pass; also carries the DESIGN.md draft)
   - bc84e46: L2 in-box results on all devices, top row, first-use tip, visibleBottom fix (unit 355 pass)
   - f72fbf5: L3 long press, iOS-style shift, keycap sizing, R13 fixes (unit 355 pass; long-press paths pass in WebKit and Chromium)
+  - caa8c42: release prep; main fast-forwarded and pushed; production deploy cbc7817d (main-DKL8AnjN.js)
   - 8bb6ce9: hide icon A, faint alt labels from 700 px; unit 355, Playwright 187 pass
   - 2545f37: round-12 fixes (shift on iPhone, top-row alignment, bubble boxes, 1.5 s); unit 355, Playwright 187 pass
   - d98e9cd: alt names for screen readers (R14), bubble on existing duration tiers (T3c)
@@ -490,19 +491,30 @@ Project obligations:
   **进展（未勾选，等 G23）**：`npm run design:capture` 重新生成 45 张截图（先清掉了旧编号的残留截图）；派 `design-reviewer`（Sonnet、medium），报告与 Claude 的核实存 `reviews/review-post.md`。无 P0；P1 一项（1280 px 键上印着 alt，R18）已由 T3f 修复并加测试；P3 三项：#2 已接受、#4 留作遗留项、#3 与 Spec 冲突 → G23。另记 P3：1280 px 下键帽字形偏小。
 - [x] **P5** iPhone 真机确认（第 15 轮：1–5 项通过；第 6 项转为 R25 / G27）：applies — 键盘排布、长按（含没有系统菜单）、⇧ 三态、首次提示。*Owner:* 负责人
   **结果**：第 15 轮负责人确认 1–5 项通过；第 6 项转为 R25、R26，另开任务（G27）。
-- [ ] **P6** 部署与线上核对：applies — 重新部署预览 → 负责人 iPhone 确认 → 合并 `main` → 部署 → 确认线上 `/` 与 `/help` 为新版（接续 `2026-09-26-keyboard-followups` 的 F-8）。*Owner:* Claude + 负责人
+- [x] **P6** 部署与线上核对：applies — 重新部署预览 → 负责人 iPhone 确认 → 合并 `main` → 部署 → 确认线上 `/` 与 `/help` 为新版（接续 `2026-09-26-keyboard-followups` 的 F-8）。*Owner:* Claude + 负责人
+  **结果**：负责人第 16 轮同意发布。`main` 快进到 `caa8c42` 并推送；`wrangler pages deploy dist --branch main` → https://cbc7817d.ap-calculus-practice.pages.dev ；线上 https://ap-calculus-practice.pages.dev 返回 `main-DKL8AnjN.js`，与本地构建一致；`/help` 含 “Hold a key”、“second symbol”、“short countdown”、“Check your input”，不含 “More page”、“three-second”。CI 结果补记于提交说明。
   **进展**：负责人要预览链接（2026-09-27）。`npm run build` 后 `wrangler pages deploy dist --branch design-keyboard-1.2`（提交 `77f86c3`）：部署 https://2f52e608.ap-calculus-practice.pages.dev ，别名 https://design-keyboard-1-2-dh6k.ap-calculus-practice.pages.dev ，两者都返回 `main-DuJWLhnV.js`，与本地构建一致。注意：Cloudflare 这次给的别名带后缀，上一轮的 `design-keyboard-1-2.ap-calculus-practice.pages.dev` 仍是旧构建（`main-6ChDpAWy.js`）。正式站点未动。等负责人 iPhone 确认（P5）。 第二次预览（第 12 轮修正后，提交 `2545f37`）：https://88c2b53d.ap-calculus-practice.pages.dev ，别名同上 https://design-keyboard-1-2-dh6k.ap-calculus-practice.pages.dev ，均返回 `main-B6MAfquY.js`，与本地构建一致；正式站点未动。 第三次预览（第 14 轮，提交 `8bb6ce9`）：https://df2007f6.ap-calculus-practice.pages.dev ，别名同上；部署后别名约 20 秒内仍返回旧构建，随后两者都返回 `main-BM5o0949.js`，与本地构建一致；正式站点仍为 `main-jvVkbN6_.js`。
 
 ## Acceptance
 
+Walk done 2026-09-27 after release. Evidence paths are relative to this folder unless noted.
+
 | Spec | To Do | Evidence | Result |
 |---|---|---|---|
-| S1 | T2、T6、T7 | | |
-| S2 | T2、T5、T6 | | |
-| S3 | T1、T3、T6、P5 | | |
-| S4 | T1、T2、T6 | | |
-| S5 | T4、T6 | | |
-| S6 | T5、T6、T7 | | |
-| S7 | P1–P3 | | |
+| S1 one-page layout | T2 | `tests/math-keyboard-layout.test.ts` (29, four `vars` cases); `l1-390-*.png`; device check round 15 | pass |
+| S2 placeholders and symbols | T2, T5, T14 | layout test faces; `t14-bubbles.png`; `·` sized in T3; in-field `*` renders as `\cdot` (MathLive mapping, L2 report) | pass |
+| S3 alt, ⇧, long press | T3, T3b–T3f, T12, T18 | `verify-l3.cjs` paths in WebKit + Chromium; `tests/math-keyboard.spec.ts` (24, three engines) incl. guard, compatibility-mouseup and 700 px label tests; aria names R14; device: ⇧ once/locked, long press without iOS menu (round 15) | pass |
+| S4 KaTeX font | T2, T3 | layout test (all math keys `latex`); screenshots | pass |
+| S5 top row | T4, T13, T15 | alignment ≤ 0.1 px at 320–2000 px; 46 × 44 hit area; icon A (`t14-*.png`); first-use tip test | pass |
+| S6 results in the answer box | T5, T5b, T17 | `l2-*.png`; answer-box tests at 1280 / phone open / phone closed (15/15 repeat); 1.5 s countdown test | pass |
+| S7 docs and version | P1–P3 | README, `help.html`, DESIGN.md, `review-workflow.md`, What's new 1.2.0 (dated 2026-09-27); live `/help` checked | pass |
+| S8 design-review process | T9–T11 | global skill + `design-reviewer` agent; used for P4 (`reviews/review-post.md`) | pass |
+| S9 preview fixes | T12–T19 | as above; device round 15 items 1–5 | pass, except ⑤ (keyboard under the address bar) → moved to follow-up task (owner, G27) |
 
-Open / deferred / owner checks：R5 的 [P]（手机键盘打开时看不到答错说明句）由 S6 一并解决；P5 iPhone 确认。
+Release: `main` fast-forwarded to `caa8c42` and pushed; production deploy `cbc7817d` (`main-DKL8AnjN.js`, same as local build); live `/help` has the new wording and none of the old. CI on the push: see the commits list.
+
+Open / deferred / owner checks:
+- **Follow-up task** `docs/reviews/2026-09-27-iphone-viewport-storage/plan.md`: keyboard 13 px below the visible area on iPhone Safari (R26, cause found, fix unverified); IndexedDB open hanging or failing on the device (R25). The `?debug=viewport` panel stays in production until that task ends.
+- **Follow-up task** `docs/reviews/2026-09-27-coefficients/plan.md`: single-digit coefficients (G26).
+- P3 leftovers: grader message for a missing bracket doesn't name the bracket; keycap faces look small in 80 px desktop keys.
+- Changed from the first Spec, with reasons in the Grill log: More page → one page with ⇧ and long press (rounds 2–3); no printed alts on phones, faint labels from 700 px (rounds 4, 14); results as in-box text without an explanation strip (round 5); one "Check your input" label (rounds 8, 16); 1.5 s auto-next (round 13).
