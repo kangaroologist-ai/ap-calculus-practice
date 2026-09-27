@@ -4,7 +4,10 @@ phase: implement         # grill | research | spec | todo | implement | acceptan
 scope: ap-calculus-practice / 数学键盘、答题框结果显示
 branch: design-keyboard-1.2
 version: 1.2.0 → 1.2.0（未发布，并入同一版本；见 D1）
-commits: []
+commits:
+  - dff3149: plan, Grill rounds 1-8, prototypes and three-perspective review
+  - 63a8089: L1 one-page keyboard with shift layer (unit 355 pass; also carries the DESIGN.md draft)
+  - bc84e46: L2 in-box results on all devices, top row, first-use tip, visibleBottom fix (unit 355 pass)
 ---
 
 # 2026-09-27 键盘打磨：More 页排布、符号、字体、按键位置、桌面端结果显示
@@ -227,6 +230,17 @@ Labels: **[F]** fact (source), **[I]** inference, **[U]** unknown, **[P]** pre-e
 - **[I]** 所以框内的短标签按两类分开最贴切：前者让学生检查输入，后者让学生换写法；具体原因交给框下小字。
 - **[F]** DESIGN.md 的审核清单要求 “反馈框四种判定都有颜色以外的图标”（`review-workflow.md` 第 6 节）；去掉 “i” 后这两类靠文字区分，清单这一条要改为 “颜色以外的区分（符号或文字）”。
 
+### R12. 长按机制的更正（L3 提问，实施中发现）
+
+- **[F]** R9 第二条的推断有误：`shiftPressCount` 的 setter 除了切换 `is-caps-lock`，还会调用 `render()`（`mathlive.mjs:28949-28954`；Claude 最初只读到前两行）。`render()` 会重写所有键帽的 class，去掉被按住键的 `is-pressed`；而 MathLive 的 pointerup 只在键仍带 `is-pressed` 时执行命令（`28785-28807`）。所以按原计划在长按到时设 `shiftPressCount = 1`，松手不会输入 alt，count 也不会被复位。Luna 在 L3 发现并停下提问，未写代码。
+- **[I]** 选定做法：长按到时直接写内部字段 `_shiftPressCount = 1`（不重绘），松手仍由 MathLive 自己执行 `keycap.shift`，并通过 setter 归零（归零时的 `render()` 无害）；取消时同样直接把 `_shiftPressCount` 写回 0。代价：依赖 MathLive 0.110 的内部字段。对策：版本已锁定（`package.json`），并加一个测试，在字段不存在或 setter 行为变化时明确失败；DESIGN.md 6.5 记录。
+- 另一选项（在捕获阶段拦截松手、自己执行 alt 命令）被否决：拦下 pointerup 后 MathLive 为这次按压注册的监听不会被清理，按下状态也要自己收拾，出错面更大。
+
+### R13. L3 浏览器验证发现的两个问题（实施中发现）
+
+- **[F]** 按住 7 或 sin 700 ms 后松手，输入的是主功能（“7”、“\\sin”），计数回到 0；WebKit 与 Chromium 相同（验证脚本 `verify-l3.cjs` 在会话 scratchpad）。**[I]** 原因：L3 在 `window` 捕获阶段的 pointerup 里用 `queueMicrotask` 复位计数；浏览器派发的事件在两个监听器之间会执行微任务，于是复位发生在 MathLive 的 pointerup 读取计数之前。改为在 MathLive 处理完之后（`setTimeout(…, 0)`）再检查复位。
+- **[F]** ⇧ 后按 9 输入 “Z”（大写），⇧ 锁定时按 7、8 输入 “XY”。**[I]** MathLive 在 shift 状态下把 `typedText` 的字母转成大写。**事后更正**：L1 时 Luna 让数字 alt 的字母用 `insert`、变量键用 `typedText`，Claude 在复核中把它当作 “绕过测试” 改成了同一个 `typedText` 命令（提交 `63a8089`）——这个判断是错的，两种写法有实际原因。改回：字母、θ、π 的 alt 用 `insert`；测试的 “变量除外” 按功能（插入的字母）豁免，而不是按命令写法，并在测试注释里写明原因。
+
 ### R11. L2 复核中发现：键盘上方的可见范围算错（实施中发现）
 
 - **[P]**（提交 `3e23463` 引入，1.2.0 预览版，未发布）`visibleBottom()` 在 `.actions` 高度大于 0 时以它的顶部为界。键盘打开时 `.actions` 是视觉隐藏的 1×1 px 元素，高度为 1，于是界限变成了页面下方很远的位置，而不是键盘顶部。以前框内结果本来就在答题框里，没有暴露；现在框下的 “Check your input” 原因会被键盘挡住。
@@ -250,7 +264,7 @@ Labels: **[F]** fact (source), **[I]** inference, **[U]** unknown, **[P]** pre-e
 
 - **S1 单页键位。** 键盘只有上表一页，没有页签；每个功能只出现一次（主字或 alt），变量除外（上表本身就让本题变量既有自己的键、又是某个数字的 alt；L1 复核时补写这条例外，两处用同一个命令）。*Accept:* 单元测试逐格核对 x、t、θ、隐函数四种情形的主字、alt 与宽度；390 截图。*From:* G1、G10→第 2 轮、第 3 轮、R3、R9
 - **S2 占位与符号。** 等待输入的位置画空框（▫/▫、▫^▫、e^▫、√▫、log▫、\|▫\|）；乘号为 “·”；分式键单按插入上下分式，alt 为 ÷。答题框里乘号也显示为 “·”。*Accept:* 单元测试核对键帽 LaTeX；浏览器中按 · 后答题框的显示；截图。*From:* 第 2 点、G7、G13、R2、R8
-- **S3 alt、⇧ 与长按。**（第 4–6 轮与 T1b 评审后）键上不印 alt。⇧ 点一次只对下一个键生效，连点两次锁定，再点解除；⇧ 三态照 iOS shift 的形状（关 = 灰色功能键底、空心箭头；一次性 = 白底实心箭头；锁定 = 白底实心箭头加下方横线），激活与锁定时箭头为 `--tint` 蓝色（G20）。⇧ 激活时有 alt 的键显示 alt 并变为 `--tint` 色，没有 alt 的键保持原样、不变淡（评审 A2）；三角键显示 sin⁻¹ 等、输入 arcsin 等。长按：只在有 alt 的键上计时（B5），按住 450 ms 且手指移动不超过 8 px 时弹出气泡显示 alt（B1），松手输入 alt 且气泡立即消失，手指移出键外取消（80 ms 淡出）；气泡出现 120 ms，透明度 0→1、缩放 0.95→1、ease-out，减少动态模式下只保留透明度（B4、B8）。键盘上禁用 iOS 的长按菜单与文字选择（B2）。读屏：⇧ 名为 shift，状态用 `aria-pressed`；⇧ 激活时键的读屏名称随 alt 更新（A6）。*Accept:* 浏览器测试（单按、⇧ 一次、⇧ 锁定、长按松手、长按移出、无 alt 键长按等同单按）逐项核对答题框内容；`tests/contrast.test.ts` 覆盖 ⇧ 状态下的蓝色字；iPhone 真机确认长按无系统菜单。*From:* G12→第 2 轮、G15、第 4–6 轮、R7、R9、`reviews/synthesis.md`
+- **S3 alt、⇧ 与长按。**（第 4–6 轮与 T1b 评审后）键上不印 alt。⇧ 点一次只对下一个键生效，连点两次锁定，再点解除；⇧ 三态照 iOS shift 的形状（关 = 灰色功能键底、空心箭头；一次性 = 白底实心箭头；锁定 = 白底实心箭头加下方横线），激活与锁定时箭头为 `--tint` 蓝色（G20）。⇧ 激活时有 alt 的键显示 alt 并变为 `--tint` 色，没有 alt 的键保持原样、不变淡（评审 A2）；三角键显示 sin⁻¹ 等、输入 arcsin 等。长按：只在有 alt 的键上计时（B5），到时直接写 MathLive 的内部字段 `_shiftPressCount = 1`（不重绘，R12），按住 450 ms 且手指移动不超过 8 px 时弹出气泡显示 alt（B1），松手输入 alt 且气泡立即消失，手指移出键外取消（80 ms 淡出）；气泡出现 120 ms，透明度 0→1、缩放 0.95→1、ease-out，减少动态模式下只保留透明度（B4、B8）。键盘上禁用 iOS 的长按菜单与文字选择（B2）。读屏：⇧ 名为 shift，状态用 `aria-pressed`；⇧ 激活时键的读屏名称随 alt 更新（A6）。*Accept:* 浏览器测试（单按、⇧ 一次、⇧ 锁定、长按松手、长按移出、无 alt 键长按等同单按）；一个测试在 MathLive 的 `_shiftPressCount` 字段不存在时失败（R12）逐项核对答题框内容；`tests/contrast.test.ts` 覆盖 ⇧ 状态下的蓝色字；iPhone 真机确认长按无系统菜单。*From:* G12→第 2 轮、G15、第 4–6 轮、R7、R9、`reviews/synthesis.md`
 - **S4 字体。** 所有数学键帽由 KaTeX 渲染，与题目公式同一套字体；Check / Next 与顶栏按钮用界面字体。*Accept:* 单元测试：数学键都用 `latex` 键帽；浏览器中取 sin、7、+ 键的计算字体为 KaTeX_*。*From:* 第 3 点、G5、R4
 - **S5 顶栏。** 左侧 Hint?、Skip，右侧收起键盘；显示规则不变（提示用完隐藏 Hint?，答对后隐藏 Hint? 与 Skip）；这些按钮触控高度 44 px（C-F6）。键盘第一次打开时，顶栏中间显示一行 “Hold a key or tap ⇧ for more”，学生第一次用过长按或 ⇧ 后不再显示，记在本机（G18）。*Accept:* 浏览器测试沿用并更新；截图。*From:* 第 3 轮
 - **S6 答题框内的结果（所有设备）。**（第 5 轮更正后）桌面与手机、键盘开与关，一律使用手机现在的框内显示：答题框右侧显示 “✓ Correct” / “! Not quite” / “i Couldn’t check”，边框分别为 `--success` / `--warning`，答对时框底有倒计时线；修改答案后答错类标签清除（现有行为）。页面下方不再显示反馈框和 “Next in 3s” 条（`#feedback` 保留为读屏 live region）；答错说明句不显示（读屏仍读）。桌面上 Next question 按钮保留。无效输入或无法判定时，框内显示 “Check your input”（G22，不加符号），答题框下方另显示一行小字说明具体原因（G19、G21：`--warning` 色、`--t-footnote`，前面不加符号），修改答案后消失；手机键盘打开时这行也保持在键盘上方。*Accept:* e2e：1280 与 390（键盘开 / 关）三种结果的框内文字可见、`#feedback` 与 `#auto-next` 视觉隐藏且 `#feedback` 文字仍含结果；截图。*From:* 第 5 点、G6、第 5 轮、R5
@@ -281,13 +295,16 @@ Luna 步骤（第 8 轮后重排，负责人要求多交给 Luna max）：
 
 - [x] **T2** (S1–S4) `src/math-keyboard.ts`：单页布局、`shift` alt 定义、`[shift]` 键、空框键帽、KaTeX 键帽、读屏名称（含 alt）；同时改写 `tests/math-keyboard-layout.test.ts`。*Verify:* 单元测试；Claude 在浏览器看 390 截图。*Owner:* Luna max（L1）- Spec 已定，键位与接口在步骤说明里写死，文件集独立
   **结果**：Luna 报告 tsc 通过、布局测试 29 项、全部单元测试 355 项通过。Claude 复核：读 diff；发现 Luna 为通过 “命令不重复” 测试，让数字 alt 的字母用 `insert`、变量键用 `typedText`（功能相同、写法不同，属于绕过测试）。Claude 改为两处同一命令，并在测试里明确写出 “变量除外” 的例外（S1、DESIGN.md 6.1 规则 4 同步补写）；重跑 tsc 与全部单元测试 355 项通过。WebKit 390 截图 `l1-390-normal.png`、`l1-390-shift.png`：一页 4×9、⇧ 下各键换成 alt、← → ⌫ Check 不变，无页面错误。留给 L3 的样式：⇧ 三个图标同时显示、函数名字号偏小（`small` 类）、`·` 太小、空框键大小。
-- [ ] **T3** (S3) `src/main.ts`、`src/style.css`：长按（只对有 alt 的键；450 ms、移动 8 px 取消；到时设一次性 shift 并弹气泡，气泡动效与减少动态）、⇧ 三态样式（iOS 形状）、⇧ 状态下 alt 字变蓝、iOS 长按菜单与选择的禁用、⇧ 的 `aria-pressed` 与 alt 读屏名称、覆盖 MathLive 对 ← → ⌫ 的 shift 功能。*Verify:* Claude 在浏览器里逐项试（WebKit 390）；T6 浏览器测试。*Owner:* Luna max（L3）- 负责人要求多委派；Claude 在步骤说明里写明借用 MathLive shift 的机制与取消时必须复位 `shiftPressCount`，并亲自做浏览器验证
+- [x] **T3** (S3) `src/main.ts`、`src/style.css`：长按（只对有 alt 的键；450 ms、移动 8 px 取消；到时写 `_shiftPressCount = 1`（R12，L3 提问后更正）并弹气泡，气泡动效与减少动态）、⇧ 三态样式（iOS 形状）、⇧ 状态下 alt 字变蓝、iOS 长按菜单与选择的禁用、⇧ 的 `aria-pressed` 与 alt 读屏名称、覆盖 MathLive 对 ← → ⌫ 的 shift 功能。*Verify:* Claude 在浏览器里逐项试（WebKit 390）；T6 浏览器测试。*Owner:* Luna max（L3）- 负责人要求多委派；Claude 在步骤说明里写明借用 MathLive shift 的机制与取消时必须复位 `shiftPressCount`，并亲自做浏览器验证
+  **结果**：L3 第一次运行时 Luna 发现原计划与 MathLive 实际行为冲突（R12），停下提问；Claude 核实后决定写内部字段，Luna 在同一会话续做。Luna 报告 tsc 通过、单元测试 355 项通过。Claude 复核：读 diff，浏览器验证（`verify-l3.cjs`，WebKit 与 Chromium，鼠标指针）发现 R13 的两个问题，由 T3b 修正；另把 `·` 调到 34 px（Luna 用的 1.5em 以行字号为基准，实测太小）、⇧ 状态下三角 alt 统一 14 px（16 px 时 tan⁻¹ 宽 38 px，键宽 39 px）。修正后各路径两种引擎结果一致：单按 7 → “7”；按住 7 → “x”；按住 sin → “\\arcsin”；按住后移出 → 无输入，下一次单按 8 → “8”；无 alt 的 + 按住 → “+”；⇧ 一次后 9 → “z” 且 ⇧ 复位；⇧ 两次锁定，7、8 → “xy”，再点解除；`aria-pressed` 随状态变化；无页面错误。截图：`l3-normal-light.png`、`l3-shift-dark.png`、`l3-lock-light.png`、`l3-bubble-webkit.png`（气泡在顶栏上方，会暂时盖住 Hint?，松手即消失）。首次提示在第一次点 ⇧ 后消失。未验证：真实触屏（Playwright 用鼠标指针）与 iOS 系统长按菜单，留给 P5 真机确认。
 - [x] **T4** (S5) `src/main.ts`、`src/style.css`：Hint?、Skip 注入顶栏左侧，收起留右侧，触控高度 44 px；首次提示（本机记录是否已用过长按 / ⇧）。*Verify:* 截图；T6。*Owner:* Luna max（L2）
 - [x] **T5** (S2、S6) `src/main.ts`、`src/style.css`：把框内显示（右侧文字、边框颜色、倒计时线）从 `@media (max-width: 700px)` 的 `.keyboard-open` 规则移出，对所有情况生效；`#feedback`、`#auto-next` 在所有情况下视觉隐藏；无效 / 无法判定的框内 “Check your input”（G22）与框下小字（G19、G21），小字纳入 `keepAnswerVisible`；核实答题框乘号显示为 “·”。（第 5 轮更正：不做框底状态栏）*Verify:* Claude 看 1280、390 键盘开 / 关截图，核对读屏 live region 与焦点；T6。*Owner:* Luna max（L2）- 与 T4 同一步
   **结果（T4、T5）**：Luna 报告 tsc 通过、单元测试 360 项通过（worktree 中需加 `--configLoader runner`）。Claude 复核：读 diff，改了三处——① Luna 让无效 / 无法判定也显示琥珀色边框和琥珀色框内文字，与 Spec（边框不变、框内 `--label-2`，只有框下原因为琥珀色）不符，已改回；② `markAltTipSeen` 不必从入口模块导出；③ 注释里还提到已删除的页签。合并到主工作区后发现 R11 的旧问题（T5b）。浏览器验证（Chromium 1280、WebKit 390，脚本在会话 scratchpad）：`l2-1280-correct/incorrect/invalid.png`、`l2-390-closed-incorrect.png`、`l2-390-open-invalid.png`、`l2-390-open-correct.png`——框内结果与边框在所有情况下出现；`#feedback`、`#auto-next` 为 1×1 视觉隐藏且文字仍在；桌面与手机键盘收起时操作区可见，键盘打开时隐藏；无效时框下原因为琥珀色小字；顶栏左侧 Hint?、Skip、首次提示（390 宽下完整显示），右侧收起；顶栏高 44 px。无页面错误。另记：`3x·sin(` 得到的原因是判分器的 “Use an evaluated expression with supported functions.”，对括号缺失不够贴切，属于判分器文案，未在本任务范围内（P3，记入 Acceptance 的遗留项）。
   **结果（T5b）**：修正后 390 键盘打开、无效输入时原因小字 y = 382–414，键盘顶部 429；另给 `#feedback`、`#auto-next` 的视觉隐藏补了 `padding: 0; border: 0`（此前实测为 32×24 的裁剪框）。
 - [x] **T5b** (S6) `src/main.ts` `visibleBottom()`：键盘可见时以键盘顶部为界（R11）。*Verify:* 390 键盘打开、无效输入时原因小字在键盘上方；提示面板仍能滚入。*Owner:* Claude - 一行修复，在复核中发现
-- [ ] **T6** (S1–S6) 测试：`tests/math-keyboard-layout.test.ts` 改为单页布局与 alt；`tests/math-keyboard.spec.ts`、`tests/app.spec.ts` 中 More 页、页签行、框内结果相关的测试改写；新增 ⇧ / 长按、框内结果（所有设备）、无法判定小字、首次提示的浏览器测试；`tests/contrast.test.ts` 加 ⇧ 状态的蓝色字。*Verify:* T7。*Owner:* Luna max - 按本文 Spec 改写测试，范围限定在 `tests/`，与 T2–T5 的文件不重叠（Playwright 由 Claude 运行）；另把 `scripts/design-capture.ts` 的 “键盘第二页” 改为 ⇧ 一次性、⇧ 锁定、长按气泡三个状态（L4）
+- [x] **T3b** (S3) `src/main.ts`（长按松手后的复位时机）、`src/math-keyboard.ts` 与 `tests/math-keyboard-layout.test.ts`（字母 alt 改回 `insert`，测试按功能豁免变量）：R13。*Verify:* `verify-l3.cjs` 各路径在 WebKit、Chromium 通过；单元测试。*Owner:* Claude - 复核中发现，改动小且涉及 Claude 自己在 L1 复核时引入的错误
+  **结果**：见 T3 结果；布局单元测试 29 项、全部 355 项通过。
+- [ ] **T6** (S1–S6) 测试：含 `_shiftPressCount` 字段的守护测试（R12）；`tests/math-keyboard-layout.test.ts` 改为单页布局与 alt；`tests/math-keyboard.spec.ts`、`tests/app.spec.ts` 中 More 页、页签行、框内结果相关的测试改写；新增 ⇧ / 长按、框内结果（所有设备）、无法判定小字、首次提示的浏览器测试；`tests/contrast.test.ts` 加 ⇧ 状态的蓝色字。*Verify:* T7。*Owner:* Luna max - 按本文 Spec 改写测试，范围限定在 `tests/`，与 T2–T5 的文件不重叠（Playwright 由 Claude 运行）；另把 `scripts/design-capture.ts` 的 “键盘第二页” 改为 ⇧ 一次性、⇧ 锁定、长按气泡三个状态（L4）
 - [ ] **T7** (S1–S6) 复核 T6：读 diff；运行 `npm test`、`npm run test:math`、`npm run build`、`npm run test:e2e`；新测试放到旧代码上确认失败；检查没有被放宽的断言。*Owner:* Claude - Luna 步骤之后的复核
 
 - [x] **T8** (—) `~/.claude/skills/grsta/SKILL.md`（全局配置，负责人第 7 轮在本任务中提出）：写明每一轮 Grill（包括回头追问、中途新需求、设计评审）结束时都要先同步 Research、Spec、To Do，再做别的；只记在 Grill 表或旁边文件里的决定算作没有记录；新需求和设计评审都要走一遍 G-R-S-T。*Verify:* 读改后的段落；不与原有规则矛盾。*Owner:* Claude - 指令文件不委派

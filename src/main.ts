@@ -1,4 +1,4 @@
-import { layoutsFor } from "./math-keyboard";
+import { altFor, layoutsFor } from "./math-keyboard";
 import { celebrateFullScreen, stopCelebration } from "./celebration";
 import {
   MathfieldElement,
@@ -400,7 +400,6 @@ function mountInputs() {
     ? ["x", "y"]
     : [c.question.domain.variable];
   window.mathVirtualKeyboard.editToolbar = "none";
-  // App layouts allow width 3 via w30 CSS; MathLive types only list built-in widths.
   window.mathVirtualKeyboard.layouts = layoutsFor(vars) as import("mathlive").VirtualKeyboardLayout[];
   renderAnswerVerdict();
   on("keyboard", () => {
@@ -641,6 +640,248 @@ function markAltTipSeen() {
   }
   document.querySelectorAll(".kb-alt-tip").forEach((tip) => tip.remove());
 }
+type KeyboardShiftAccess = typeof window.mathVirtualKeyboard & {
+  shiftPressCount: number;
+  _shiftPressCount: number;
+};
+type AltPress = {
+  pointerId: number;
+  keycap: HTMLElement;
+  latex: string;
+  x: number;
+  y: number;
+  timer?: number;
+  fired: boolean;
+};
+type ShiftTap = { pointerId: number; keycap: HTMLElement };
+let altPress: AltPress | undefined;
+let shiftTap: ShiftTap | undefined;
+let altBubble: HTMLElement | undefined;
+let altBubbleFadeTimer: number | undefined;
+function keyboardShiftAccess() {
+  return window.mathVirtualKeyboard as KeyboardShiftAccess;
+}
+// MathLive 0.110.0's public setter re-renders keycaps (mathlive.mjs:28949), dropping
+// .is-pressed before pointerup can execute the alt command. Keep this write isolated.
+function writeShiftCountWithoutRender(count: 0 | 1) {
+  const keyboard = keyboardShiftAccess();
+  if (!("_shiftPressCount" in keyboard)) return false;
+  keyboard._shiftPressCount = count;
+  return true;
+}
+function currentKeyboardVars() {
+  const domain = state.session?.current?.question.domain;
+  return domain?.curve ? ["x", "y"] : [domain?.variable ?? "x"];
+}
+function keycapFromEvent(event: Event, selector: string) {
+  return (event.target as Element | null)?.closest?.<HTMLElement>(selector) ?? null;
+}
+function clearAltBubble(immediate = false) {
+  const bubble = altBubble;
+  if (!bubble) return;
+  clearTimeout(altBubbleFadeTimer);
+  altBubbleFadeTimer = undefined;
+  if (immediate) {
+    bubble.remove();
+    altBubble = undefined;
+    return;
+  }
+  bubble.classList.remove("is-visible");
+  bubble.classList.add("is-canceling");
+  const value = getComputedStyle(bubble).transitionDuration.split(",")[0].trim();
+  const amount = Number.parseFloat(value);
+  const duration = value.endsWith("ms") ? amount : amount * 1000;
+  const remove = () => {
+    clearTimeout(altBubbleFadeTimer);
+    bubble.removeEventListener("transitionend", onTransitionEnd);
+    bubble.remove();
+    if (altBubble === bubble) altBubble = undefined;
+    altBubbleFadeTimer = undefined;
+  };
+  const onTransitionEnd = (event: TransitionEvent) => {
+    if (event.target === bubble && event.propertyName === "opacity") remove();
+  };
+  bubble.addEventListener("transitionend", onTransitionEnd);
+  if (!duration) remove();
+  else altBubbleFadeTimer = window.setTimeout(remove, duration);
+}
+function showAltBubble(press: AltPress) {
+  const keyboard = document.querySelector<HTMLElement>(".ML__keyboard");
+  if (!keyboard?.contains(press.keycap)) return;
+  clearAltBubble(true);
+  const bubble = document.createElement("div");
+  bubble.className = "practice-alt-bubble";
+  bubble.setAttribute("aria-hidden", "true");
+  bubble.innerHTML = convertLatexToMarkup(press.latex);
+  document.body.append(bubble);
+  const bounds = press.keycap.getBoundingClientRect();
+  const width = bubble.getBoundingClientRect().width;
+  const halfWidth = width / 2;
+  const center = bounds.left + bounds.width / 2;
+  const left = Math.max(
+    halfWidth + 8,
+    Math.min(center, window.innerWidth - halfWidth - 8),
+  );
+  bubble.style.left = `${left}px`;
+  bubble.style.top = `${Math.max(8, bounds.top - 8)}px`;
+  altBubble = bubble;
+  requestAnimationFrame(() => {
+    if (altPress === press && bubble.isConnected) bubble.classList.add("is-visible");
+  });
+}
+function cancelAltPress() {
+  const press = altPress;
+  if (press?.timer !== undefined) clearTimeout(press.timer);
+  altPress = undefined;
+  if (press?.fired && keyboardShiftAccess().shiftPressCount === 1)
+    writeShiftCountWithoutRender(0);
+  clearAltBubble();
+}
+function onKeyboardPointerDown(event: PointerEvent) {
+  if (altPress && event.pointerId !== altPress.pointerId) {
+    cancelAltPress();
+    shiftTap = undefined;
+    return;
+  }
+  if (altPress) return;
+
+  if (shiftTap && event.pointerId !== shiftTap.pointerId) shiftTap = undefined;
+  const shiftKey = keycapFromEvent(event, ".ML__keyboard .practice-shift");
+  if (shiftKey) {
+    shiftTap = keyboardShiftAccess().shiftPressCount === 0
+      ? { pointerId: event.pointerId, keycap: shiftKey }
+      : undefined;
+    return;
+  }
+  shiftTap = undefined;
+
+  const keycap = keycapFromEvent(event, ".ML__keyboard .practice-has-alt");
+  if (!keycap || keyboardShiftAccess().shiftPressCount !== 0) return;
+  const id = [...keycap.classList]
+    .find((name) => name.startsWith("practice-key-"))
+    ?.slice("practice-key-".length);
+  const alternate = id && altFor(id, currentKeyboardVars());
+  if (!alternate) return;
+
+  const press: AltPress = {
+    pointerId: event.pointerId,
+    keycap,
+    latex: alternate.latex,
+    x: event.clientX,
+    y: event.clientY,
+    fired: false,
+  };
+  altPress = press;
+  press.timer = window.setTimeout(() => {
+    if (altPress !== press || !press.keycap.isConnected || !window.mathVirtualKeyboard.visible)
+      return cancelAltPress();
+    if (keyboardShiftAccess().shiftPressCount !== 0) return cancelAltPress();
+    press.timer = undefined;
+    if (!writeShiftCountWithoutRender(1)) return cancelAltPress();
+    press.fired = true;
+    showAltBubble(press);
+  }, 450);
+}
+function onKeyboardPointerMove(event: PointerEvent) {
+  const press = altPress;
+  if (
+    !press ||
+    press.pointerId !== event.pointerId ||
+    press.fired ||
+    press.timer === undefined
+  )
+    return;
+  if (Math.hypot(event.clientX - press.x, event.clientY - press.y) > 8) {
+    clearTimeout(press.timer);
+    press.timer = undefined;
+  }
+}
+function onKeyboardPointerLeave(event: PointerEvent) {
+  const related = event.relatedTarget;
+  const leftKey = (keycap: HTMLElement) =>
+    !(related instanceof Node && keycap.contains(related));
+  const press = altPress;
+  if (
+    press &&
+    press.pointerId === event.pointerId &&
+    keycapFromEvent(event, ".ML__keyboard .practice-has-alt") === press.keycap &&
+    leftKey(press.keycap)
+  )
+    cancelAltPress();
+
+  if (
+    shiftTap &&
+    shiftTap.pointerId === event.pointerId &&
+    keycapFromEvent(event, ".ML__keyboard .practice-shift") === shiftTap.keycap &&
+    leftKey(shiftTap.keycap)
+  )
+    shiftTap = undefined;
+}
+function onKeyboardPointerUp(event: PointerEvent) {
+  const press = altPress;
+  if (press && press.pointerId === event.pointerId) {
+    if (press.timer !== undefined) clearTimeout(press.timer);
+    const releasedOnKey =
+      keycapFromEvent(event, ".ML__keyboard .practice-has-alt") === press.keycap;
+    const willInsertAlt =
+      press.fired && releasedOnKey && press.keycap.classList.contains("is-pressed");
+    altPress = undefined;
+    clearAltBubble(willInsertAlt);
+    // MathLive's own pointerup (on the key, after this capture listener) reads the count and
+    // types the alt. A microtask would run between the two listeners and reset it too early.
+    if (press.fired) {
+      setTimeout(() => {
+        if (willInsertAlt) markAltTipSeen();
+        if (keyboardShiftAccess().shiftPressCount === 1)
+          writeShiftCountWithoutRender(0);
+      });
+    }
+  }
+
+  const tap = shiftTap;
+  if (!tap || tap.pointerId !== event.pointerId) return;
+  shiftTap = undefined;
+  if (keycapFromEvent(event, ".ML__keyboard .practice-shift") !== tap.keycap) return;
+  setTimeout(() => {
+    if (
+      tap.keycap.isConnected &&
+      tap.keycap.classList.contains("is-active") &&
+      keyboardShiftAccess().shiftPressCount === 1
+    )
+      markAltTipSeen();
+  });
+}
+function onKeyboardPointerCancel(event: PointerEvent) {
+  if (altPress?.pointerId === event.pointerId) cancelAltPress();
+  if (shiftTap?.pointerId === event.pointerId) shiftTap = undefined;
+}
+function syncKeyboardShiftState() {
+  document.querySelectorAll<HTMLElement>(".ML__keyboard .practice-shift").forEach((key) => {
+    const keyboard = key.closest<HTMLElement>(".ML__keyboard");
+    const pressed =
+      key.classList.contains("is-active") || Boolean(keyboard?.classList.contains("is-caps-lock"));
+    key.setAttribute("aria-pressed", String(pressed));
+  });
+}
+window.addEventListener("pointerdown", onKeyboardPointerDown, true);
+window.addEventListener("pointermove", onKeyboardPointerMove, true);
+window.addEventListener("pointerleave", onKeyboardPointerLeave, true);
+window.addEventListener("pointerup", onKeyboardPointerUp, true);
+window.addEventListener("pointercancel", onKeyboardPointerCancel, true);
+window.addEventListener(
+  "contextmenu",
+  (event) => {
+    if ((event.target as Element | null)?.closest?.(".ML__keyboard")) event.preventDefault();
+  },
+  true,
+);
+window.mathVirtualKeyboard.addEventListener("geometrychange", () => {
+  if (
+    !window.mathVirtualKeyboard.visible ||
+    window.mathVirtualKeyboard.boundingRect.height === 0
+  )
+    cancelAltPress();
+});
 const KEYBOARD_HINT_TOOL = '<button type="button" class="kb-tool" data-act="hint">Hint?</button>';
 const KEYBOARD_SKIP_TOOL = '<button type="button" class="kb-tool" data-act="skip">Skip</button>';
 const KEYBOARD_ALT_TIP = '<span class="kb-alt-tip" aria-hidden="true">Hold a key or tap ⇧ for more</span>';
@@ -689,6 +930,7 @@ new MutationObserver(() => {
       }
     });
   if (added) syncKeyboardControls();
+  syncKeyboardShiftState();
 }).observe(document.body, { childList: true, subtree: true });
 // Our keys and buttons in the math keyboard are handled here, in the capture phase, and
 // hidden from MathLive: when MathLive also processes the tap it runs a command on the

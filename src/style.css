@@ -57,6 +57,9 @@
   --dur-press: 100ms;
   --dur-fast: 150ms;
   --dur-base: 200ms;
+  /* Long-press feedback gets a brief entrance and a quicker cancel fade. */
+  --dur-key-bubble-in: 120ms;
+  --dur-key-bubble-out: 80ms;
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
   --shadow-card: 0 4px 24px color-mix(in srgb, var(--label) 2%, transparent);
@@ -1162,6 +1165,90 @@ dialog h2[tabindex="-1"]:focus {
   /* Pressed keys darken like a system keyboard instead of turning blue. */
   --keycap-background-pressed: var(--separator);
   --keycap-background-active: var(--separator);
+  -webkit-touch-callout: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.ML__keyboard .MLK__rows > .MLK__row > div[class*="practice-key-"] {
+  font-size: 19px;
+}
+.ML__keyboard .MLK__rows > .MLK__row > div.practice-key-fraction:not(.practice-alt-on),
+.ML__keyboard .MLK__rows > .MLK__row > div.practice-key-power,
+.ML__keyboard .MLK__rows > .MLK__row > div.practice-key-sqrt,
+.ML__keyboard .MLK__rows > .MLK__row > div.practice-key-exponential:not(.practice-alt-on),
+.ML__keyboard .MLK__rows > .MLK__row > div.practice-key-ln.practice-alt-on,
+.ML__keyboard .MLK__rows > .MLK__row > div.practice-key-open.practice-alt-on {
+  font-size: 0.8em;
+}
+.ML__keyboard .MLK__rows > .MLK__row > div.practice-key-multiply {
+  /* \cdot is a 3 px dot at text size; it needs this much to read as a key. */
+  font-size: 34px;
+}
+.ML__keyboard .MLK__rows > .MLK__row > div.practice-alt-on {
+  color: var(--tint);
+  transition: color var(--dur-fast) var(--ease-out);
+}
+.ML__keyboard .MLK__rows > .MLK__row > div.practice-shift {
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: var(--_keycap-secondary-background);
+  color: var(--label);
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+.ML__keyboard .MLK__rows > .MLK__row > div.practice-shift.is-active {
+  background: var(--surface);
+  color: var(--tint);
+}
+.ML__keyboard .practice-shift svg {
+  display: none;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+}
+.ML__keyboard .practice-shift .practice-shift-off {
+  display: block;
+}
+.ML__keyboard .practice-shift.is-active .practice-shift-off {
+  display: none;
+}
+.ML__keyboard:not(.is-caps-lock) .practice-shift.is-active .practice-shift-on,
+.ML__keyboard.is-caps-lock .practice-shift.is-active .practice-shift-lock {
+  display: block;
+}
+.practice-alt-bubble {
+  position: fixed;
+  z-index: 1001;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: calc(100vw - 16px);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--label);
+  box-shadow: var(--shadow-dialog), var(--shadow-card);
+  font-family: KaTeX_Main, KaTeX_Math, serif;
+  font-size: 19px;
+  line-height: 1.2;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, -100%) scale(0.95);
+  transform-origin: 50% 100%;
+  transition:
+    opacity var(--dur-key-bubble-in) var(--ease-out),
+    transform var(--dur-key-bubble-in) var(--ease-out);
+}
+.practice-alt-bubble.is-visible {
+  opacity: 1;
+  transform: translate(-50%, -100%) scale(1);
+}
+.practice-alt-bubble.is-canceling {
+  opacity: 0;
+  transform: translate(-50%, -100%) scale(1);
+  transition: opacity var(--dur-key-bubble-out) var(--ease-out);
 }
 /* Check / Next: the one primary action while the keyboard is open. */
 .ML__keyboard .MLK__rows > .MLK__row > div.practice-enter {
@@ -1205,10 +1292,6 @@ dialog h2[tabindex="-1"]:focus {
   min-width: 44px;
   color: var(--label-2);
 }
-/* MathLive has width classes for 0.5, 1.5, 2 and 5 units only. */
-.ML__keyboard .MLK__rows > .MLK__row .w30 {
-  width: calc(3 * var(--_keycap-width) - var(--_keycap-gap));
-}
 /* Tooltips double as accessible names; the hover bubble sticks after a tap on iOS. */
 .ML__keyboard [data-tooltip]::after {
   display: none !important;
@@ -1250,6 +1333,17 @@ dialog h2[tabindex="-1"]:focus {
   .ML__keyboard {
     --keycap-background-hover: var(--_keycap-background);
     --keycap-secondary-background-hover: var(--_keycap-secondary-background);
+  }
+}
+@media (max-width: 430px) {
+  .ML__keyboard .MLK__rows > .MLK__row > div.practice-key-sin.practice-alt-on,
+  .ML__keyboard .MLK__rows > .MLK__row > div.practice-key-cos.practice-alt-on,
+  .ML__keyboard .MLK__rows > .MLK__row > div.practice-key-tan.practice-alt-on,
+  .ML__keyboard .MLK__rows > .MLK__row > div.practice-key-sec.practice-alt-on,
+  .ML__keyboard .MLK__rows > .MLK__row > div.practice-key-csc.practice-alt-on,
+  .ML__keyboard .MLK__rows > .MLK__row > div.practice-key-cot.practice-alt-on {
+    /* The trig alts share one size; tan⁻¹ must fit a 39 px key with some padding (measured 38 px wide at 16 px). */
+    font-size: 14px;
   }
 }
 
@@ -1547,5 +1641,24 @@ dialog h2[tabindex="-1"]:focus {
   .ML__keyboard * {
     animation: none !important;
     transition: none !important;
+  }
+  .ML__keyboard .MLK__rows > .MLK__row > div.practice-alt-on {
+    transition: color var(--dur-fast) var(--ease-out) !important;
+  }
+  .ML__keyboard .MLK__rows > .MLK__row > div.practice-shift {
+    transition:
+      background-color var(--dur-fast) var(--ease-out),
+      color var(--dur-fast) var(--ease-out) !important;
+  }
+  .practice-alt-bubble {
+    transform: translate(-50%, -100%);
+    transition: opacity var(--dur-key-bubble-in) var(--ease-out);
+  }
+  .practice-alt-bubble.is-visible,
+  .practice-alt-bubble.is-canceling {
+    transform: translate(-50%, -100%);
+  }
+  .practice-alt-bubble.is-canceling {
+    transition: opacity var(--dur-key-bubble-out) var(--ease-out);
   }
 }

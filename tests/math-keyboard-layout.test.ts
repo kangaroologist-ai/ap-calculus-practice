@@ -149,11 +149,11 @@ function expectedAltCommand(id: string, variable: string, latex: string) {
   if (id === 'power') return expectedInsert(`${variableLatex(variable)}^{#?}`);
   if (id === 'sqrt') return expectedInsert(`\\sqrt{${variableLatex(variable)}}`, 'after');
   if (id === 'open') return expectedInsert('\\left|#?\\right|');
-  if (id === 'exponential') return expectedTyped('e');
+  if (id === 'exponential') return expectedInsert('e', 'after');
   if (id === 'ln') return expectedInsert('\\log_{#?}');
   if (id === '0') return MATH_KEYS.find(key => key.id === 'theta')?.command;
   if (id === 'decimal') return MATH_KEYS.find(key => key.id === 'pi')?.command;
-  return expectedTyped(latex);
+  return expectedInsert(latex, 'after');
 }
 
 describe.each(LAYOUT_CASES)('math keyboard for $vars', ({ vars, variable, latex: variableFace }) => {
@@ -262,11 +262,16 @@ describe.each(LAYOUT_CASES)('math keyboard for $vars', ({ vars, variable, latex:
     expect(shift.label?.match(/aria-hidden="true"/g)).toHaveLength(3);
   });
 
-  // Variables are the one allowed repeat: the question's variable has its own key and
-  // the same letter is also a digit alt, so every letter sits in the same place in any question.
-  const VARIABLE_COMMANDS = new Set(
-    MATH_KEYS.filter(item => /^[a-z]$|^theta$/.test(item.id)).map(item => JSON.stringify(item.command)),
-  );
+  // Variables are the one allowed repeat: the question's variable has its own key and the
+  // same letter is also a digit alt (plan S1). The two spell the command differently on
+  // purpose: an alt runs while MathLive is shifted, where typedText would capitalise the
+  // letter, so letter alts use insert (plan R13). Compare what is inserted, not the spelling.
+  const insertedVariable = (command: unknown) =>
+    Array.isArray(command) && (command[0] === 'typedText' || command[0] === 'insert') &&
+    /^([a-z]|\\theta)$/.test(String(command[1]))
+      ? String(command[1])
+      : undefined;
+  const VARIABLE_COMMANDS = { has: (serialized: string) => insertedVariable(JSON.parse(serialized)) !== undefined };
 
   it('does not repeat a math command among primaries and alternates, except variables', () => {
     const commands = new Set<string>();

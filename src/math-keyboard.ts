@@ -124,13 +124,13 @@ function alternateCommand(id: string, vars: string[]): Command {
   if (id === 'power') return insert(`${variableLatex(variable)}^{#?}`);
   if (id === 'sqrt') return insert(`\\sqrt{${variableLatex(variable)}}`, 'after');
   if (id === 'open') return insert('\\left|#?\\right|');
-  if (id === 'exponential') return typed('e');
+  // Alts run while MathLive is shifted, and shifted typedText capitalises letters (e → E),
+  // so letter alts insert LaTeX instead (plan R13).
+  if (id === 'exponential') return insert('e', 'after');
   if (id === 'ln') return insert('\\log_{#?}');
-  // Letters, θ and π type exactly what their own keys type (the question's variable key
-  // shares its letter with a digit alt by design, plan S1).
   if (id === '0') return MATH_KEYS.find(item => item.id === 'theta')!.command;
   if (id === 'decimal') return MATH_KEYS.find(item => item.id === 'pi')!.command;
-  return MATH_KEYS.find(item => item.id === alternate.latex)!.command;
+  return insert(alternate.latex, 'after');
 }
 
 function key(id: string, vars: string[], width = 1): KeyboardKeycap {
