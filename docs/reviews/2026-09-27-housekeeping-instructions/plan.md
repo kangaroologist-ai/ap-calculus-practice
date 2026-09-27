@@ -18,12 +18,12 @@ Size class: medium - 写进指令的内容要负责人选，一轮问题。
 
 | # | Question | Options (recommendation first) | Owner's answer | Date |
 |---|---|---|---|---|
-| G1 | Prettier 怎么处理 | **删除这个未使用的依赖** / 全仓格式化并在 CI 检查 / 不动 | 第 1 轮：“这个是干什么的？”；再问后：“所以到底是干什么用的？有什么利弊？”——待回答后再定 | 2026-09-27 |
+| G1 | Prettier 怎么处理 | **删除这个未使用的依赖** / 全仓格式化并在 CI 检查 / 不动 | 第 1 轮：“这个是干什么的？”；再问后：“所以到底是干什么用的？有什么利弊？”；解释用途与利弊后：“remove it” → 推荐方案 | 2026-09-27 |
 | G2 | 写进项目指令 `../AGENTS.md` 的条目 | 版本号同步锁文件 / iPhone 问题的复现方法 / 发布只快进并先核对 origin / 取证大文件不进仓库 | 选：版本号同步锁文件、发布只快进并先核对 origin、取证大文件不进仓库（**未选** iPhone 复现方法） | 2026-09-27 |
 | G3 | 写进全局指令 `~/.claude/CLAUDE.md` 的条目 | 浏览器滚动要修源头 / 子代理与共享环境 / 真机问题先取证 / 都不写 | 选：子代理与共享环境、真机问题先取证 | 2026-09-27 |
 
 Default assumptions (not answered): 指令文字用各文件已有的语言（`../AGENTS.md` 练习网站各节为中文，`~/.claude/CLAUDE.md` 为英文）；写成规则加一句理由，不写本次事故经过。
-Shared understanding confirmed: G2、G3 由负责人选定即开始；G1 待定。
+Shared understanding confirmed: G2、G3 由负责人选定即开始；G1 “remove it”。
 
 ## Research
 
@@ -45,7 +45,7 @@ Shared understanding confirmed: G2、G3 由负责人选定即开始；G1 待定�
 - **S1 锁文件版本一致。** `package-lock.json` 的版本与 `package.json` 相同（1.2.1）。*Accept:* 检索；`npm ci` 通过。*From:* R1
 - **S2 项目指令。** `../AGENTS.md` 练习网站部分新增三条：提升版本时用 `npm version` 同步锁文件；发布前核对本地与 `origin/main`，只用快进移动 `main`；取证的视频与逐帧图不进仓库。*Accept:* 读文件。*From:* G2
 - **S3 全局指令。** `~/.claude/CLAUDE.md` 新增两条：子代理在用共享开发服务器 / 模拟器时，改代码前先通知它，模拟器任务说明 `simctl openurl` 每次开新标签页；只在真机出现、复现不了的问题，先加只在调试参数下出现的事件记录（带变化来源）、请负责人截图取数，再定修法，任务结束删除。*Accept:* 读文件。*From:* G3
-- **S4 Prettier。** 待 G1。
+- **S4 去掉未使用的 Prettier。** `prettier` 不再在 devDependencies 与锁文件中；代码不变。*Accept:* 检索 `package.json`、`package-lock.json`；单元测试与构建通过；CI。*From:* G1、R2
 
 ## To Do
 
@@ -55,7 +55,8 @@ Shared understanding confirmed: G2、G3 由负责人选定即开始；G1 待定�
   **结果**：“文档同步” 一节加 `npm version` 一条；新增 “练习网站发布与取证文件” 一节两条。差异见 `AGENTS.md.diff`。
 - [x] **T3** (S3) `~/.claude/CLAUDE.md`：两条规则。*Verify:* 读回。*Owner:* Claude - 指令文件不委派
   **结果**：新增 “Subagents and shared environments”（2 条）与 “Device-only bugs: gather evidence before fixing”（1 段）。差异见 `CLAUDE.md.diff`。
-- [ ] **T4** (S4) 待 G1。
+- [x] **T4** (S4) `package.json`、`package-lock.json`：`npm uninstall prettier`。*Verify:* 检索；`npm test`、`npm run build`；推送后 CI。*Owner:* Claude - 一条命令
+  **结果**：`npm uninstall prettier`：`package.json` 少一行，锁文件去掉 17 行；两文件检索 `prettier` 为 0。unit 355 通过，构建通过。
 
 Project obligations:
 - [x] **P1** README / `help.html`：not applicable - 学生看不到任何变化。
@@ -65,4 +66,12 @@ Project obligations:
 
 ## Acceptance
 
-待填写。
+| Spec | To Do | Evidence | Result |
+|---|---|---|---|
+| S1 锁文件版本一致 | T1 | `package-lock.json` 两处 1.2.1；推送后 CI `npm ci` | pass（CI 见 P4） |
+| S2 项目指令 | T2 | `AGENTS.md.diff` | pass |
+| S3 全局指令 | T3 | `CLAUDE.md.diff` | pass |
+| S4 去掉 Prettier | T4 | 检索为 0；unit 355、构建 | pass |
+
+- 不需要重新部署：学生看到的页面与版本号都没变。
+- 负责人没选的条目（iPhone 复现方法、浏览器滚动要修源头）没有写进指令；这些经验仍在 `2026-09-27-iphone-viewport-storage` 的任务文档与 DESIGN.md 6.5 里。
