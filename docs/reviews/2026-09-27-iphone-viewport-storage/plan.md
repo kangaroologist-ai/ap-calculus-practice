@@ -5,6 +5,7 @@ scope: ap-calculus-practice / iPhone Safari：键盘超出可见区域；本地�
 branch: fix-iphone-keyboard-viewport
 version: 1.2.0 → 1.2.1（预计，用户可见的修复）
 commits:
+  - 82ff58f: 44 px top row from the start (R4), storage timeout and reload screen (S3); unit 355, Playwright 195 pass
   - 8e85af7: keyboard layer follows innerHeight; 1.2.1; unit 355, Playwright 190 pass
 ---
 
@@ -89,7 +90,7 @@ Project obligations:
   **结果（常规审核）**：仿真中键盘外观与 1.2.0 相同（`after-390-light.png`、`after-390-dark.png`），差异只在 iPhone 真机上出现，由 P5 确认。无 P0 / P1。
 - [ ] **P5** iPhone 真机确认：applies — 键盘底部读数与最后一行可见。
 - [ ] **P6** 部署与线上核对：applies — 预览 → 真机确认 → 合并 `main` → 部署 → 线上 `/` 与 `/help`。
-  **进展**：预览（提交 `8e85af7`）https://fix-iphone-keyboard-viewport.ap-calculus-practice.pages.dev ，部署 `6cb8c958`，返回 `main-D6IQTFAP.js`，与本地构建一致；正式站点仍为 1.2.0。等负责人真机确认（P5）。
+  **进展**：预览（提交 `8e85af7`）https://fix-iphone-keyboard-viewport.ap-calculus-practice.pages.dev ，部署 `6cb8c958`，返回 `main-D6IQTFAP.js`，与本地构建一致；正式站点仍为 1.2.0。等负责人真机确认（P5）。 第二次预览（第 2 轮修正后，提交 `82ff58f`）：部署 `cabe3a6f`，别名同上，均返回 `main-BOy_zPim.js`，与本地构建一致；正式站点仍为 1.2.0（`main-DKL8AnjN.js`）。
 
 诊断面板（`?debug=viewport`）随 1.2.0 上线，本任务结束时删除。
 
