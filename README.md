@@ -125,7 +125,7 @@ npm run test:e2e
 npm run design:capture
 ```
 
-在 `artifacts/design/<版本>/` 生成 390 px（WebKit iPhone 仿真）与 1280 px（Chromium）、浅色与深色的截图矩阵和键盘几何数据，然后按改动范围比对受影响的界面状态（常规审核）。新增界面或组件、修改设计原则或令牌、较大改版时，再做完整审核：一个 Sonnet 评审者用项目里的 `design-review` 技能（`.claude/skills/design-review/`）一次完成三个评审视角。P0 / P1 问题清零后才发布。
+在 `artifacts/design/<版本>/` 生成 390 px（WebKit iPhone 仿真）与 1280 px（Chromium）、浅色与深色的截图矩阵和键盘几何数据，然后按改动范围比对受影响的界面状态（常规审核）。新增界面或组件、修改设计原则或令牌、较大改版时，再做完整审核：派全局子代理 `design-reviewer`（Sonnet、medium，运行全局技能 `design-review`），一次完成三个评审视角，流程见 `docs/design/review-workflow.md`。P0 / P1 问题清零后才发布。
 
 ## Cloudflare Pages
 

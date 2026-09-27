@@ -339,4 +339,4 @@ MathLive 把键帽的 `tooltip` 优先用作 `aria-label`，所以 `tooltip` 只
 
 ## 10. 发布前审核
 
-凡是版本号要提升的改动，发布前按 [`review-workflow.md`](review-workflow.md) 做设计审核，分两级。**常规审核**每次都做：用 `npm run design:capture` 截图，只比对受本次改动影响的界面状态，对照本文件的相关规则，不调用评审技能。**完整审核**只在新增界面或组件、修改本文件的原则或令牌、较大改版或用户要求时做：一个 Sonnet 评审者用合并式评审技能 `design-review` 一次完成三个视角，Claude 核实定级；与任务 Spec 冲突的结论先回到 Grill 问负责人。两级都是 P0 / P1 阻塞发布。审核清单逐条对应本文件第 2–9 节。
+凡是版本号要提升的改动，发布前按 [`review-workflow.md`](review-workflow.md) 做设计审核，分两级。**常规审核**每次都做：用 `npm run design:capture` 截图，只比对受本次改动影响的界面状态，对照本文件的相关规则，不调用评审技能。**完整审核**只在新增界面或组件、修改本文件的原则或令牌、较大改版或用户要求时做：派全局子代理 `design-reviewer`（Sonnet、medium，运行全局技能 `design-review`）一次完成三个视角，Claude 核实定级；与任务 Spec 冲突的结论先回到 Grill 问负责人。两级都是 P0 / P1 阻塞发布。审核清单逐条对应本文件第 2–9 节。

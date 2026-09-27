@@ -129,6 +129,9 @@ Shared understanding confirmed：2026-09-27，第 3 轮 “其他没问题”，
 - D10：完整审核改为一个 Sonnet 评审者使用这个技能；范围为本次改动影响的界面状态，只有修改 DESIGN.md 原则或令牌时才看全站。原来的 “三个独立评审者” 保留为可选做法，用于负责人要求多视角独立意见时（例如本任务实现前的样机评审）。
 - D11：评审结论与任务 Spec 冲突时不直接修改，先回到 Grill 问负责人（第 9 轮的规则写进流程文档）。
 
+第 11 轮（2026-09-27，原话）：“放到 global skill 吧，甚至可以在 system prompt 里提到。不需要三个 reviewer 了，有一个 sonnet medium 运行这个 skill 就行。”
+→ **定案：** 评审技能改为全局技能（`~/.claude/skills/design-review/`），内容去掉本项目的专有路径，项目细节由 `reviews/context.md` 提供；在全局 `~/.claude/CLAUDE.md` 里提到它；新建全局子代理 `~/.claude/agents/design-reviewer.md`（`model: sonnet`、`effort: medium`、预载该技能、禁用编辑工具），完整审核就是派这个子代理。**取消 “三人独立评审” 这一可选做法**（D9、D10 中相应部分作废）。
+
 Default assumptions (not answered):
 - D1：版本号保持 1.2.0，直接修改尚未发布的 1.2.0 What's new 条目（上一轮同样处理）。
 - D2：t 题、θ 题中，Main 页 “x” 的位置显示本题变量（t 或 θ），与现在一样。
@@ -270,6 +273,12 @@ Labels: **[F]** fact (source), **[I]** inference, **[U]** unknown, **[P]** pre-e
 - **[F]** 项目的 `.claude/` 目前未被 git 跟踪也未被忽略（只有本地排除的 `launch.json`）；三套评审技能装在 `~/.claude/skills/`（`emil-design-eng`、`apple-design`、`impeccable`）和 design 插件（`design:*`）。
 - **[I]** 合并技能只做编排：读背景与 DESIGN.md、看截图、按三个视角各调用技能、去重、标注与 Spec 的冲突、按统一格式报告。
 
+### R16. 全局技能与固定模型 / 强度的子代理（第 11 轮）
+
+- **[F]** Agent 工具本身没有 “推理强度” 参数；子代理定义文件（`~/.claude/agents/*.md`）的 frontmatter 支持 `model`（如 `sonnet`）、`effort`（`low`–`max`）、`skills`（启动时预载的技能）、`tools` / `disallowedTools`（官方文档 https://code.claude.com/docs/en/sub-agents ，2026-09-27 读取）。
+- **[F]** `~/.claude/agents/` 目前不存在；全局技能目录已有 `grsta`、`impeccable`、`emil-design-eng`、`apple-design`。
+- **[I]** 所以 “一个 Sonnet medium 运行这个技能” 用一个全局子代理定义实现，而不是每次在提示里说明；评审者要写 Playwright 脚本，保留 Bash，禁用 Edit / Write / NotebookEdit 来保证只读。
+
 ## Spec
 
 保持不变：4 行 × 9 个单位；← → 在底行左侧，⌫ 在第 3 行右侧，Check / Next 在右下角；判分、进度、3 秒倒计时；手机上键盘打开时不显示页面下方的按钮栏。
@@ -291,7 +300,7 @@ Labels: **[F]** fact (source), **[I]** inference, **[U]** unknown, **[P]** pre-e
 - **S4 字体。** 所有数学键帽由 KaTeX 渲染，与题目公式同一套字体；Check / Next 与顶栏按钮用界面字体。*Accept:* 单元测试：数学键都用 `latex` 键帽；浏览器中取 sin、7、+ 键的计算字体为 KaTeX_*。*From:* 第 3 点、G5、R4
 - **S5 顶栏。** 左侧 Hint?、Skip，右侧收起键盘；显示规则不变（提示用完隐藏 Hint?，答对后隐藏 Hint? 与 Skip）；这些按钮触控高度 44 px（C-F6）。键盘第一次打开时，顶栏中间显示一行 “Hold a key or tap ⇧ for more”，学生第一次用过长按或 ⇧ 后不再显示，记在本机（G18）。*Accept:* 浏览器测试沿用并更新；截图。*From:* 第 3 轮
 - **S6 答题框内的结果（所有设备）。**（第 5 轮更正后）桌面与手机、键盘开与关，一律使用手机现在的框内显示：答题框右侧显示 “✓ Correct” / “! Not quite” / “i Couldn’t check”，边框分别为 `--success` / `--warning`，答对时框底有倒计时线；修改答案后答错类标签清除（现有行为）。页面下方不再显示反馈框和 “Next in 3s” 条（`#feedback` 保留为读屏 live region）；答错说明句不显示（读屏仍读）。桌面上 Next question 按钮保留。无效输入或无法判定时，框内显示 “Check your input”（G22，不加符号），答题框下方另显示一行小字说明具体原因（G19、G21：`--warning` 色、`--t-footnote`，前面不加符号），修改答案后消失；手机键盘打开时这行也保持在键盘上方。*Accept:* e2e：1280 与 390（键盘开 / 关）三种结果的框内文字可见、`#feedback` 与 `#auto-next` 视觉隐藏且 `#feedback` 文字仍含结果；截图。*From:* 第 5 点、G6、第 5 轮、R5
-- **S8 合并式设计评审（流程）。** 项目里有一个评审技能，Sonnet 用它一次完成三个视角的实现后审核，报告统一格式并有 “是否与 Spec 冲突” 一栏；`review-workflow.md`、DESIGN.md 第 10 节、README、`AGENTS.md` 都按它描述完整审核（一个评审者、范围为改动状态、冲突回 Grill），不再有 “三个独立评审者” 作为默认的说法。*Accept:* 技能文件存在且格式正确；逐处检索旧说法；本任务的 P4 用它完成。*From:* 第 9、10 轮、R15
+- **S8 合并式设计评审（流程）。**（第 11 轮修订）全局有一个评审技能 `design-review` 和一个子代理 `design-reviewer`（Sonnet、medium），完整审核就是派这个子代理一次完成三个视角的审核，全局 `CLAUDE.md` 提到它；报告统一格式并有 “是否与 Spec 冲突” 一栏；`review-workflow.md`、DESIGN.md 第 10 节、README、`AGENTS.md` 都按它描述完整审核（一个评审者、范围为改动状态、冲突回 Grill），不再有 “三个独立评审者” 的做法（包括可选做法）。*Accept:* 技能文件存在且格式正确；逐处检索旧说法；本任务的 P4 用它完成。*From:* 第 9、10 轮、R15
 - **S7 文档与版本。** README、`help.html`、DESIGN.md、What's new 1.2.0 与代码一致，并说明长按与 ⇧（G18）；DESIGN.md 6.5 写明 alt 只能靠触摸 / 鼠标长按或 ⇧ 取得，物理键盘直接输入是替代路径（A6）；检索不到 More 页、Main / More、÷ 分式、×、“仅手机在框内显示结果” 等旧说法。*Accept:* 逐段核对与检索。*From:* R6、AGENTS.md
 
 ## To Do
@@ -336,6 +345,8 @@ Luna 步骤（第 8 轮后重排，负责人要求多交给 Luna max）：
   **结果**：`.claude/skills/design-review/SKILL.md` 已写：输入（`reviews/context.md`、任务 Spec、DESIGN.md、截图）、规则（只读、不用共享浏览器窗格、不运行第三方可执行文件与 impeccable 检测器）、步骤（三个视角依次调用各自技能，合并去重，逐条判断是否与 Spec 冲突，P0–P3 定级）、统一报告格式（含 “Spec conflict?” 一栏）。实际使用见 P4。
 - [x] **T10** (S8) `docs/design/review-workflow.md`、`docs/design/DESIGN.md` 第 10 节、`README.md` 设计审核段、`../AGENTS.md`：改为合并式完整审核。*Verify:* 检索 “三套”“三个 Sonnet”“三份评审” 等旧说法只剩 “可选做法” 的描述。*Owner:* Claude - 文档不委派
   **结果**：`review-workflow.md` 第 1 节表格、第 3 节步骤 ②③⑥、第 4 节（改为合并式评审技能，三人独立评审降为可选做法）、第 5 节、第 6 节说明、第 7 节记录要求；DESIGN.md 第 10 节；README 设计审核段；`../AGENTS.md`（不在 git 仓库内，未进提交）。检索 “三套 / 三个 Sonnet / 三份 / Sonnet × 3” 只剩第 4 节的可选做法说明。
+- [x] **T11** (S8) 全局：`~/.claude/skills/design-review/SKILL.md`（由项目版改写为通用版）、`~/.claude/agents/design-reviewer.md`（新）、`~/.claude/CLAUDE.md`（一段说明）、`~/.claude/skills/grsta/SKILL.md`（Sonnet 负责人规则里 “并行的技能评审” 改为派 `design-reviewer`）；项目：删除 `.claude/skills/design-review/`，`docs/design/review-workflow.md`、DESIGN.md 第 10 节、README、`../AGENTS.md` 改为指向全局子代理并删去三人可选做法。*Verify:* 文件存在、frontmatter 字段与官方文档一致；检索旧说法与旧路径为 0。*Owner:* Claude - 指令文件与文档不委派
+  **结果**：全局 `~/.claude/skills/design-review/SKILL.md`（通用版，项目细节交给 `reviews/context.md`）；`~/.claude/agents/design-reviewer.md`（`model: sonnet`、`effort: medium`、`skills: [design-review]`、`disallowedTools: Edit, Write, NotebookEdit`，字段按 R16 的官方文档）；`~/.claude/CLAUDE.md` 新增 “Design reviews” 一节；`~/.claude/skills/grsta/SKILL.md` 的 Sonnet 规则改为派 `design-reviewer`。项目里删除 `.claude/skills/design-review/`；`review-workflow.md` 第 1、3、4、5 节，DESIGN.md 第 10 节，README，`../AGENTS.md` 改为指向全局子代理，三人做法全部删除。检索旧说法与项目内技能路径为 0。全局文件不在本仓库，未进提交。
 - [ ] **T6** (S1–S6) 测试：含 `_shiftPressCount` 字段的守护测试（R12）；`tests/math-keyboard-layout.test.ts` 改为单页布局与 alt；`tests/math-keyboard.spec.ts`、`tests/app.spec.ts` 中 More 页、页签行、框内结果相关的测试改写；新增 ⇧ / 长按、框内结果（所有设备）、无法判定小字、首次提示的浏览器测试；`tests/contrast.test.ts` 加 ⇧ 状态的蓝色字。*Verify:* T7。*Owner:* Luna max - 按本文 Spec 改写测试，范围限定在 `tests/`，与 T2–T5 的文件不重叠（Playwright 由 Claude 运行）；另把 `scripts/design-capture.ts` 的 “键盘第二页” 改为 ⇧ 一次性、⇧ 锁定、长按气泡三个状态（L4）
 - [ ] **T7** (S1–S6) 复核 T6：读 diff；运行 `npm test`、`npm run test:math`、`npm run build`、`npm run test:e2e`；新测试放到旧代码上确认失败；检查没有被放宽的断言。*Owner:* Claude - Luna 步骤之后的复核
 
@@ -347,7 +358,7 @@ Project obligations:
 - [ ] **P2** 版本与 What's new：applies，不提升版本（D1）— 改写 `src/whats-new.ts` 的 1.2.0 条目（单页键盘、⇧ 与长按、框内结果）。*Owner:* Claude
 - [ ] **P3** DESIGN.md：applies — 5.2 / 5.3（框内显示对所有设备生效、无效 / 无法判定的短标签与框下小字）、第 9 节文案；`review-workflow.md` 第 6 节 “颜色以外的图标” 改为 “颜色以外的区分（符号或文字）”（R10）、6.1（单页布局表、规则改写，D8）、6.3（字体、alt 小字、⇧、气泡）、6.4（读屏名称）、6.5（长按借用 shift 的注意事项）。*Owner:* Claude
   **进展（P1–P3，未勾选）**：Luna 跑 L1、L2 期间，Claude 按最终 Spec 起草了 README 第 36、38 段、`help.html` 的结果说明与 Typing formulas、`src/whats-new.ts` 1.2.0 条目（4 条，What's new 单元测试 6 项通过；日期在发布时更新）、DESIGN.md 5.3、6.1–6.5、7、8 与 `review-workflow.md` 的清单。实现完成后逐条对照代码核对（尤其气泡时长、44 px 顶栏是否增加键盘高度、`w30` 是否删除），再勾选。
-- [ ] **P4** 设计审核：applies。按第 9、10 轮改为**合并式审核**，评审者使用 T9 的技能：Claude 运行 `npm run design:capture`（L4 更新后的状态），一个 Sonnet 只读评审者在一次评审中调用三套视角的技能（`design:design-critique` / `design:accessibility-review` / `design:ux-copy`，`emil-design-eng` / `apple-design`，`impeccable` 的 critique 与 polish，不运行 impeccable 检测器），只看本次改动的状态（键盘三态与长按、四种结果、框下原因、顶栏与首次提示，390 深浅色、1280）；共同背景沿用 `reviews/context.md` 并更新为实现后的状态；报告存 `reviews/`。Claude 核实、定级：与 Spec 不冲突的 P0 / P1 修复后复测；**与 Spec 冲突的结论先回 Grill 问负责人**。*Owner:* Sonnet 评审 + Claude 综合 - 负责人指定
+- [ ] **P4** 设计审核：applies。按第 9–11 轮改为**合并式审核**，派全局子代理 `design-reviewer`（Sonnet、medium，预载 `design-review` 技能）：Claude 运行 `npm run design:capture`（L4 更新后的状态），一个 Sonnet 只读评审者在一次评审中调用三套视角的技能（`design:design-critique` / `design:accessibility-review` / `design:ux-copy`，`emil-design-eng` / `apple-design`，`impeccable` 的 critique 与 polish，不运行 impeccable 检测器），只看本次改动的状态（键盘三态与长按、四种结果、框下原因、顶栏与首次提示，390 深浅色、1280）；共同背景沿用 `reviews/context.md` 并更新为实现后的状态；报告存 `reviews/`。Claude 核实、定级：与 Spec 不冲突的 P0 / P1 修复后复测；**与 Spec 冲突的结论先回 Grill 问负责人**。*Owner:* Sonnet 评审 + Claude 综合 - 负责人指定
 - [ ] **P5** iPhone 真机确认：applies — 键盘排布、长按（含没有系统菜单）、⇧ 三态、首次提示。*Owner:* 负责人
 - [ ] **P6** 部署与线上核对：applies — 重新部署预览 → 负责人 iPhone 确认 → 合并 `main` → 部署 → 确认线上 `/` 与 `/help` 为新版（接续 `2026-09-26-keyboard-followups` 的 F-8）。*Owner:* Claude + 负责人
 
