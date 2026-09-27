@@ -9,13 +9,12 @@ export const WHATS_NEW: WhatsNewEntry[] = [
   {
     version: "1.2.0",
     date: "2026-09-26",
-    title: "A tidier math keyboard",
+    title: "A new math keyboard",
     items: [
-      "The math keyboard is laid out like a calculator: numbers in one block, ÷ × − + in one column, and keys that fill the width of your phone.",
-      "<strong>Main</strong> has everything most answers need; <strong>More</strong> has inverse trig, log, cube root, and extra variables. No more repeated keys or “Type …” bubbles.",
-      "The blue key at the bottom right checks your answer, then takes you to the next question. <strong>Hint?</strong>, <strong>Skip</strong>, and hide keyboard sit next to the page names.",
-      "On a phone, your result shows right in the answer box, so it is never hidden behind the keyboard.",
-      "After a correct answer, <strong>Next question</strong> is the one button to press.",
+      "The math keyboard is now one page, laid out like a calculator, in the same math font as the questions. Empty boxes show where you type next.",
+      "Many keys have a second symbol, such as sin⁻¹ on sin, ÷ on the fraction key, and letters on the numbers. <strong>Hold a key</strong> to see it, then let go to type it, or tap <strong>⇧</strong> first.",
+      "The blue key at the bottom right checks your answer, then takes you to the next question. <strong>Hint?</strong> and <strong>Skip</strong> are at the top of the keyboard.",
+      "On every device, your result shows right in the answer box. If something can’t be checked, the line under the box says what to fix.",
     ],
   },
   {
