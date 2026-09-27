@@ -96,6 +96,24 @@ function keepAnswerVisible() {
     window.scrollBy({ top: bounds.top - 16, behavior: "instant" });
   if (heldScroll) heldScroll.top = window.scrollY;
 }
+// When a key leaves a placeholder selected (fraction, power, root), MathLive writes the selection
+// into its hidden input and selects that text; iOS Safari then scrolls the page to reveal the new
+// selection, a visible jump (task 2026-09-27-iphone-viewport-storage R8). The text only feeds the
+// system's copy and text services, which the on-screen keyboard never uses, so skip it while that
+// keyboard is open. Uses MathLive 0.110 internals; a guard test checks they still exist.
+type KeyboardDelegate = { setValue(value: string): void };
+const quietDelegates = new WeakSet<KeyboardDelegate>();
+function quietKeyboardSink(field: MathfieldElement) {
+  if (keepMathLiveScroll) return;
+  const delegate = (field as unknown as { _mathfield?: { keyboardDelegate?: KeyboardDelegate } })
+    ._mathfield?.keyboardDelegate;
+  if (!delegate || quietDelegates.has(delegate)) return;
+  quietDelegates.add(delegate);
+  const setValue = delegate.setValue.bind(delegate);
+  delegate.setValue = (value) => {
+    if (!window.mathVirtualKeyboard.visible) setValue(value);
+  };
+}
 // iOS Safari scrolls the page by itself (about 12 px) when the focused answer field grows, as a
 // fraction or a power does (task 2026-09-27-iphone-viewport-storage R6). With the phone keyboard
 // open, a key should move the page only through keepAnswerVisible(), so put the page back.
@@ -434,7 +452,9 @@ function mountInputs() {
           keepAnswerVisible();
         } else mf.scrollIntoView({ block: "nearest", inline: "nearest" });
       };
+    quietKeyboardSink(mf);
     mf.addEventListener("focus", () => {
+      quietKeyboardSink(mf);
       if (c.verdict?.status === "correct") cancelAutoNext();
       activeMathfield = mf;
       requestAnimationFrame(keepAnswerVisible);

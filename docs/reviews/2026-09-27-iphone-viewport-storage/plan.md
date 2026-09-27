@@ -27,6 +27,12 @@ Recon：键盘任务里已做的真机取数与分析，见 Research。
 第 5 轮（2026-09-27，负责人在第三次预览上真机试用，原话）：“不会每次输入x幂和根号x时跳了。现在变成每次打开键盘第一次输入会跳。首次键盘后再打开，再输入还会跳一小下。分式、幂好像都会，别的不确定。你复现一下，看能不能解决。别忘了GRST”（附事件记录截图 `round5-iphone-eventlog.webp`）
 → T8 部分有效（连续输入不再每次跳）；剩下 “打开键盘后的第一次输入跳一下” → R6，回到 Research。S4 保持不变。
 
+第 6 轮（2026-09-27，负责人在第四次预览上真机试用，原话）：“还是会跳，操作simulator让sonnet high去干吧，汇报结果给你就行”
+→ T11 真机未通过（S4 仍未达成）。回到 Research（R7）：模拟器操作与逐帧取证交给 Sonnet 子代理（负责人指定），Claude 读报告、定修法。
+
+第 7 轮（2026-09-27，负责人用 `&anchor=none` 真机试用，原话）：“还是jump”（附截图 `round7-iphone-anchor-none.webp`）
+→ 排除滚动锚定；回 Research（R8），源码里找到触发点。
+
 | # | Question | Options (recommendation first) | Owner's answer | Date |
 |---|---|---|---|---|
 | G1 | 存储打开超时或失败后怎么处理 | **显示 “无法打开已保存的进度，请重新载入页面” 与重新载入按钮，不自动进入临时模式**（避免学生在不保存的模式里做题）/ 超时后自动进入临时模式（现有的失败路径） | 第 2 轮：“local-storage problem uses "please reload"” → 推荐方案 | 2026-09-27 |
@@ -103,6 +109,23 @@ Recon：键盘任务里已做的真机取数与分析，见 Research。
 - **[I]** 原因是 iOS Safari 自己的滚动：聚焦的可编辑内容所在的答题框变高后，Safari 把页面滚了约 12 px（具体规则未公开，模拟器与真机一致）。无法从页面关掉这一行为。
 - **修法（T11）**：按键后把页面位置恢复到 “应该在的位置”：按下键盘键时记下 `scrollY`；本站的 `keepAnswerVisible()` 滚动后更新这个值；之后 500 ms 内（每次答题框 `input` 重新计时）若页面位置变了且不是本站滚动的，立即 `scrollTo` 回去。只在手机键盘打开时生效。风险：iOS 滚动与还原之间可能露出一帧；需要模拟器与真机确认。
 
+### R7. T11 之后真机仍跳（第 6 轮）
+
+- **[U]** 可能：① iOS 滚动与还原之间露出了一两帧（`scrollY` 最终不变，但画面动过）；② 跳动不是 `scrollY` 变化，而是别的东西在动（视觉视口平移、答题框变高把下面内容推开、键区移位）；③ 真机与模拟器的触发条件不同。
+- **[F]** 负责人真机截图（`round6-iphone-eventlog.webp`，第四次预览）：`anchor auto`——**真机 Safari 支持 `overflow-anchor`（滚动锚定）**，模拟器不支持；按 5、6、分式后 `27.619 scrollY 0→0 …+window.scrollTo`、`27.637 scrollY 0→0 window.scrollTo`：页面确实被滚动过，随即被 T11 还原（记录读到的已是还原后的值）；答题框 66→80，上边缘不动（349）。
+- **[I]** 真机上看到的 “跳” 很可能是滚动与还原之间露出的帧。真机的滚动来源可能是滚动锚定（模拟器里的滚动另有来源）；若是，`overflow-anchor: none` 能让它根本不发生。诊断模式已有 `&anchor=none` 开关，可直接在真机上对比。
+- **取证（T12，Sonnet）**：模拟器录屏（60 fps）逐帧测答题框上边缘与键区上边缘的位置，分别在当前版本与 `&mlscroll=1`（本任务所有修法关闭）下按 R6 步骤操作，并记录诊断面板事件。
+
+### R8. 真正的触发点：MathLive 在隐藏输入元素里选中文字（第 7 轮）
+
+- **[F]** `&anchor=none` 真机（`anchor none`）：按分式后仍 `26.829 / 26.846 scrollY 0→0 …+window.scrollTo`——页面仍被滚动并被 T11 还原，负责人仍看到跳动。滚动锚定排除。
+- **[I]** T11 还原不了 “看到的跳”：iOS 的页面滚动在另一个进程里先合成上屏，页面脚本的还原至少晚一帧。只能不让它发生。
+- **[F]** MathLive `onSelectionDidChange()`（`mathlive.mjs:40141-40147`）：答题框有焦点时，把**当前选区的 LaTeX** 写进隐藏输入元素（`keyboardDelegate.setValue`，`25304-25310`）：内容与上次相同就直接返回；否则写入文字、把元素移到 `left: -1000px`，再 `window.getSelection().selectAllChildren(sink)` 选中这段文字。
+- **[F]** 分式、幂、根号之后 MathLive 选中空占位框（选区非空），于是写入并选中非空文字；数字、字母之后光标折叠，写入空串，与上次相同即返回。连续按同一个键时内容相同也返回；清空后再按又变成新内容——与负责人观察到的规律一致（R5、R6、第 5 轮）。
+- **[I]** 聚焦的可编辑元素里出现新的选区，iOS Safari 会滚动页面去 “露出” 选区；元素在视口左侧 1000 px 外、固定定位，iOS 算出的滚动量就是看到的 8–12 px。仿真与桌面浏览器没有这一行为。
+- **[F]** 这段文字只给系统的复制 / 文字服务用：MathLive 从 `input` 事件的 `data` 读输入（`25188-25204`），复制由 `onCopy` 按模型处理，不读这段文字。
+- **修法（T14）**：屏幕数学键盘打开时，跳过 `keyboardDelegate.setValue`（不写文字、不改选区）；键盘收起时照旧。需要借用 MathLive 的内部字段 `_mathfield.keyboardDelegate`（与 6.5 的 `_shiftPressCount` 同类风险），加守护测试。T11 暂时保留作为兜底，真机确认后再决定是否删除。
+
 ### R2. 本地存储（IndexedDB）打开卡住或失败
 
 - **[F]** 一次停在 “Opening your practice…”（`boot()` 没有到第一次 `render()`），一次出现 “Temporary session: export progress before leaving”（`loadState()` 抛错后的临时模式）。仿真与已部署预览都无法复现。
@@ -134,6 +157,14 @@ Recon：键盘任务里已做的真机取数与分析，见 Research。
   **结果**：`mountInputs()` 里设置 `mf.onScrollIntoView`；`keepMathLiveScroll` 读 `?debug=viewport&mlscroll=1`。新测试 “typing a power or a root does not scroll the page unless the keyboard covers the answer”：去掉修法时答题框的 `scrollIntoView` 被调用 14 次、三种引擎失败；修法后 0 次、`scrollY` 不变，答题框被推到键盘下时按一键后距键盘 ≥ 15 px，三种引擎通过。全套：unit 355、Playwright 198 通过（60 跳过）。真机效果待 T9。
 - [x] **T11** (S4) `src/main.ts`：R6 的 “按键后还原页面位置”（`?debug=viewport&mlscroll=1` 时关闭，与 T8 一起）；诊断面板保留答题框 / sink 位置与 `overflow-anchor` 支持两项读数。`tests/math-keyboard.spec.ts`：按键后 500 ms 内页面被外部滚动会被还原；本站因遮挡而滚动的位置不被还原。*Verify:* 新测试在无修法时失败；iOS 模拟器按 R6 步骤 `scrollY` 不变或当帧还原；预览真机 S4。*Owner:* Claude - 依赖模拟器与真机验证
   **结果**：`heldScroll`、`holdScrollAfterKey()`（`src/main.ts`）：按下编辑键（不含 Check / Next 键和顶栏按钮）时记下位置，`keepAnswerVisible()` 滚动后更新，答题框 `input` 时延长 500 ms；按到键盘以外的地方即取消。iOS 模拟器按 R6 步骤：`key fraction` 后三次 `scrollY 0→0 …window.scrollTo`（iOS 连续滚了三帧，每次都被还原），`scrollY` 保持 0，键区不再出现 `715→703` 的临时移位；是否有一帧闪动只能真机看。新测试 “a scroll the browser makes by itself right after a key is undone” 去掉修法时三种引擎失败，恢复后通过；全套 unit 355、Playwright 201 通过（60 跳过）。诊断面板新增 `anchor`（`overflow-anchor` 支持）与答题框 / sink 位置读数，以及 `&anchor=none` 实验开关。
+- [x] **T12** (S4) 只读取证，不改代码：iOS 模拟器录屏逐帧测量（R7）。*Verify:* 报告含帧号、位置与截图路径。*Owner:* Sonnet - 负责人指定由 Sonnet 操作模拟器
+  **结果**：Sonnet 子代理完成：T14 之前 1 次、T14 之后 3 次分式录屏逐帧测量；幂键与 `&mlscroll=1` 未能补录（模拟器 Safari 开了 11 个标签页后卡在标签页总览）。报告与 5 张关键帧在 `evidence-r7/`，视频与全部帧（124 MB）移出仓库到会话 scratchpad。
+- [x] **T13** (S4) Claude 复核 T12 报告，定下一步修法。*Owner:* Claude
+  **结果**：Claude 复核：T14 之前，按分式后答题框**连同键盘顶栏**一起下移并在约 250 ms 内滑回（`single_0068.png`）——固定的键盘也动了，说明是 Safari 滚动页面再被 T11 拉回，不是子代理猜的 CSS 动画；T14 之后 3 次都没有 `scrollY` 记录，键盘与答题框上边缘都不动，只有答题框在一帧内向下变高。结论：R8 的触发点成立，T14 在模拟器上消除了跳动。
+- [x] **T14** (S4) `src/main.ts`：屏幕键盘打开时跳过隐藏输入元素的 `setValue`（R8；`?debug=viewport&mlscroll=1` 时不跳过）；`tests/math-keyboard.spec.ts`：键盘打开时按分式，隐藏元素内容仍为空、页面选区不在它里面；守护测试：`_mathfield.keyboardDelegate.setValue` 存在。*Verify:* 新测试在无修法时失败；模拟器按 R6 步骤无滚动事件；真机 S4。*Owner:* Claude - 借用 MathLive 内部字段，需要判断
+  **结果**：`quietKeyboardSink()`（`src/main.ts`），在 `mountInputs()` 与答题框 `focus` 时挂上。新测试 “keys that select a placeholder leave the hidden input alone while the keyboard is open”（分式、幂、根号；含内部字段守护）：去掉修法时三种引擎失败，恢复后通过；Firefox 里聚焦输入框内本来就有折叠光标，所以只检查 “有没有选中文字”。全套 unit 355、Playwright 203 通过（60 跳过）。模拟器见 T13。真机待确认。
+- [x] **T15** (S1) `tests/math-keyboard.spec.ts`：**[P]** “the keyboard layer follows the visible height…” 在 Firefox 偶发失败（`Expected 500, Received 700`，连跑 3 遍 1 次）：测试先把变量设成 500、再在下一步读层高，中间迟到的 `resize` 事件把变量改回 `innerHeight`。改为在同一次 `evaluate` 里设置并读取。与 T14 无关（T1 时写的测试）。*Verify:* Firefox 该文件连跑 5 遍全过。*Owner:* Claude - 一处测试修正
+  **结果**：同一次 `evaluate` 里设置变量并读层高；Firefox `math-keyboard.spec.ts` 连跑 5 遍 65/65 通过。
 - [ ] **T10** (S2、S4) `src/whats-new.ts` 1.2.1 加第三条（输入时页面不再跳动），真机确认 S4 后再写，以免写了没做到的事；`docs/design/DESIGN.md` 6.5 加一条输入时滚动的规则（已写）；README / `help.html`：检索后没有关于输入时滚动的说法，无需修改。*Owner:* Claude - 文档不委派
 - [ ] **T9** (S4) 部署预览（D4），请负责人真机按 R5 的方法截图（修法后；需要时加 `&mlscroll=1` 录修法前）。*Owner:* Claude
   **进展**：第三次预览（提交 `86f261f`）：部署 `c39ac23c`，别名与部署都返回 `main-B_ee2kt_.js`，与本地构建一致，包内含 `mlscroll`。等负责人真机截图。

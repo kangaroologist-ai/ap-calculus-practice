@@ -395,10 +395,11 @@ test('the keyboard layer follows the visible height, so the last row stays on sc
     await expect.poll(() => page.evaluate(() =>
       document.documentElement.style.getPropertyValue('--practice-viewport-height'),
     )).toBe(`${height}px`);
-    await page.evaluate(() => document.documentElement.style.setProperty('--practice-viewport-height', '500px'));
-    expect(await page.evaluate(() =>
-      Math.round(document.querySelector<HTMLElement>('body > .ML__keyboard')!.getBoundingClientRect().height),
-    )).toBe(500);
+    // Set and read in one step, so a late resize event can't reset the variable in between.
+    expect(await page.evaluate(() => {
+      document.documentElement.style.setProperty('--practice-viewport-height', '500px');
+      return Math.round(document.querySelector<HTMLElement>('body > .ML__keyboard')!.getBoundingClientRect().height);
+    })).toBe(500);
     await page.evaluate(() => window.dispatchEvent(new Event('resize')));
     await expect.poll(() => page.evaluate(() => {
       const layer = document.querySelector<HTMLElement>('body > .ML__keyboard')!.getBoundingClientRect();
@@ -485,4 +486,29 @@ test('a scroll the browser makes by itself right after a key is undone', async (
   await page.evaluate(() => window.scrollBy({ top: 12, behavior: 'instant' }));
   await page.waitForTimeout(100);
   expect(await page.evaluate(() => window.scrollY)).toBe(before + 12);
+});
+
+// MathLive copies a non-empty selection into its hidden input and selects that text; on an iPhone
+// that selection made Safari scroll the page after fraction, power and root (task R8). With the
+// on-screen keyboard open the hidden input stays empty; the internals this relies on still exist.
+test('keys that select a placeholder leave the hidden input alone while the keyboard is open', async ({ page }) => {
+  await openPracticeKeyboard(page);
+  expect(await page.locator('math-field').first().evaluate((element) =>
+    typeof (element as unknown as { _mathfield?: { keyboardDelegate?: { setValue?: unknown } } })
+      ._mathfield?.keyboardDelegate?.setValue,
+  )).toBe('function');
+  for (const id of ['fraction', 'power', 'sqrt']) {
+    await setValue(page, '');
+    await pointerPressKey(page, id);
+    const sink = await page.locator('math-field').first().evaluate((element) => {
+      const input = element.shadowRoot!.querySelector('.ML__keyboard-sink')!;
+      const selection = document.getSelection();
+      return {
+        text: input.textContent,
+        // A caret may rest in the focused input; selected text is what made Safari scroll.
+        selected: !!selection?.anchorNode && input.contains(selection.anchorNode) && !selection.isCollapsed,
+      };
+    });
+    expect(sink, id).toEqual({ text: '', selected: false });
+  }
 });
