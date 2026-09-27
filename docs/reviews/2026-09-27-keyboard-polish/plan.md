@@ -132,6 +132,12 @@ Shared understanding confirmed：2026-09-27，第 3 轮 “其他没问题”，
 第 11 轮（2026-09-27，原话）：“放到 global skill 吧，甚至可以在 system prompt 里提到。不需要三个 reviewer 了，有一个 sonnet medium 运行这个 skill 就行。”
 → **定案：** 评审技能改为全局技能（`~/.claude/skills/design-review/`），内容去掉本项目的专有路径，项目细节由 `reviews/context.md` 提供；在全局 `~/.claude/CLAUDE.md` 里提到它；新建全局子代理 `~/.claude/agents/design-reviewer.md`（`model: sonnet`、`effort: medium`、预载该技能、禁用编辑工具），完整审核就是派这个子代理。**取消 “三人独立评审” 这一可选做法**（D9、D10 中相应部分作废）。
 
+P4 评审的回头追问（2026-09-27，loop-back，按第 9 轮规则：与 Spec 冲突的评审结论先问负责人）：
+
+| # | Question | Options (recommendation first) | Owner's answer | Date |
+|---|---|---|---|---|
+| G23 | 评审 #3（P3，ux-copy）：“Check your input” 同时用于无效输入和判分器无法判定，答案看起来没问题的学生可能会去找不存在的输入错误。是否改回两个标签？ | **保持第 8 轮的决定（一个标签，框下原因区分两种情况）**：评审没有提出第 8 轮之外的新证据，框下原因已经说明要 “换一种写法” / 改为两个标签（如 “Check your input” / “Try another form”） | 待答 | 2026-09-27 |
+
 Default assumptions (not answered):
 - D1：版本号保持 1.2.0，直接修改尚未发布的 1.2.0 What's new 条目（上一轮同样处理）。
 - D2：t 题、θ 题中，Main 页 “x” 的位置显示本题变量（t 或 θ），与现在一样。
@@ -367,12 +373,16 @@ Luna 步骤（第 8 轮后重排，负责人要求多交给 Luna max）：
 - [x] **T8** (—) `~/.claude/skills/grsta/SKILL.md`（全局配置，负责人第 7 轮在本任务中提出）：写明每一轮 Grill（包括回头追问、中途新需求、设计评审）结束时都要先同步 Research、Spec、To Do，再做别的；只记在 Grill 表或旁边文件里的决定算作没有记录；新需求和设计评审都要走一遍 G-R-S-T。*Verify:* 读改后的段落；不与原有规则矛盾。*Owner:* Claude - 指令文件不委派
   **结果**：在 “The document” 一节新增 “Every round re-syncs R-S-T” 一条（每轮 Grill、回头追问、中途新需求、设计评审之后先同步 R、S、T 与 `phase`；只记在 Grill 表或旁边文件里的决定算没有记录；新需求和评审各走一遍 G-R-S-T）；Grill 第 6 步的 loop-back 说明指向这一条。与原有 “Before each edit…”、“New findings… before the related fix” 两条一致，是它们在多轮讨论时的具体要求。
 
+- [x] **T3f** (S3) `src/style.css`、DESIGN.md 6.3、`tests/math-keyboard.spec.ts`：R18，任何宽度都隐藏 MathLive 的 alt 角标，并加测试。*Verify:* 1280 与 600 px 无角标；390 不变。*Owner:* Claude - 评审发现的一行修复
+  **事后补记**：R18 写入 Research 时，插入这条 To Do 的锚点（未勾选的 T6）已不存在，插入静默失败，修改先于这条条目完成；提交 `233e26a` 后核对时发现并补上。**结果**：390 / 600 / 1280 px 可见角标均为 0（Chromium）；`p4-1280-alt-labels-after.png`；新测试在旧样式下失败、修正后在 Chromium、Firefox、WebKit 通过。
+
 Project obligations:
 - [ ] **P1** README 与 `help.html` 同步：applies — README 第 36、38 段，`help.html` 的 Correct、Not quite 与 Typing formulas。*Owner:* Claude（文档不委派）
 - [ ] **P2** 版本与 What's new：applies，不提升版本（D1）— 改写 `src/whats-new.ts` 的 1.2.0 条目（单页键盘、⇧ 与长按、框内结果）。*Owner:* Claude
 - [ ] **P3** DESIGN.md：applies — 5.2 / 5.3（框内显示对所有设备生效、无效 / 无法判定的短标签与框下小字）、第 9 节文案；`review-workflow.md` 第 6 节 “颜色以外的图标” 改为 “颜色以外的区分（符号或文字）”（R10）、6.1（单页布局表、规则改写，D8）、6.3（字体、alt 小字、⇧、气泡）、6.4（读屏名称）、6.5（长按借用 shift 的注意事项）。*Owner:* Claude
   **进展（P1–P3，未勾选）**：Luna 跑 L1、L2 期间，Claude 按最终 Spec 起草了 README 第 36、38 段、`help.html` 的结果说明与 Typing formulas、`src/whats-new.ts` 1.2.0 条目（4 条，What's new 单元测试 6 项通过；日期在发布时更新）、DESIGN.md 5.3、6.1–6.5、7、8 与 `review-workflow.md` 的清单。实现完成后逐条对照代码核对（尤其气泡时长、44 px 顶栏是否增加键盘高度、`w30` 是否删除），再勾选。
 - [ ] **P4** 设计审核：applies。按第 9–11 轮改为**合并式审核**，派全局子代理 `design-reviewer`（Sonnet、medium，预载 `design-review` 技能）：Claude 运行 `npm run design:capture`（L4 更新后的状态），一个 Sonnet 只读评审者在一次评审中调用三套视角的技能（`design:design-critique` / `design:accessibility-review` / `design:ux-copy`，`emil-design-eng` / `apple-design`，`impeccable` 的 critique 与 polish，不运行 impeccable 检测器），只看本次改动的状态（键盘三态与长按、四种结果、框下原因、顶栏与首次提示，390 深浅色、1280）；共同背景沿用 `reviews/context.md` 并更新为实现后的状态；报告存 `reviews/`。Claude 核实、定级：与 Spec 不冲突的 P0 / P1 修复后复测；**与 Spec 冲突的结论先回 Grill 问负责人**。*Owner:* Sonnet 评审 + Claude 综合 - 负责人指定
+  **进展（未勾选，等 G23）**：`npm run design:capture` 重新生成 45 张截图（先清掉了旧编号的残留截图）；派 `design-reviewer`（Sonnet、medium），报告与 Claude 的核实存 `reviews/review-post.md`。无 P0；P1 一项（1280 px 键上印着 alt，R18）已由 T3f 修复并加测试；P3 三项：#2 已接受、#4 留作遗留项、#3 与 Spec 冲突 → G23。另记 P3：1280 px 下键帽字形偏小。
 - [ ] **P5** iPhone 真机确认：applies — 键盘排布、长按（含没有系统菜单）、⇧ 三态、首次提示。*Owner:* 负责人
 - [ ] **P6** 部署与线上核对：applies — 重新部署预览 → 负责人 iPhone 确认 → 合并 `main` → 部署 → 确认线上 `/` 与 `/help` 为新版（接续 `2026-09-26-keyboard-followups` 的 F-8）。*Owner:* Claude + 负责人
 
