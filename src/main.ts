@@ -327,7 +327,7 @@ function levelView(level: number, expanded = false) {
   const unlocked = state.progress.unlockedLevel >= level;
   const currentId = state.session?.current?.question.primarySkill;
   return `<details class="path-level ${unlocked ? "unlocked" : ""}" data-level="${level}" ${expanded ? "open" : ""}>
-    <summary class="level ${unlocked ? "unlocked" : ""} ${skills.some(s => s.id === currentId) ? "active" : ""}"><span class="level-number">${String(level).padStart(2, "0")}</span><span class="level-copy"><strong>${["", "The foundations", "Essential functions", "Rules in combination", "Deeper compositions", "Beyond the first derivative", "Curves & coordinates"][level]}</strong><small>${!skills.length ? "Not included" : unlocked ? `${ready} of ${skills.length} skills ready` : "Locked · preview skills"}</small></span><span class="path-chevron" aria-hidden="true"></span></summary>
+    <summary class="level ${unlocked ? "unlocked" : ""} ${skills.some(s => s.id === currentId) ? "active" : ""}"><span class="level-number">${String(level).padStart(2, "0")}</span><span class="level-copy"><strong>${["", "The foundations", "Essential functions", "Products & quotients", "The chain rule", "Beyond the basics", "Curves & coordinates"][level]}</strong><small>${!skills.length ? "Not included" : unlocked ? `${ready} of ${skills.length} skills ready` : "Locked · preview skills"}</small></span><span class="path-chevron" aria-hidden="true"></span></summary>
     <div class="path-skills">${skills.map(s => {
       const t = state.progress.skills[s.id];
       const mastery = Math.round(100 * masteryOf(state.progress, s.id));

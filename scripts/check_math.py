@@ -42,6 +42,7 @@ SUPPORTED_FAMILIES = {
     "product",
     "quotient",
     "chain",
+    "combine",
     "nested",
     "mixed",
     "abstract",

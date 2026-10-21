@@ -133,7 +133,7 @@ describe('S4 mastery acceptance', () => {
       `S4 medians over 40 truth students: first product/quotient/chain ${firstPC}, ` +
         `remedial ${remedial}, weak skill targeted ${targeted}/40`,
     );
-    expect(firstPC).toBeLessThanOrEqual(70);
+    expect(firstPC).toBeLessThanOrEqual(35);
     expect(remedial).toBeLessThanOrEqual(20);
     expect(targeted).toBeGreaterThanOrEqual(20);
   }, 300_000);

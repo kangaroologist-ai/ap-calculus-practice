@@ -135,7 +135,7 @@ describe('local progress and FSRS boundaries', () => {
     const p = freshProgress(config(), NOW);
     const q1 = 'q1:12345678aaaaaaaaaaaaaaaaaaaaaaaa';
     const q2 = questionFingerprint(q1);
-    // A level 3 skill needs two correct answers, so the line stays unpassed.
+    // A level 4 skill needs two correct answers, so the line stays unpassed.
     const state = stateFor(p, 'chain', NOW);
     state.basic = { streak: 1, lastQ: q2, passed: false, repair: false };
     const cur = current({ ...question('mixed-q-fingerprint', 'chain'), signature: q1 });
@@ -685,7 +685,7 @@ describe('local progress and FSRS boundaries', () => {
     expect(chooseNext(p, config(), NOW + 3).question.primarySkill).toBe('power');
   });
 
-  it('passes a level 3 skill after two correct answers and permits the same template', () => {
+  it('passes a level 4 skill after two correct answers and permits the same template', () => {
     const p = freshProgress(config(), NOW);
     const s = stateFor(p, 'chain', NOW);
     recordOutcome(p, current(question('chain-one', 'chain', 0)), config(), correct, NOW);

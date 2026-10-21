@@ -51,7 +51,7 @@ const CURRENT_KEY_BY_LEGACY_ID: Record<string, string> = {
   'nested:0': 'nested.basic.function_quadratic',
   'nested:1': 'nested.basic.function_pair',
   'mixed:0': 'mixed.basic.product_chain',
-  'mixed:1': 'mixed.basic.quotient_chain',
+  'mixed:1': 'nested.basic.quotient_chain',
   'implicit:0': 'implicit.basic.ellipse',
   'implicit:1': 'implicit.basic.hyperbola',
   'inverse:0': 'inverse.basic.linear',
@@ -91,7 +91,12 @@ describe('frozen v1.1.0 generator history', () => {
     expect(Object.keys(CURRENT_KEY_BY_LEGACY_ID)).toHaveLength(26 * 2);
     for (const [legacyId, key] of Object.entries(CURRENT_KEY_BY_LEGACY_ID)) {
       const [family] = legacyId.split(':');
-      expect(TEMPLATES[family]?.some((template) => template.key === key), legacyId).toBe(true);
+      // T9 (S8) moved mixed:1 to nested, so moved keys are looked up in all families.
+      const families = legacyId === 'mixed:1' ? Object.keys(TEMPLATES) : [family];
+      expect(
+        families.some((id) => TEMPLATES[id]?.some((template) => template.key === key)),
+        legacyId,
+      ).toBe(true);
     }
   });
 

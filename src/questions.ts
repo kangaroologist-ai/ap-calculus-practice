@@ -162,9 +162,11 @@ export function ruleFormula(id: string): string {
     root: "\\sqrt{x}=x^{1/2}",
     product: "(uv)'=u'v+uv'",
     quotient: "\\left(\\frac{u}{v}\\right)'=\\frac{u'v-uv'}{v^2}",
+    combine: "(uv)'=u'v+uv',\\quad \\left(\\frac{u}{v}\\right)'=\\frac{u'v-uv'}{v^2}",
     chain: "[f(g(x))]'=f'(g(x))g'(x)",
     abstract: "[f(g(x))]'=f'(g(x))\\,g'(x)",
-    nested: "[f(g(h(x)))]'=f'(g(h(x)))g'(h(x))h'(x)",
+    mixed: "(uv)'=u'v+uv',\\quad [f(g(x))]'=f'(g(x))\\,g'(x)",
+    nested: "\\left(\\frac{u}{v}\\right)'=\\frac{u'v-uv'}{v^2},\\quad [f(g(h(x)))]'=f'(g(h(x)))\\,g'(h(x))\\,h'(x)",
     exp: "(e^u)'=e^u u',\\quad (a^u)'=a^u\\ln(a)u'",
     log: "(\\ln u)'=\\frac{u'}{u}",
     sin: "(\\sin u)'=\\cos(u)u'",
@@ -181,7 +183,11 @@ export function ruleFormula(id: string): string {
 }
 function structureHint(id: string, source: Expr[], variable: string): string {
   let e = source[0];
-  if (["product", "mixed", "quotient"].includes(id) && Array.isArray(e))
+  if (
+    ["product", "combine", "mixed", "nested", "quotient"].includes(id) &&
+    Array.isArray(e) &&
+    (e[0] === "Divide" || (e[0] === "Multiply" && e.length === 3))
+  )
     return `u=${L(e[1])},\\quad v=${L(e[2])}`;
   if (Array.isArray(e) && e[0] === "Multiply" && typeof e[1] === "number")
     e = e[2];

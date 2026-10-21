@@ -325,6 +325,11 @@ const linearIntervals = (c: Ctx): [number, number][] => [
   [(-c.b - 0.6) / c.a, (-c.b - 0.2) / c.a],
   [(-c.b + 0.2) / c.a, (-c.b + 0.6) / c.a],
 ];
+// Keeps |bx| below 1 for arcsin and arccos.
+const inverseTrigIntervals = (b: number): [number, number][] => [
+  [-0.8 / b, -0.2 / b],
+  [0.2 / b, 0.8 / b],
+];
 
 export const TEMPLATES: Record<string, readonly Template[]> = {
   constant: [
@@ -686,6 +691,83 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
       }),
     },
   ],
+  combine: [
+    {
+      key: "combine.basic.product_quotient",
+      role: "basic",
+      requires: ["product", "quotient"],
+      pools: { h: ["sin", "cos", "exp", "log"] },
+      build: (c) => {
+        const a = int(c, 1, 4),
+          b = int(c, 1, 3),
+          m = int(c, 2, 4),
+          n = int(c, 2, 4),
+          h = pooled(c, "h");
+        return {
+          e:
+            c.r() < 0.5
+              ? Q(M(a, P("x", n), h), A("x", b))
+              : Q(M(a, P("x", m), h), A(P("x", n), b)),
+          intervals: POSITIVE_INTERVALS,
+        };
+      },
+    },
+    {
+      key: "combine.basic.sum_of_rules",
+      role: "basic",
+      requires: ["product", "quotient"],
+      pools: { h: ["sin", "cos", "exp", "log"], g: ["sin", "cos", "exp", "log"] },
+      build: (c) => {
+        const a = int(c, 1, 5),
+          n = int(c, 2, 5),
+          m = int(c, 2, 5),
+          h = c.pool("h"),
+          g = otherFromPool(c, "g", h) ?? h;
+        return {
+          e: A(
+            M(a, P("x", n), F(SKILL_FN[h], "x")),
+            Q(F(SKILL_FN[g], "x"), P("x", m)),
+          ),
+          intervals: POSITIVE_INTERVALS,
+        };
+      },
+    },
+    {
+      key: "combine.mix.trig_product",
+      role: "mix",
+      requires: ["product", "quotient"],
+      pools: { h: ["tan", "sec", "cot", "csc"] },
+      build: (c) => {
+        const a = int(c, 1, 5),
+          n = int(c, 2, 4),
+          b = int(c, 1, 3),
+          m = int(c, 2, 3),
+          k = int(c, 1, 3);
+        return {
+          e: A(M(a, P("x", n), pooled(c, "h")), Q(b, A(P("x", m), k))),
+          intervals: SAFE_TRIG_INTERVALS,
+        };
+      },
+    },
+    {
+      key: "combine.mix.trig_quotient",
+      role: "mix",
+      requires: ["product", "quotient"],
+      pools: { h: ["tan", "sec", "cot", "csc"] },
+      build: (c) => {
+        const n = int(c, 2, 4),
+          b = int(c, 1, 3),
+          h = pooled(c, "h");
+        return {
+          e:
+            c.r() < 0.5
+              ? Q(h, A(P("x", n), b))
+              : Q(M(P("x", n), F("Exp", "x")), h),
+          intervals: SAFE_TRIG_INTERVALS,
+        };
+      },
+    },
+  ],
   chain: [
     {
       key: "chain.basic.power_linear",
@@ -731,8 +813,10 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
       }),
     },
     {
+      // Kept under its stable key, but Combinations III has two basic slots
+      // and this two-function composition now practises the mix line.
       key: "nested.basic.function_pair",
-      role: "basic",
+      role: "mix",
       requires: ["chain"],
       pools: { h: SMOOTH_POOL, g: SMOOTH_POOL },
       build: (c) => {
@@ -745,6 +829,16 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
           intervals: linearIntervals(c),
         };
       },
+    },
+    {
+      key: "nested.basic.quotient_chain",
+      role: "basic",
+      requires: ["chain", "quotient"],
+      pools: { h: SMOOTH_POOL },
+      build: (c) => ({
+        e: Q(F(SKILL_FN[c.pool("h")], lin(c)), A(P("x", 2), int(c, 1, 5))),
+        intervals: POSITIVE_INTERVALS,
+      }),
     },
     {
       key: "nested.mix.function_power_sum",
@@ -768,37 +862,7 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
       },
     },
     {
-      key: "nested.mix.power_outer",
-      role: "mix",
-      requires: ["power"],
-      pools: { h: SMOOTH_POOL },
-      build: (c) => {
-        const b = int(c, 1, 9);
-        return { e: P(A(F(SKILL_FN[c.pool("h")], lin(c)), b), 2), intervals: linearIntervals(c) };
-      },
-    },
-  ],
-  mixed: [
-    {
-      key: "mixed.basic.product_chain",
-      role: "basic",
-      pools: { h: SMOOTH_POOL },
-      build: (c) => ({
-        e: M(A(P("x", 2), int(c, 1, 5)), F(SKILL_FN[c.pool("h")], M(int(c, 1, 5), "x"))),
-        intervals: X_INTERVALS,
-      }),
-    },
-    {
-      key: "mixed.basic.quotient_chain",
-      role: "basic",
-      pools: { h: SMOOTH_POOL },
-      build: (c) => ({
-        e: Q(F(SKILL_FN[c.pool("h")], lin(c)), A(P("x", 2), int(c, 1, 5))),
-        intervals: POSITIVE_INTERVALS,
-      }),
-    },
-    {
-      key: "mixed.mix.quotient_power",
+      key: "nested.mix.quotient_power",
       role: "mix",
       requires: ["product", "quotient", "chain"],
       pools: { h: SMOOTH_POOL },
@@ -808,12 +872,94 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
       }),
     },
     {
+      key: "nested.mix.inverse_trig_chain",
+      role: "mix",
+      requires: ["chain", "product"],
+      pools: { h: ["asin", "acos", "atan"] },
+      build: (c) => {
+        const id = c.pool("h"),
+          op = SKILL_FN[id],
+          b = int(c, 2, 5),
+          a = int(c, 1, 5),
+          n = int(c, 2, 6),
+          kind = c.pick(
+            id === "atan"
+              ? (["linear", "quadratic", "power"] as const)
+              : (["linear", "power"] as const),
+          );
+        if (kind === "quadratic")
+          return {
+            e: F("Arctan", A(P("x", 2), b)),
+            intervals: X_INTERVALS,
+          };
+        if (kind === "power") {
+          // The inverse function stays outermost, so the answer needs no
+          // inverse-trig head on the keyboard.
+          const bound = (0.8 / b) ** (1 / n);
+          return {
+            e: F(op, M(b, P("x", n))),
+            intervals:
+              id === "atan"
+                ? X_INTERVALS
+                : [
+                    [-bound, -0.2 * bound],
+                    [0.2 * bound, bound],
+                  ],
+          };
+        }
+        return {
+          e: M(a, F(op, M(b, "x"))),
+          intervals: inverseTrigIntervals(b),
+        };
+      },
+    },
+  ],
+  mixed: [
+    {
+      key: "mixed.basic.product_chain",
+      role: "basic",
+      requires: ["product", "chain"],
+      pools: { h: SMOOTH_POOL },
+      // Slope 1 would simplify the inner argument to x and drop the chain.
+      build: (c) => ({
+        e: M(A(P("x", 2), int(c, 1, 5)), F(SKILL_FN[c.pool("h")], M(int(c, 2, 5), "x"))),
+        intervals: X_INTERVALS,
+      }),
+    },
+    {
+      key: "mixed.basic.power_times_composite",
+      role: "basic",
+      requires: ["product", "chain"],
+      pools: { h: SMOOTH_POOL },
+      build: (c) => ({
+        e: M(
+          int(c, 1, 5),
+          P("x", int(c, 2, 5)),
+          F(SKILL_FN[c.pool("h")], lin(c)),
+        ),
+        intervals: X_INTERVALS,
+      }),
+    },
+    {
       key: "mixed.mix.log_product",
       role: "mix",
       requires: ["log", "product"],
       pools: { h: SMOOTH_POOL },
       build: (c) => ({
         e: M(F("Ln", A(P("x", 2), int(c, 1, 9))), pooled(c, "h")),
+        intervals: X_INTERVALS,
+      }),
+    },
+    {
+      key: "mixed.mix.sum_with_composite",
+      role: "mix",
+      requires: ["sum", "chain"],
+      pools: { h: SMOOTH_POOL },
+      build: (c) => ({
+        e: A(
+          M(int(c, 1, 9), P("x", int(c, 2, 6))),
+          F(SKILL_FN[c.pool("h")], lin(c)),
+        ),
         intervals: X_INTERVALS,
       }),
     },

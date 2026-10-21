@@ -54,7 +54,7 @@ export const SKILLS: Skill[] = [
     "The derivative of ln(u) is u′/u; a different base adds a logarithm in the denominator.",
     ["power"],
   ),
-  ...["sin", "cos", "tan", "cot", "sec", "csc"].map((id) =>
+  ...["sin", "cos"].map((id) =>
     s(
       id,
       functionLabels[id],
@@ -63,21 +63,12 @@ export const SKILLS: Skill[] = [
       ["power"],
     ),
   ),
-  ...["asin", "acos", "atan"].map((id) =>
-    s(
-      id,
-      functionLabels[id],
-      2,
-      "Use the inverse-trigonometric derivative, with its real-domain restriction.",
-      ["root"],
-    ),
-  ),
   s(
     "product",
     "Product rule",
     3,
     "Differentiate the first factor times the second, plus the first times the derivative of the second.",
-    ["sum", "sin", "cos", "exp", "tan"],
+    ["sum", "power", "sin", "cos", "exp"],
   ),
   s(
     "quotient",
@@ -86,26 +77,35 @@ export const SKILLS: Skill[] = [
     "Use (u′v − uv′)/v². Keep the order in the numerator.",
     ["sum", "power"],
   ),
+  ...["tan", "cot", "sec", "csc"].map((id) =>
+    s(
+      id,
+      functionLabels[id],
+      3,
+      "Use the basic trigonometric derivative and include any inner derivative.",
+      ["quotient"],
+    ),
+  ),
+  s(
+    "combine",
+    "Combinations I",
+    3,
+    "Find the outermost operation first, then use the sum, product and quotient rules on its parts.",
+    ["product", "quotient"],
+  ),
   s(
     "chain",
     "Chain rule",
-    3,
+    4,
     "Differentiate the outer function at the inner function, then multiply by the inner derivative.",
     ["power", "sin", "cos", "exp"],
   ),
   s(
-    "nested",
-    "Nested chain rule",
-    4,
-    "Work from the outside in, multiplying by the derivative of every inner layer.",
-    ["chain", "exp", "sin", "cos"],
-  ),
-  s(
     "mixed",
-    "Mixed differentiation",
+    "Combinations II",
     4,
-    "Identify the outermost operation first, then apply the rules within each factor.",
-    ["product", "quotient", "chain"],
+    "Use the product or sum rule outside and the chain rule inside: multiply each composite part by the derivative of its inside.",
+    ["product", "chain"],
   ),
   s(
     "implicit",
@@ -121,12 +121,28 @@ export const SKILLS: Skill[] = [
     "Use (f⁻¹)′(a)=1/f′(b), where f(b)=a and f′(b) is nonzero.",
     ["power"],
   ),
+  ...["asin", "acos", "atan"].map((id) =>
+    s(
+      id,
+      functionLabels[id],
+      5,
+      "Use the inverse-trigonometric derivative, with its real-domain restriction.",
+      id === "atan" ? ["inverse"] : ["inverse", "root"],
+    ),
+  ),
   s(
     "higher",
     "Higher derivatives",
     5,
     "Differentiate successively; keep track of which derivative is requested.",
     ["product", "chain"],
+  ),
+  s(
+    "nested",
+    "Combinations III",
+    5,
+    "Work from the outside in: apply the quotient, product and chain rules in turn, and multiply by the derivative of every inner layer.",
+    ["mixed", "quotient"],
   ),
   s(
     "abstract",
