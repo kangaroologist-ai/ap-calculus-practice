@@ -3,6 +3,19 @@ import { ComputeEngine } from "@cortex-js/compute-engine";
 import type { Expr, Question, Verdict } from "./types";
 import { evaluator, random, latex, MathDomainError, type Values } from "./math";
 const ce = new ComputeEngine();
+// Abstract-function questions need f and g declared so the engine reads f(x)
+// as an application instead of the product f·x. A separate engine keeps every
+// other question's parse exactly as it was.
+let abstractCe: ComputeEngine | undefined;
+function engineFor(functions: string[]): ComputeEngine {
+  if (functions.length === 0) return ce;
+  if (!abstractCe) {
+    abstractCe = new ComputeEngine();
+    abstractCe.declare("f", "function");
+    abstractCe.declare("g", "function");
+  }
+  return abstractCe;
+}
 const arities: Record<string, [number, number]> = {
   Add: [2, 200],
   Multiply: [2, 200],
@@ -25,9 +38,14 @@ const arities: Record<string, [number, number]> = {
   Exp: [1, 1],
   Abs: [1, 1],
 };
-export function parseAnswer(raw: string, variables: string[]): Expr {
+export function parseAnswer(
+  raw: string,
+  variables: string[],
+  functions: string[] = [],
+): Expr {
   if (!raw.trim()) throw Error("Enter an answer first.");
   if (raw.length > 2000) throw Error("Your expression is too long.");
+  const abstract = functions.length > 0;
   let count = 0;
   const walk = (e: unknown, depth = 0): Expr => {
     if (++count > 200 || depth > 20)
@@ -38,6 +56,8 @@ export function parseAnswer(raw: string, variables: string[]): Expr {
       return e;
     }
     if (typeof e === "string") {
+      if (abstract && (e === "f" || e === "g"))
+        throw Error(`Write ${e}(...) with its argument.`);
       if ([...variables, "e", "ExponentialE", "Pi"].includes(e)) return e;
       throw Error(`Use only ${variables.join(", ")} and supported functions.`);
     }
@@ -56,6 +76,38 @@ export function parseAnswer(raw: string, variables: string[]): Expr {
     }
     if (op === "Root" && e.length === 3)
       return walk(["Power", e[1], ["Divide", 1, e[2]]], depth + 1);
+    if (abstract) {
+      const allowed = functions.join(" and ");
+      if (op === "Apply") {
+        const target = e[1];
+        if (Array.isArray(target) && target[0] === "Derivative") {
+          const name = target[1];
+          if (
+            (name !== "f" && name !== "g") ||
+            !functions.includes(name)
+          )
+            throw Error(`Use only ${allowed} in this answer.`);
+          if (e.length !== 3)
+            throw Error(`Write ${name}(...) with its argument.`);
+          const order = target[2];
+          if (order !== 1 && order !== 2)
+            throw Error(
+              `Use ${name}, ${name}' or ${name}'' in this answer.`,
+            );
+          return ["Fn", name, order, walk(e[2], depth + 1)];
+        }
+        throw Error("Use an evaluated expression with supported functions.");
+      }
+      if (op === "Derivative" && (e[1] === "f" || e[1] === "g"))
+        throw Error(`Write ${e[1]}(...) with its argument.`);
+      if (op === "f" || op === "g") {
+        if (!functions.includes(op))
+          throw Error(`Use only ${allowed} in this answer.`);
+        if (e.length !== 2)
+          throw Error(`Write ${op}(...) with its argument.`);
+        return ["Fn", op, 0, walk(e[1], depth + 1)];
+      }
+    }
     if (op === "InvisibleOperator") op = "Multiply";
     if (op === "Rational") op = "Divide";
     const arity = arities[op];
@@ -75,7 +127,7 @@ export function parseAnswer(raw: string, variables: string[]): Expr {
     return [op, ...args];
   };
   // Raw form preserves holes in the student's domain before any simplification.
-  return walk(ce.parse(raw, { form: "raw" }).json);
+  return walk(engineFor(functions).parse(raw, { form: "raw" }).json);
 }
 export function sampleValues(q: Question, i: number, precision = 50): Values {
   const { D, calc } = evaluator(precision);
@@ -118,17 +170,61 @@ export function sampleValues(q: Question, i: number, precision = 50): Values {
   if (i < 7) point = new D([0, 1, -1, 2, -2, 0.5, -0.5][i]);
   return { [q.domain.variable]: point };
 }
-export function grade(q: Question, raw: string[]): Verdict {
-  if (raw.length !== q.answers.length)
-    return { status: "invalid", message: "Complete every answer field." };
-  let answers: Expr[];
-  try {
-    answers = raw.map((x) =>
-      parseAnswer(x, q.domain.curve ? ["x", "y"] : [q.domain.variable]),
-    );
-  } catch (e) {
-    return { status: "invalid", message: (e as Error).message };
+export type AbstractChoice = Record<"f" | "g", [Expr, Expr, Expr]>;
+// Each list is [F, F′, F″] in u. Every function is positive for every real u,
+// so √f, ln f, ln g and 1/f, 1/g stay inside the real domain.
+export const ABSTRACT_CHOICES: AbstractChoice[] = [
+  {
+    f: [["Add", ["Power", "u", 2], "u", 3], ["Add", ["Multiply", 2, "u"], 1], 2],
+    g: [["Exp", "u"], ["Exp", "u"], ["Exp", "u"]],
+  },
+  {
+    f: [
+      ["Add", ["Sin", "u"], 2],
+      ["Cos", "u"],
+      ["Negate", ["Sin", "u"]],
+    ],
+    g: [["Add", ["Power", "u", 2], 2], ["Multiply", 2, "u"], 2],
+  },
+  {
+    f: [
+      ["Add", ["Exp", ["Divide", "u", 2]], 1],
+      ["Divide", ["Exp", ["Divide", "u", 2]], 2],
+      ["Divide", ["Exp", ["Divide", "u", 2]], 4],
+    ],
+    g: [
+      ["Add", ["Cos", "u"], 3],
+      ["Negate", ["Sin", "u"]],
+      ["Negate", ["Cos", "u"]],
+    ],
+  },
+];
+function substitute(e: Expr, variable: string, value: Expr): Expr {
+  if (typeof e === "string") return e === variable ? value : e;
+  if (typeof e === "number") return e;
+  if (e[0] === "Fn")
+    return ["Fn", e[1], e[2], substitute(e[3], variable, value)];
+  return [e[0], ...e.slice(1).map((x) => substitute(x, variable, value))];
+}
+export function instantiate(e: Expr, choice: AbstractChoice): Expr {
+  if (typeof e !== "object") return e;
+  if (e[0] === "Fn") {
+    const name = e[1];
+    const order = e[2];
+    if (
+      (name !== "f" && name !== "g") ||
+      typeof order !== "number" ||
+      !Number.isInteger(order) ||
+      order < 0 ||
+      order > 2
+    )
+      throw Error("Malformed abstract function.");
+    return substitute(choice[name][order], "u", instantiate(e[3], choice));
   }
+  return [e[0], ...e.slice(1).map((x) => instantiate(x, choice))];
+}
+// The numeric sampling loop, shared by normal and instantiated questions.
+function numericMismatch(q: Question, answers: Expr[]): Verdict | undefined {
   let valid = 0;
   const counts = q.domain.intervals.map(() => 0);
   const { calc, D } = evaluator(50);
@@ -199,10 +295,13 @@ export function grade(q: Question, raw: string[]): Verdict {
       message:
         "Not enough valid comparison points. Try another equivalent form or skip this question.",
     };
+  return undefined;
+}
+function finish(q: Question, answers: Expr[], functions: string[]): Verdict {
   // Put trusted ASTs through the same raw LaTeX grammar as student input,
   // so harmless serializer forms do not look like new domain restrictions.
   const variables = q.domain.curve ? ["x", "y"] : [q.domain.variable];
-  const normalize = (e: Expr) => parseAnswer(latex(e), variables);
+  const normalize = (e: Expr) => parseAnswer(latex(e), variables, functions);
   let domainCheck: ReturnType<typeof checkExtraDomains>;
   try {
     domainCheck = checkExtraDomains(
@@ -229,4 +328,44 @@ export function grade(q: Question, raw: string[]): Verdict {
     (a, i) => JSON.stringify(a) === JSON.stringify(q.answers[i]),
   );
   return { status: "correct", evidence: identical ? "symbolic" : "numeric" };
+}
+export function grade(q: Question, raw: string[]): Verdict {
+  if (raw.length !== q.answers.length)
+    return { status: "invalid", message: "Complete every answer field." };
+  const functions = q.domain.functions ?? [];
+  let answers: Expr[];
+  try {
+    answers = raw.map((x) =>
+      parseAnswer(
+        x,
+        q.domain.curve ? ["x", "y"] : [q.domain.variable],
+        functions,
+      ),
+    );
+  } catch (e) {
+    return { status: "invalid", message: (e as Error).message };
+  }
+  if (functions.length === 0) {
+    const mismatch = numericMismatch(q, answers);
+    return mismatch ?? finish(q, answers, functions);
+  }
+  // Abstract trees are always instantiated before evaluation; every choice
+  // must agree, so a rule that only fits one hidden function is rejected.
+  for (const choice of ABSTRACT_CHOICES) {
+    const instantiated: Question = {
+      ...q,
+      source: q.source.map((x) => instantiate(x, choice)),
+      answers: q.answers.map((x) => instantiate(x, choice)),
+      domain: {
+        ...q.domain,
+        guards: q.domain.guards.map((x) => instantiate(x, choice)),
+      },
+    };
+    const mismatch = numericMismatch(
+      instantiated,
+      answers.map((x) => instantiate(x, choice)),
+    );
+    if (mismatch) return mismatch;
+  }
+  return finish(q, answers, functions);
 }

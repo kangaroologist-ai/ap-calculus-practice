@@ -53,9 +53,11 @@ export function inferSkills(
       ? has(args[1], vs)
         ? args[1]
         : args[0]
-      : FN[op]
-        ? args[0]
-        : undefined;
+      : op === "Fn"
+        ? args[2]
+        : FN[op]
+          ? args[0]
+          : undefined;
   const composite =
     inner !== undefined && !(typeof inner === "string" && vs.includes(inner));
   if (composite && has(inner!, vs)) out.add(depth >= 1 ? "nested" : "chain");

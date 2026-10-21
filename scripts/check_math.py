@@ -44,6 +44,7 @@ SUPPORTED_FAMILIES = {
     "chain",
     "nested",
     "mixed",
+    "abstract",
     "implicit",
     "inverse",
     "higher",
@@ -51,6 +52,7 @@ SUPPORTED_FAMILIES = {
     "vector",
     "polar",
 }
+ABSTRACT_U = sp.Symbol("__u", real=True)
 CHECKED_IDENTITIES: set[str] = set()
 NUMERIC_FALLBACK_IDENTITIES = 0
 
@@ -97,6 +99,75 @@ def rational_number(value: int | float) -> sp.Expr:
     return sp.Rational(str(value))
 
 
+def abstract_function(expr: list[Any], symbols: dict[str, sp.Symbol]) -> sp.Expr:
+    """Convert ["Fn", name, order, arg] to an undefined SymPy function.
+
+    The k-th derivative at the argument is a Subs object, so SymPy can apply
+    the chain rule to it. SymPy later chooses different dummies and sometimes
+    a bare Derivative for the same idea; canonical_abstract removes that
+    difference before two trees are compared.
+    """
+
+    if len(expr) != 4:
+        raise UnsupportedExpression(f"invalid Fn node: {expr!r}")
+    name, order, arg_node = expr[1], expr[2], expr[3]
+    if name not in {"f", "g"} or not isinstance(order, int) or not 0 <= order <= 3:
+        raise UnsupportedExpression(f"invalid abstract function: {expr!r}")
+    func = sp.Function(name)
+    arg = to_sympy(arg_node, symbols)
+    if order == 0:
+        return func(arg)
+    derivative = sp.Derivative(func(ABSTRACT_U), (ABSTRACT_U, order))
+    return sp.Subs(derivative, (ABSTRACT_U,), (arg,))
+
+
+def canonical_abstract(expr: sp.Expr) -> sp.Expr:
+    """Put f'/g' expressions in one shape before an equality check."""
+
+    if isinstance(expr, sp.Subs):
+        body = expr.expr
+        if isinstance(body, sp.Derivative):
+            inner = body.expr
+            variables = body.variables
+            if (
+                isinstance(inner, sp.Function)
+                and len(inner.args) == 1
+                and variables
+                and all(v == inner.args[0] for v in variables)
+            ):
+                derivative = sp.Derivative(
+                    inner.func(ABSTRACT_U), (ABSTRACT_U, len(variables))
+                )
+                point = canonical_abstract(expr.point[0])
+                return sp.Subs(derivative, (ABSTRACT_U,), (point,))
+        return sp.Subs(
+            canonical_abstract(body),
+            expr.variables,
+            tuple(canonical_abstract(point) for point in expr.point),
+        )
+    if isinstance(expr, sp.Derivative):
+        body = expr.expr
+        variables = expr.variables
+        if (
+            isinstance(body, sp.Function)
+            and len(body.args) == 1
+            and variables
+            and all(v == body.args[0] for v in variables)
+        ):
+            derivative = sp.Derivative(
+                body.func(ABSTRACT_U), (ABSTRACT_U, len(variables))
+            )
+            point = canonical_abstract(body.args[0])
+            return sp.Subs(derivative, (ABSTRACT_U,), (point,))
+        return expr.func(
+            canonical_abstract(body),
+            *[canonical_abstract(arg) for arg in expr.args[1:]],
+        )
+    if expr.args:
+        return expr.func(*[canonical_abstract(arg) for arg in expr.args])
+    return expr
+
+
 def to_sympy(expr: Any, symbols: dict[str, sp.Symbol]) -> sp.Expr:
     if isinstance(expr, (int, float)):
         return rational_number(expr)
@@ -112,6 +183,8 @@ def to_sympy(expr: Any, symbols: dict[str, sp.Symbol]) -> sp.Expr:
         raise UnsupportedExpression(f"invalid expression node: {expr!r}")
 
     op = expr[0]
+    if op == "Fn":
+        return abstract_function(expr, symbols)
     args = [to_sympy(item, symbols) for item in expr[1:]]
     if op in {"Add", "Sum"}:
         return sp.Add(*args)
@@ -316,6 +389,9 @@ def check_direct(q: dict[str, Any], symbols: dict[str, sp.Symbol]) -> None:
     source = to_sympy(q["source"][0], symbols)
     actual = to_sympy(q["answers"][0], symbols)
     expected = sp.diff(source, variable)
+    if q["family"] == "abstract":
+        expected = canonical_abstract(expected)
+        actual = canonical_abstract(actual)
     assert_sample_equivalent(expected, actual, variable, q)
     if q["family"] == "root" and is_odd_root(q):
         source_node = q["source"][0]
@@ -517,13 +593,102 @@ def selected_questions(questions: list[dict[str, Any]], limit: int | None) -> li
     return [question for family in by_family.values() for question in family[:limit]]
 
 
+def abstract_self_test() -> int:
+    """Hand-made abstract-function answers that the oracle must accept."""
+
+    cases: list[tuple[str, Any, Any]] = [
+        (
+            "f(x^3)",
+            ["Fn", "f", 0, ["Power", "x", 3]],
+            ["Multiply", 3, ["Power", "x", 2], ["Fn", "f", 1, ["Power", "x", 3]]],
+        ),
+        (
+            "[f(x)]^3",
+            ["Power", ["Fn", "f", 0, "x"], 3],
+            ["Multiply", 3, ["Power", ["Fn", "f", 0, "x"], 2], ["Fn", "f", 1, "x"]],
+        ),
+        (
+            "e^{f(x)}",
+            ["Exp", ["Fn", "f", 0, "x"]],
+            ["Multiply", ["Exp", ["Fn", "f", 0, "x"]], ["Fn", "f", 1, "x"]],
+        ),
+        (
+            "sqrt(f(x))",
+            ["Sqrt", ["Fn", "f", 0, "x"]],
+            [
+                "Divide",
+                ["Fn", "f", 1, "x"],
+                ["Multiply", 2, ["Sqrt", ["Fn", "f", 0, "x"]]],
+            ],
+        ),
+        (
+            "ln(f(x))",
+            ["Ln", ["Fn", "f", 0, "x"]],
+            ["Divide", ["Fn", "f", 1, "x"], ["Fn", "f", 0, "x"]],
+        ),
+        (
+            "x^2 f(x)",
+            ["Multiply", ["Power", "x", 2], ["Fn", "f", 0, "x"]],
+            [
+                "Add",
+                ["Multiply", 2, "x", ["Fn", "f", 0, "x"]],
+                ["Multiply", ["Power", "x", 2], ["Fn", "f", 1, "x"]],
+            ],
+        ),
+        (
+            "f(x)/g(x)",
+            ["Divide", ["Fn", "f", 0, "x"], ["Fn", "g", 0, "x"]],
+            [
+                "Divide",
+                [
+                    "Subtract",
+                    ["Multiply", ["Fn", "f", 1, "x"], ["Fn", "g", 0, "x"]],
+                    ["Multiply", ["Fn", "f", 0, "x"], ["Fn", "g", 1, "x"]],
+                ],
+                ["Power", ["Fn", "g", 0, "x"], 2],
+            ],
+        ),
+        (
+            "f(g(x))",
+            ["Fn", "f", 0, ["Fn", "g", 0, "x"]],
+            [
+                "Multiply",
+                ["Fn", "f", 1, ["Fn", "g", 0, "x"]],
+                ["Fn", "g", 1, "x"],
+            ],
+        ),
+    ]
+    failures = 0
+    for label, source, answer in cases:
+        question = {
+            "id": f"self-test/abstract/{label}",
+            "family": "abstract",
+            "template": 0,
+            "role": "basic",
+            "prompt": label,
+            "source": [source],
+            "answers": [answer],
+            "domain": {"variable": "x", "intervals": [[-2.0, 2.0]], "guards": []},
+        }
+        try:
+            check_question(question)
+        except (AssertionError, TypeError, ValueError, ZeroDivisionError, UnsupportedExpression) as error:
+            failures += 1
+            print(f"SELF-TEST FAIL {label}: {error}", file=sys.stderr)
+    print(f"self-test: {len(cases) - failures}/{len(cases)} abstract cases passed")
+    return 1 if failures else 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--corpus", type=Path, default=DEFAULT_CORPUS)
     parser.add_argument("--limit", type=int, default=None, help="questions per family; omit for the full corpus")
+    parser.add_argument("--self-test", action="store_true", help="run the built-in abstract-function cases")
     args = parser.parse_args()
     if args.limit is not None and args.limit < 1:
         parser.error("--limit must be positive")
+    if args.self_test:
+        return abstract_self_test()
 
     try:
         corpus = load_corpus(args.corpus)

@@ -70,6 +70,14 @@ export function derivative(e: Expr, v = "x"): Expr {
       return div(d, add(1, pow(u, 2)));
     case "Sqrt":
       return div(d, mul(2, fn("Sqrt", u)));
+    case "Fn": {
+      const name = a[0] as string;
+      const order = a[1] as number;
+      const arg = a[2];
+      if (order + 1 > 3)
+        throw Error(`Unsupported derivative order for ${name}.`);
+      return mul(["Fn", name, order + 1, arg], derivative(arg, v));
+    }
     default:
       throw Error(`Unsupported derivative: ${op}`);
   }
@@ -133,14 +141,20 @@ export function latex(e: Expr): string {
     case "Arccos":
     case "Arctan":
       return `\\${op.toLowerCase()}${wrap(u)}`;
+    case "Fn": {
+      const name = a[0] as string;
+      const order = a[1] as number;
+      const arg = a[2];
+      return `${name}${"'".repeat(order)}\\left(${latex(arg)}\\right)`;
+    }
     default:
       return `\\${op.toLowerCase()}${wrap(u)}`;
   }
 }
 export function complexity(e: Expr): number {
-  return Array.isArray(e)
-    ? 1 + e.slice(1).reduce<number>((s, x) => s + complexity(x), 0)
-    : 1;
+  if (!Array.isArray(e)) return 1;
+  if (e[0] === "Fn") return 1 + complexity(e[3]);
+  return 1 + e.slice(1).reduce<number>((s, x) => s + complexity(x), 0);
 }
 export function rationalExponent(e: Expr): [number, number] | undefined {
   const reduce = (p: number, q: number): [number, number] | undefined => {
@@ -192,6 +206,8 @@ export function evaluator(precision = 50) {
       throw Error("Unknown variable");
     }
     const [op, ...args] = e;
+    if (op === "Fn")
+      throw Error("Substitute f and g with concrete functions before evaluating.");
     const a = args.map((x) => calc(x, values)),
       u = a[0],
       v = a[1];

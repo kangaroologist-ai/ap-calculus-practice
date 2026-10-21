@@ -51,4 +51,33 @@ describe('inferSkills', () => {
     expect(inferSkills(withVariable, ['x']).has('quotient')).toBe(true);
     expect(inferSkills(withoutVariable, ['x']).has('quotient')).toBe(false);
   });
+
+  it('treats an abstract function with a bare argument as no skill', () => {
+    const e: Expr = ['Fn', 'f', 0, 'x'];
+    expect(inferSkills(e, ['x'])).toEqual(new Set());
+  });
+
+  it('adds chain for f(x^3) and still finds power', () => {
+    const e: Expr = ['Fn', 'f', 0, ['Power', 'x', 3]];
+    expect(inferSkills(e, ['x'])).toEqual(new Set(['chain', 'power']));
+  });
+
+  it('adds chain for f(g(x)) without mapping f or g to a catalog skill', () => {
+    const e: Expr = ['Fn', 'f', 0, ['Fn', 'g', 0, 'x']];
+    expect(inferSkills(e, ['x'])).toEqual(new Set(['chain']));
+  });
+
+  it('adds nested when an abstract application sits inside a composite', () => {
+    const e: Expr = ['Fn', 'f', 0, ['Exp', ['Sin', 'x']]];
+    expect(inferSkills(e, ['x'])).toEqual(
+      new Set(['chain', 'nested', 'exp', 'sin']),
+    );
+  });
+
+  it('finds product and quotient around abstract functions', () => {
+    const product: Expr = ['Multiply', ['Power', 'x', 2], ['Fn', 'f', 0, 'x']];
+    expect(inferSkills(product, ['x'])).toEqual(new Set(['product', 'power']));
+    const quotient: Expr = ['Divide', ['Fn', 'f', 0, 'x'], ['Fn', 'g', 0, 'x']];
+    expect(inferSkills(quotient, ['x'])).toEqual(new Set(['quotient']));
+  });
 });

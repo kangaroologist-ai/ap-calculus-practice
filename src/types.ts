@@ -37,6 +37,9 @@ export interface Domain {
   intervals: [number, number][];
   curve?: Curve;
   guards: Expr[];
+  // Non-empty only on abstract-function questions; the answer may use these
+  // function names, and grading replaces them with concrete functions.
+  functions?: ("f" | "g")[];
 }
 export interface Question {
   id: string;
