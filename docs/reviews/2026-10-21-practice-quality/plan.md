@@ -271,7 +271,8 @@ Requirements that change: number ranges (S1, S2), display (S3), progression and 
   - One question in every three is a combined (Mixed) question when one is available.
   - The diagnostic queue for all Ready required skills and the two-correct rebuild rule go away.
   - FSRS stays for review timing. A hint or a wrong first try still rates Again. A correct combined question also counts as a Good review of each component skill that is due (L5).
-  - The interface keeps its current labels; README and help describe the new rules.
+  - The interface keeps its labels, except the path status of a started skill: the streak counts (“Basic ✓ · Mixed 1/2”, “Basic 1/2”) become the estimate (“Basic ✓ · 82%”, “Learning · 45%”), because the streak counts no longer exist. Recorded during T3 preparation, 2026-10-21; to report to the owner. README and help describe the new rules.
+  - Until T7, the compact export does not carry the estimates; an imported code seeds them from the line state (same rule as the migration).
   - *Accept:* unit tests for the update; a simulation test with the R7 truth model, 40 students, median: first product or chain question ≤ 70; extra (remedial) questions ≤ 20; weak skill found in ≥ 20 of 40 (prototype at 85%: 63, 4, 22/40); the existing no-deadlock simulations pass.
 - **S5 Keep progress on iPhone.** *From:* R5, L6
   - The site asks the browser for persistent storage once at start.
@@ -305,7 +306,7 @@ Delegation rule (owner, L7, 2026-10-21; it replaces the default Claude/Codex spl
 
 The owner tags below follow this rule: “dsf → Codex → Claude”.
 
-- [ ] **T1** (S3) `src/math.ts` (`latex`), `tests/notation.test.ts` or a new display test: write number–letter products without a dot and negative terms as subtraction. *Verify:* display test; `npm test`; `npm run test:math`; grading regression tests unchanged. *Owner:* dsf → Codex → Claude (L7).
+- [x] **T1** (S3) `src/math.ts` (`latex`), `tests/notation.test.ts` or a new display test: write number–letter products without a dot and negative terms as subtraction. *Verify:* display test; `npm test`; `npm run test:math`; grading regression tests unchanged. *Owner:* dsf → Codex → Claude (L7). Done 2026-10-21: Codex approved in round 0; Claude check: `tsc` pass, unit 361/361, `test:math` 10,100 checked, 0 failures. Sessions: Qoder `56306ebb-cf46-4849-be8e-54f271e4b7db`, Codex `01a15e52-c2d1-7cd3-a8fc-efbce7477cd2`.
 - [ ] **T2** (S1, S2) `src/templates.ts`, new `tests/number-policy.test.ts`: apply the number limits and natural forms to every existing template. *Verify:* new test (200 seeds per template); variety test; `npm run test:math`. *Owner:* dsf → Codex → Claude (L7).
 - [ ] **T3** (S4) new `src/mastery.ts`; `src/progress.ts` (`recordOutcome`, `chooseNext`, readiness helpers, `SkillState`); `tests/mastery.test.ts`; `tests/progress.test.ts`; `tests/simulation.test.ts`; `tests/helpers/simulate.ts`: build the mastery model and the new selection rules. *Verify:* unit tests; S4 simulation thresholds; no-deadlock simulations. *Owner:* dsf → Codex → Claude (L7).
 - [ ] **T4** (S6) `src/math.ts` (derivative, evaluation, display of `f`/`g` nodes), `src/grading.ts` (second parse engine, substitution grading), `src/domains.ts`, `src/skill-inference.ts`, `scripts/math-corpus.ts`, `scripts/check_math.py`: abstract-function math and grading, to a node design that Claude writes in the step prompt. *Verify:* new grader tests (correct, wrong, equivalent forms, `f'` notation, no change for other questions); SymPy oracle with `Function('f')`. *Owner:* dsf → Codex → Claude (L7).
