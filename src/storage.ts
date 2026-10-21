@@ -12,6 +12,25 @@ const db = () =>
 export async function loadState(): Promise<AppState | undefined> {
   return (await db()).get("state", "current");
 }
+type StorageNavigator = {
+  storage?: {
+    persisted?: () => Promise<boolean>;
+    persist?: () => Promise<boolean>;
+  };
+};
+export async function requestPersistentStorage(
+  nav: StorageNavigator | undefined = globalThis.navigator,
+): Promise<boolean> {
+  try {
+    const storage = nav?.storage;
+    if (!storage?.persisted) return false;
+    if (await storage.persisted()) return true;
+    if (!storage.persist) return false;
+    return await storage.persist();
+  } catch {
+    return false;
+  }
+}
 let writes: Promise<unknown> = Promise.resolve();
 function enqueue<T>(operation: () => Promise<T>): Promise<T> {
   const next = writes.then(operation);

@@ -300,3 +300,46 @@ describe('serialized local persistence and backup replacement', () => {
     expect(await storage.loadState()).toEqual(valid);
   });
 });
+
+describe('persistent storage request', () => {
+  it('does not ask again when the browser already persists storage', async () => {
+    const persist = vi.fn(async () => true);
+    const nav = { storage: { persisted: async () => true, persist } };
+
+    await expect(storage.requestPersistentStorage(nav)).resolves.toBe(true);
+    expect(persist).not.toHaveBeenCalled();
+  });
+
+  it('returns true when the browser grants persistence', async () => {
+    const persisted = vi.fn(async () => false);
+    const persist = vi.fn(async () => true);
+    const nav = { storage: { persisted, persist } };
+
+    await expect(storage.requestPersistentStorage(nav)).resolves.toBe(true);
+    expect(persisted).toHaveBeenCalledTimes(1);
+    expect(persist).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns false when the browser denies persistence', async () => {
+    const nav = { storage: { persisted: async () => false, persist: async () => false } };
+
+    await expect(storage.requestPersistentStorage(nav)).resolves.toBe(false);
+  });
+
+  it('returns false when the navigator has no storage object', async () => {
+    await expect(storage.requestPersistentStorage({})).resolves.toBe(false);
+  });
+
+  it('returns false instead of throwing when persist rejects', async () => {
+    const nav = {
+      storage: {
+        persisted: async () => false,
+        persist: async () => {
+          throw new Error('persistence denied');
+        },
+      },
+    };
+
+    await expect(storage.requestPersistentStorage(nav)).resolves.toBe(false);
+  });
+});

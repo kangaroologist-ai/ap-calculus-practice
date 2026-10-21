@@ -33,6 +33,7 @@ import {
   resetState,
   validateLocalState,
   commitMigration,
+  requestPersistentStorage,
 } from "./storage";
 import { LATEST_FORMAT } from "./migrate";
 import {
@@ -1509,6 +1510,8 @@ async function boot() {
     let saved: AppState | undefined;
     try {
       saved = await loadStateWithin(STORAGE_TIMEOUT_MS);
+      // Fire and forget: asking for persistence must not delay the first render.
+      void requestPersistentStorage();
     } catch {
       // On an iPhone, opening storage sometimes hangs or fails until the page is reloaded; ask
       // for a reload rather than silently practising without saving (task
