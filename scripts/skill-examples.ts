@@ -48,8 +48,10 @@ const CHINESE_TYPE: Record<string, string> = {
   product: "乘积法则：第一因子的导数乘第二因子，加第一因子乘第二因子的导数。",
   quotient: "商法则：分子为 u′v−uv′，分母为 v²，保持顺序。",
   chain: "链式法则：先求外层函数在内层处的导数，再乘以内层导数。",
-  nested: "多层链式法则：由外向内逐层求导，并乘上每一层的导数。",
-  mixed: "混合求导：先识别最外层运算，再在各因子内部使用相应法则。",
+  nested: "组合 III：商法则加链式、链式加链式或三条法则；由外向内逐层求导，并乘上每一层的导数。",
+  combine: "组合 I：两条法则组合，不含链式法则；先找最外层运算，再对各部分用和、积、商法则。",
+  abstract: "抽象函数：f、g 未知，只有一层复合；把 f 当作普通函数，在内层处求 f′ 再乘以内层导数。",
+  mixed: "组合 II：链式法则加一条其他法则，内层简单；外层用积或和法则，复合部分乘以内层导数。",
   implicit: "隐函数求导：对 F(x,y)=0 关于 x 求导；每个 y 的导数都带 dy/dx。",
   inverse: "反函数导数：在对应点使用 (f⁻¹)′(a)=1/f′(b)。",
   higher: "高阶导数：连续求导，并准确区分所要求的阶数。",
@@ -77,8 +79,10 @@ const ENGLISH_TYPE: Record<string, string> = {
   product: "Apply the product rule.",
   quotient: "Apply the quotient rule.",
   chain: "Apply a single chain rule.",
-  nested: "Apply the chain rule through multiple layers.",
-  mixed: "Combine product, quotient, and chain rules.",
+  nested: "Combine the quotient, product and chain rules through several layers.",
+  combine: "Combine the sum, product and quotient rules without the chain rule.",
+  abstract: "Differentiate expressions with unknown functions f and g.",
+  mixed: "Combine the chain rule with one other rule.",
   implicit: "Differentiate an equation that relates x and y.",
   inverse: "Use the reciprocal derivative theorem for an inverse function.",
   higher: "Find a second or third derivative.",
@@ -470,8 +474,8 @@ for (const skill of SKILLS) {
 }
 
 const expectedTemplates = SKILLS.reduce((sum, skill) => sum + TEMPLATES[skill.id].length, 0);
-if (items.length !== 26 || verifiedCount !== expectedTemplates)
-  throw new Error(`Expected 26 skills and ${expectedTemplates} questions, got ${items.length} and ${verifiedCount}`);
+if (items.length !== SKILLS.length || verifiedCount !== expectedTemplates)
+  throw new Error(`Expected ${SKILLS.length} skills and ${expectedTemplates} questions, got ${items.length} and ${verifiedCount}`);
 
 writeFileSync(resolve(OUT_DIR, "skill-examples.md"), renderMarkdown(items));
 writeFileSync(resolve(OUT_DIR, "skill-examples.html"), renderHtml(items, "docs"));
