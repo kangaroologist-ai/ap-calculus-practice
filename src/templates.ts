@@ -23,6 +23,9 @@ export interface Ctx {
   // A skill id drawn from the template's named pool, restricted to skills the
   // student may combine right now (see `open`).
   pool(name: string): string;
+  // The usable members of a named pool, in registry order. Templates that need
+  // two different functions from one pool draw the second through this list.
+  poolChoices(name: string): readonly string[];
 }
 export interface Built {
   e?: Expr;
@@ -82,6 +85,7 @@ export function makeCtx(
       if (!usable.length) throw Error(`Template pool ${name} has no usable skill.`);
       return usable[Math.floor(r() * usable.length)];
     },
+    poolChoices: (name) => (pools[name] ?? []).filter(ok),
   };
 }
 // ax+b for templates with a linear inner function.
@@ -285,6 +289,17 @@ const int = (c: Ctx, min: number, max: number) =>
   min + Math.floor(c.r() * (max - min + 1));
 const pooled = (c: Ctx, name: string, variable = "x") =>
   F(SKILL_FN[c.pool(name)], variable);
+// A second draw from a pool that must differ from the first. Returns undefined
+// when the caller allows only one member, so templates can fall back instead of
+// repeating a function or throwing.
+const otherFromPool = (
+  c: Ctx,
+  name: string,
+  exclude: string,
+): string | undefined => {
+  const choices = c.poolChoices(name).filter((id) => id !== exclude);
+  return choices.length ? c.pick(choices) : undefined;
+};
 const trigIntervals = (id: string): [number, number][] =>
   ["tan", "sec", "cot", "csc"].includes(id)
     ? SAFE_TRIG_INTERVALS
@@ -300,7 +315,7 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
       key: "constant.basic.forms",
       role: "basic",
       build: (c) => {
-        const a = int(c, 2, 15);
+        const a = int(c, 2, 5);
         return {
           e: c.pick<Expr>([a, F("Ln", a), F("Sqrt", a), F("Exp", a)]),
           intervals: X_INTERVALS,
@@ -311,9 +326,9 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
       key: "constant.basic.rational",
       role: "basic",
       build: (c) => {
-        const a = int(c, 2, 15),
-          b = int(c, 2, 15),
-          n = int(c, 2, 9);
+        const a = int(c, 1, 5),
+          b = int(c, 1, 5),
+          n = int(c, 2, 5);
         return { e: A(a, Q(b, n)), intervals: X_INTERVALS };
       },
     },
@@ -322,9 +337,9 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
       role: "mix",
       requires: ["sum", "power"],
       build: (c) => {
-        const a = int(c, 2, 15),
-          b = int(c, 2, 15),
-          n = int(c, 2, 12);
+        const a = int(c, 1, 9),
+          b = int(c, 1, 9),
+          n = int(c, 2, 6);
         return { e: A(a, M(b, P("x", n))), intervals: X_INTERVALS };
       },
     },
@@ -333,23 +348,30 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
     {
       key: "power.basic.positive",
       role: "basic",
-      build: (c) => ({ e: P("x", int(c, 2, 12)), intervals: X_INTERVALS }),
+      build: (c) => ({
+        e: M(int(c, 1, 5), P("x", int(c, 2, 6))),
+        intervals: X_INTERVALS,
+      }),
     },
     {
       key: "power.basic.negative",
       role: "basic",
-      build: (c) => ({ e: P("x", -int(c, 2, 12)), intervals: X_INTERVALS }),
+      build: (c) => ({
+        e: M(int(c, 1, 5), P("x", -int(c, 1, 4))),
+        intervals: X_INTERVALS,
+      }),
     },
     {
       key: "power.mix.polynomial_sum",
       role: "mix",
       requires: ["sum"],
       build: (c) => {
-        const n = int(c, 2, 5),
-          m = int(c, 2, 5),
-          a = int(c, 2, 15),
-          b = int(c, 2, 15),
-          k = int(c, 2, 15);
+        const n = int(c, 2, 6);
+        let m = int(c, 2, 5);
+        if (m >= n) m += 1;
+        const a = int(c, 1, 9),
+          b = int(c, 1, 9),
+          k = int(c, 1, 9);
         return { e: A(M(a, P("x", n)), M(b, P("x", m)), k), intervals: X_INTERVALS };
       },
     },
@@ -358,9 +380,9 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
       role: "mix",
       requires: ["sum"],
       build: (c) => {
-        const a = int(c, 2, 15),
-          b = int(c, 2, 15),
-          n = int(c, 2, 12);
+        const a = int(c, 1, 9),
+          b = int(c, 1, 9),
+          n = int(c, 1, 4);
         return { e: A(M(a, P("x", -n)), M(b, "x")), intervals: X_INTERVALS };
       },
     },
@@ -370,10 +392,10 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
       key: "sum.basic.polynomial_linear",
       role: "basic",
       build: (c) => {
-        const a = int(c, 2, 15),
-          b = int(c, 2, 15),
-          k = int(c, 2, 15),
-          n = int(c, 2, 8);
+        const a = int(c, 1, 5),
+          b = int(c, 1, 5),
+          k = int(c, 1, 5),
+          n = int(c, 2, 6);
         return { e: A(M(a, P("x", n)), M(b, "x"), k), intervals: X_INTERVALS };
       },
     },
@@ -382,9 +404,9 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
       role: "mix",
       requires: ["root"],
       build: (c) => {
-        const a = int(c, 2, 15),
-          b = int(c, 2, 15),
-          n = int(c, 2, 8);
+        const a = int(c, 1, 9),
+          b = int(c, 1, 9),
+          n = int(c, 2, 6);
         return { e: A(M(a, F("Sqrt", "x")), M(b, P("x", n))), intervals: POSITIVE_INTERVALS };
       },
     },
@@ -394,15 +416,14 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
       requires: ["root"],
       meta: { oddRoot: true },
       build: (c) => {
-        const a = int(c, 2, 15),
-          b = int(c, 2, 15),
-          n = int(c, 2, 8),
+        const a = int(c, 1, 9),
+          b = int(c, 1, 9),
+          n = int(c, 1, 4),
           [p, q] = c.pick([
             [1, 3],
             [2, 3],
             [4, 3],
-            [1, 5],
-            [2, 5],
+            [5, 3],
           ] as const);
         return {
           e: A(M(a, P("x", -n)), M(b, P("x", Q(p, q)))),
@@ -417,7 +438,7 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
       role: "basic",
       meta: { oddRoot: false },
       build: (c) => {
-        const a = int(c, 2, 15),
+        const a = c.pick([-5, -4, -3, -2, -1, 1, 2, 3, 4, 5]),
           displayed = M(a, F("Sqrt", "x")),
           rewritten = M(a, P("x", Q(1, 2)));
         return {
@@ -439,14 +460,12 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
       role: "basic",
       meta: { oddRoot: true },
       build: (c) => {
-        const a = int(c, 2, 15),
+        const a = int(c, 2, 5),
           [p, q] = c.pick([
             [1, 3],
             [2, 3],
             [4, 3],
             [5, 3],
-            [1, 5],
-            [2, 5],
           ] as const);
         return {
           e: M(a, P("x", Q(p, q))),
@@ -463,9 +482,9 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
       requires: ["sum", "power"],
       meta: { oddRoot: false },
       build: (c) => {
-        const a = int(c, 2, 15),
-          b = int(c, 2, 15),
-          n = int(c, 2, 8);
+        const a = int(c, 1, 9),
+          b = int(c, 1, 9),
+          n = int(c, 2, 6);
         return { e: A(M(a, F("Sqrt", "x")), M(b, P("x", n))), intervals: POSITIVE_INTERVALS };
       },
     },
@@ -474,15 +493,18 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
     {
       key: "exp.basic.natural",
       role: "basic",
-      build: (c) => ({ e: M(int(c, 2, 15), F("Exp", "x")), intervals: X_INTERVALS }),
+      build: (c) => ({
+        e: M(c.pick([-5, -4, -3, -2, -1, 1, 2, 3, 4, 5]), F("Exp", "x")),
+        intervals: X_INTERVALS,
+      }),
     },
     {
       key: "exp.basic.base",
       role: "basic",
       build: (c) => {
-        const a = int(c, 2, 15),
-          b = int(c, 2, 15);
-        return { e: M(b, P(a, "x")), intervals: X_INTERVALS };
+        const coefficient = int(c, 1, 5),
+          base = c.pick([2, 3, 5, 10] as const);
+        return { e: M(coefficient, P(base, "x")), intervals: X_INTERVALS };
       },
     },
     {
@@ -490,9 +512,9 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
       role: "mix",
       requires: ["sum", "power"],
       build: (c) => {
-        const a = int(c, 2, 15),
-          b = int(c, 2, 15),
-          n = int(c, 2, 8);
+        const a = int(c, 1, 9),
+          b = int(c, 1, 9),
+          n = int(c, 2, 6);
         return { e: A(M(a, F("Exp", "x")), M(b, P("x", n))), intervals: X_INTERVALS };
       },
     },
@@ -501,9 +523,9 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
       role: "mix",
       requires: ["sum", "root"],
       build: (c) => {
-        const a = int(c, 2, 15),
-          b = int(c, 2, 15);
-        return { e: A(F("Exp", "x"), M(a, F("Sqrt", "x"))), intervals: POSITIVE_INTERVALS };
+        const a = int(c, 1, 9),
+          b = int(c, 1, 9);
+        return { e: A(M(a, F("Exp", "x")), M(b, F("Sqrt", "x"))), intervals: POSITIVE_INTERVALS };
       },
     },
   ],
@@ -511,15 +533,18 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
     {
       key: "log.basic.natural",
       role: "basic",
-      build: (c) => ({ e: M(int(c, 2, 15), F("Ln", "x")), intervals: POSITIVE_INTERVALS }),
+      build: (c) => ({
+        e: M(c.pick([-5, -4, -3, -2, -1, 1, 2, 3, 4, 5]), F("Ln", "x")),
+        intervals: POSITIVE_INTERVALS,
+      }),
     },
     {
       key: "log.basic.scaled",
       role: "basic",
       build: (c) => {
-        const a = int(c, 2, 15),
-          b = int(c, 2, 15);
-        return { e: Q(M(a, F("Ln", "x")), F("Ln", b + 1)), intervals: POSITIVE_INTERVALS };
+        const coefficient = c.pick([-5, -4, -3, -2, -1, 1, 2, 3, 4, 5]),
+          base = c.pick([2, 3, 5, 10] as const);
+        return { e: Q(M(coefficient, F("Ln", "x")), F("Ln", base)), intervals: POSITIVE_INTERVALS };
       },
     },
     {
@@ -527,9 +552,9 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
       role: "mix",
       requires: ["sum", "power"],
       build: (c) => {
-        const a = int(c, 2, 15),
-          b = int(c, 2, 15),
-          n = int(c, 2, 8);
+        const a = int(c, 1, 9),
+          b = int(c, 1, 9),
+          n = int(c, 2, 6);
         return { e: A(M(a, F("Ln", "x")), M(b, P("x", n))), intervals: POSITIVE_INTERVALS };
       },
     },
@@ -537,10 +562,14 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
       key: "log.mix.exponential",
       role: "mix",
       requires: ["sum", "exp"],
-      build: (c) => ({
-        e: A(F("Ln", "x"), N(M(int(c, 2, 15), F("Exp", "x")))),
-        intervals: POSITIVE_INTERVALS,
-      }),
+      build: (c) => {
+        const a = int(c, 1, 9),
+          b = int(c, 1, 9);
+        return {
+          e: A(M(b, F("Ln", "x")), N(M(a, F("Exp", "x")))),
+          intervals: POSITIVE_INTERVALS,
+        };
+      },
     },
   ],
   sin: [],
@@ -557,13 +586,22 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
       key: "product.basic.power_function",
       role: "basic",
       pools: { h: SMOOTH_POOL },
-      build: (c) => ({ e: M(P("x", int(c, 2, 5)), pooled(c, "h")), intervals: SAFE_TRIG_INTERVALS }),
+      build: (c) => ({ e: M(P("x", int(c, 2, 6)), pooled(c, "h")), intervals: SAFE_TRIG_INTERVALS }),
     },
     {
       key: "product.basic.function_pair",
       role: "basic",
       pools: { h: SMOOTH_POOL, g: SMOOTH_POOL },
-      build: (c) => ({ e: M(c.a, pooled(c, "h"), pooled(c, "g")), intervals: SAFE_TRIG_INTERVALS }),
+      build: (c) => {
+        const h = c.pool("h"),
+          g = otherFromPool(c, "g", h);
+        return {
+          e: g
+            ? M(c.a, F(SKILL_FN[h], "x"), F(SKILL_FN[g], "x"))
+            : M(c.a, F(SKILL_FN[h], "x"), P("x", 2)),
+          intervals: SAFE_TRIG_INTERVALS,
+        };
+      },
     },
     {
       key: "product.mix.quadratic_function",
@@ -571,7 +609,7 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
       requires: ["sum", "power"],
       pools: { h: SMOOTH_POOL },
       build: (c) => ({
-        e: M(A(P("x", 2), int(c, 2, 15)), pooled(c, "h")),
+        e: M(A(P("x", 2), int(c, 1, 9)), pooled(c, "h")),
         intervals: SAFE_TRIG_INTERVALS,
       }),
     },
@@ -581,7 +619,11 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
       requires: ["power"],
       pools: { h: ["tan", "sec"] },
       build: (c) => ({
-        e: M(P("x", int(c, 2, 12)), pooled(c, "h")),
+        e: M(
+          int(c, 1, 9),
+          P("x", int(c, 2, 6)),
+          pooled(c, "h"),
+        ),
         intervals: SAFE_TRIG_INTERVALS,
       }),
     },
@@ -591,9 +633,9 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
       key: "quotient.basic.polynomial_linear",
       role: "basic",
       build: (c) => {
-        const a = int(c, 2, 15),
-          b = int(c, 2, 15),
-          k = int(c, 2, 15);
+        const a = int(c, 1, 5),
+          b = int(c, 1, 5),
+          k = int(c, 1, 5);
         return { e: Q(A(P("x", 2), b), A(M(a, "x"), k)), intervals: POSITIVE_INTERVALS };
       },
     },
@@ -601,9 +643,9 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
       key: "quotient.basic.reciprocal_power",
       role: "basic",
       build: (c) => {
-        const a = int(c, 2, 15),
-          b = int(c, 2, 15),
-          n = int(c, 2, 8);
+        const a = int(c, 1, 5),
+          b = int(c, 1, 5),
+          n = int(c, 2, 6);
         return { e: Q(a, A(P("x", n), b)), intervals: POSITIVE_INTERVALS };
       },
     },
@@ -612,7 +654,7 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
       role: "mix",
       pools: { h: SMOOTH_POOL },
       build: (c) => ({
-        e: Q(pooled(c, "h"), A(P("x", 2), int(c, 2, 15))),
+        e: Q(pooled(c, "h"), A(P("x", 2), int(c, 1, 9))),
         intervals: SAFE_TRIG_INTERVALS,
       }),
     },
@@ -622,7 +664,7 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
       requires: ["product"],
       pools: { h: SMOOTH_POOL },
       build: (c) => ({
-        e: Q(M(P("x", int(c, 2, 8)), pooled(c, "h")), A("x", int(c, 2, 15))),
+        e: Q(M(P("x", int(c, 2, 6)), pooled(c, "h")), A("x", int(c, 1, 9))),
         intervals: SAFE_TRIG_INTERVALS,
       }),
     },
@@ -631,7 +673,7 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
     {
       key: "chain.basic.power_linear",
       role: "basic",
-      build: (c) => ({ e: P(lin(c), int(c, 2, 8)), intervals: X_INTERVALS }),
+      build: (c) => ({ e: P(lin(c), 2), intervals: X_INTERVALS }),
     },
     {
       key: "chain.basic.function_linear",
@@ -655,7 +697,7 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
       role: "mix",
       requires: ["root", "sum", "power"],
       build: (c) => ({
-        e: F("Sqrt", A(M(int(c, 2, 15), P("x", 2)), int(c, 1, 15))),
+        e: F("Sqrt", A(M(int(c, 1, 9), P("x", 2)), int(c, 1, 9))),
         intervals: X_INTERVALS,
       }),
     },
@@ -676,10 +718,16 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
       role: "basic",
       requires: ["chain"],
       pools: { h: SMOOTH_POOL, g: SMOOTH_POOL },
-      build: (c) => ({
-        e: F(SKILL_FN[c.pool("h")], F(SKILL_FN[c.pool("g")], lin(c))),
-        intervals: linearIntervals(c),
-      }),
+      build: (c) => {
+        const h = c.pool("h"),
+          g = otherFromPool(c, "g", h);
+        return {
+          e: g
+            ? F(SKILL_FN[h], F(SKILL_FN[g], lin(c)))
+            : F(SKILL_FN[h], lin(c)),
+          intervals: linearIntervals(c),
+        };
+      },
     },
     {
       key: "nested.mix.function_power_sum",
@@ -688,11 +736,13 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
       pools: { h: SMOOTH_POOL, g: SMOOTH_POOL },
       build: (c) => {
         const k = int(c, 2, 3),
-          b = -int(c, 1, 2),
-          g = SKILL_FN[c.pool("g")],
-          h = SKILL_FN[c.pool("h")];
+          b = int(c, 1, 9),
+          h = c.pool("h"),
+          g = otherFromPool(c, "g", h);
         return {
-          e: F(h, F(g, A(P("x", k), b))),
+          e: g
+            ? F(SKILL_FN[h], F(SKILL_FN[g], A(P("x", k), b)))
+            : F(SKILL_FN[h], A(P("x", k), b)),
           intervals: [
             [0.2, 0.6],
             [0.7, 0.9],
@@ -706,9 +756,8 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
       requires: ["power"],
       pools: { h: SMOOTH_POOL },
       build: (c) => {
-        const b = int(c, 1, 9),
-          n = int(c, 2, 5);
-        return { e: P(A(F(SKILL_FN[c.pool("h")], lin(c)), b), n), intervals: linearIntervals(c) };
+        const b = int(c, 1, 9);
+        return { e: P(A(F(SKILL_FN[c.pool("h")], lin(c)), b), 2), intervals: linearIntervals(c) };
       },
     },
   ],
@@ -718,7 +767,7 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
       role: "basic",
       pools: { h: SMOOTH_POOL },
       build: (c) => ({
-        e: M(A(P("x", 2), int(c, 2, 15)), F(SKILL_FN[c.pool("h")], M(int(c, 2, 15), "x"))),
+        e: M(A(P("x", 2), int(c, 1, 5)), F(SKILL_FN[c.pool("h")], M(int(c, 1, 5), "x"))),
         intervals: X_INTERVALS,
       }),
     },
@@ -727,7 +776,7 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
       role: "basic",
       pools: { h: SMOOTH_POOL },
       build: (c) => ({
-        e: Q(F(SKILL_FN[c.pool("h")], lin(c)), A(P("x", 2), int(c, 2, 15))),
+        e: Q(F(SKILL_FN[c.pool("h")], lin(c)), A(P("x", 2), int(c, 1, 5))),
         intervals: POSITIVE_INTERVALS,
       }),
     },
@@ -737,7 +786,7 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
       requires: ["product", "quotient", "chain"],
       pools: { h: SMOOTH_POOL },
       build: (c) => ({
-        e: Q(M(P("x", int(c, 2, 8)), F(SKILL_FN[c.pool("h")], lin(c))), A("x", int(c, 2, 15))),
+        e: Q(M(P("x", int(c, 2, 6)), F(SKILL_FN[c.pool("h")], lin(c))), A("x", int(c, 1, 9))),
         intervals: POSITIVE_INTERVALS,
       }),
     },
@@ -747,7 +796,7 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
       requires: ["log", "product"],
       pools: { h: SMOOTH_POOL },
       build: (c) => ({
-        e: M(F("Ln", A(P("x", 2), int(c, 2, 15))), pooled(c, "h")),
+        e: M(F("Ln", A(P("x", 2), int(c, 1, 9))), pooled(c, "h")),
         intervals: X_INTERVALS,
       }),
     },
@@ -760,7 +809,7 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
       build: (c) => {
         const p = int(c, 1, 5),
           q = int(c, 1, 5),
-          cc = p * q * int(c, 4, 16),
+          cc = int(c, 1, 36),
           y = F("Sqrt", Q(A(cc, N(M(p, P("x", 2)))), q)),
           xm = Math.sqrt(cc / p);
         return implicitBuilt(
@@ -780,7 +829,7 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
       build: (c) => {
         const p = int(c, 1, 5),
           q = int(c, 1, 5),
-          cc = p * q * int(c, 4, 16),
+          cc = int(c, 1, 36),
           y = F("Sqrt", Q(A(cc, M(p, P("x", 2))), q));
         return implicitBuilt(
           { type: "graph", free: "x", branches: [y, N(y)] },
@@ -794,7 +843,7 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
       role: "mix",
       requires: [...implicitRequires, "sin"],
       build: (c) => {
-        const a = int(c, 2, 15),
+        const a = int(c, 1, 9),
           value = a + int(c, 1, 10),
           x = F("Sqrt", A(value, N(M(a, F("Sin", "y")))));
         return implicitBuilt(
@@ -813,7 +862,7 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
       role: "mix",
       requires: [...implicitRequires, "exp"],
       build: (c) => {
-        const a = int(c, 2, 15),
+        const a = int(c, 1, 9),
           value = int(c, 10, 20) + 5,
           x = F("Sqrt", Q(A(value, N(F("Exp", "y"))), a));
         return implicitBuilt(
@@ -833,28 +882,38 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
       key: "inverse.basic.linear",
       role: "basic",
       build: (c) => {
-        const a = int(c, 2, 15),
-          b = int(c, 1, 9);
-        return inverseBuilt(A(M(a, "x"), b), b, X_INTERVALS);
+        const a = c.pick([-5, -4, -3, -2, -1, 1, 2, 3, 4, 5]),
+          b = int(c, 1, 5),
+          point = c.pick([-1, 0, 1, 2] as const);
+        return inverseBuilt(A(M(a, "x"), b), point, X_INTERVALS);
       },
     },
     {
       key: "inverse.basic.cubic",
       role: "basic",
-      build: (c) => inverseBuilt(A(P("x", 3), M(int(c, 2, 15), "x")), int(c, 1, 9), X_INTERVALS),
+      build: (c) => {
+        const a = int(c, 1, 5),
+          b = int(c, 1, 5),
+          point = c.pick([-1, 0, 1, 2] as const);
+        return inverseBuilt(A(P("x", 3), M(a, "x"), b), point, X_INTERVALS);
+      },
     },
     {
       key: "inverse.mix.linear_exponential",
       role: "mix",
       requires: ["exp"],
-      build: (c) => inverseBuilt(A(M(int(c, 2, 15), "x"), F("Exp", "x")), 0, X_INTERVALS),
+      build: (c) => {
+        const a = int(c, 1, 9),
+          b = int(c, 1, 9);
+        return inverseBuilt(A(M(a, "x"), M(b, F("Exp", "x"))), 0, X_INTERVALS);
+      },
     },
     {
       key: "inverse.mix.cubic_sine",
       role: "mix",
       requires: ["sin"],
       build: (c) => {
-        const a = int(c, 5, 15),
+        const a = int(c, 2, 9),
           b = int(c, 1, a - 1);
         return inverseBuilt(A(P("x", 3), M(a, "x"), M(b, F("Sin", "x"))), 0, X_INTERVALS);
       },
@@ -865,13 +924,17 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
       key: "higher.basic.second_polynomial",
       role: "basic",
       meta: { derivativeOrder: 2 },
-      build: (c) => higherBuilt(A(P("x", int(c, 3, 9)), M(int(c, 2, 15), P("x", 2))), 2, X_INTERVALS),
+      build: (c) => higherBuilt(A(P("x", int(c, 3, 6)), M(int(c, 1, 5), P("x", 2))), 2, X_INTERVALS),
     },
     {
       key: "higher.basic.third_power",
       role: "basic",
       meta: { derivativeOrder: 3 },
-      build: (c) => higherBuilt(M(int(c, 2, 15), P("x", int(c, 4, 12))), 3, X_INTERVALS),
+      build: (c) => {
+        const n = int(c, 3, 6),
+          a = int(c, 1, Math.min(5, Math.floor(200 / (n * (n - 1) * (n - 2)))));
+        return higherBuilt(M(a, P("x", n)), 3, X_INTERVALS);
+      },
     },
     {
       key: "higher.mix.third_chain",
@@ -879,7 +942,11 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
       requires: ["chain"],
       pools: { h: SMOOTH_POOL },
       meta: { derivativeOrder: 3 },
-      build: (c) => higherBuilt(M(int(c, 2, 15), F(SKILL_FN[c.pool("h")], M(int(c, 2, 5), "x"))), 3, X_INTERVALS),
+      build: (c) => {
+        const b = int(c, 1, 5),
+          a = int(c, 1, Math.min(9, Math.floor(200 / b ** 3)));
+        return higherBuilt(M(a, F(SKILL_FN[c.pool("h")], M(b, "x"))), 3, X_INTERVALS);
+      },
     },
     {
       key: "higher.mix.second_product",
@@ -887,7 +954,7 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
       requires: ["product"],
       pools: { h: SMOOTH_POOL },
       meta: { derivativeOrder: 2 },
-      build: (c) => higherBuilt(M(P("x", int(c, 2, 5)), pooled(c, "h")), 2, SAFE_TRIG_INTERVALS),
+      build: (c) => higherBuilt(M(P("x", int(c, 2, 6)), pooled(c, "h")), 2, SAFE_TRIG_INTERVALS),
     },
   ],
   parametric: [
@@ -896,14 +963,14 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
       role: "basic",
       requires: ["quotient"],
       meta: { derivativeOrder: 1 },
-      build: (c) => parametricBuilt(A(M(int(c, 2, 15), "t"), int(c, 1, 9)), P("t", int(c, 2, 8)), 1, T_INTERVALS),
+      build: (c) => parametricBuilt(A(M(int(c, 1, 5), "t"), int(c, 1, 5)), P("t", int(c, 2, 6)), 1, T_INTERVALS),
     },
     {
       key: "parametric.basic.power_second",
       role: "basic",
       requires: ["quotient"],
       meta: { derivativeOrder: 2 },
-      build: (c) => parametricBuilt(M(int(c, 2, 15), P("t", 2)), P("t", int(c, 3, 8)), 2, T_INTERVALS),
+      build: (c) => parametricBuilt(M(int(c, 1, 4), P("t", 2)), P("t", int(c, 3, 6)), 2, T_INTERVALS),
     },
     {
       key: "parametric.mix.exponential_product",
@@ -920,8 +987,8 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
       pools: { h: SMOOTH_POOL },
       meta: { derivativeOrder: 1 },
       build: (c) => parametricBuilt(
-        A(M(int(c, 2, 15), "t"), int(c, 1, 9)),
-        F(SKILL_FN[c.pool("h")], M(int(c, 2, 5), "t")),
+        A(M(int(c, 1, 9), "t"), int(c, 1, 9)),
+        F(SKILL_FN[c.pool("h")], M(int(c, 1, 9), "t")),
         1,
         T_INTERVALS,
       ),
@@ -932,13 +999,13 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
       key: "vector.basic.power_function",
       role: "basic",
       pools: { h: SMOOTH_POOL },
-      build: (c) => vectorBuilt([P("t", int(c, 2, 8)), M(int(c, 2, 15), pooled(c, "h", "t"))], T_INTERVALS),
+      build: (c) => vectorBuilt([P("t", int(c, 2, 6)), M(int(c, 1, 5), pooled(c, "h", "t"))], T_INTERVALS),
     },
     {
       key: "vector.basic.polynomial_exponential",
       role: "basic",
       build: (c) => vectorBuilt([
-        A(M(int(c, 2, 15), P("t", int(c, 2, 8))), int(c, 1, 9)),
+        A(M(int(c, 1, 5), P("t", int(c, 2, 6))), int(c, 1, 5)),
         F("Exp", "t"),
       ], T_INTERVALS),
     },
@@ -948,7 +1015,7 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
       requires: ["product", "chain"],
       pools: { h: SMOOTH_POOL },
       build: (c) => vectorBuilt([
-        M(A(P("t", 2), int(c, 2, 15)), F("Exp", "t")),
+        M(A(P("t", 2), int(c, 1, 9)), F("Exp", "t")),
         F(SKILL_FN[c.pool("h")], P("t", 2)),
       ], T_INTERVALS),
     },
@@ -958,7 +1025,7 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
       requires: ["log", "chain", "product"],
       pools: { h: SMOOTH_POOL },
       build: (c) => vectorBuilt([
-        F("Ln", A(P("t", 2), int(c, 2, 15))),
+        F("Ln", A(P("t", 2), int(c, 1, 9))),
         M("t", pooled(c, "h", "t")),
       ], T_INTERVALS),
     },
@@ -968,25 +1035,25 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
       key: "polar.basic.sine_radius",
       role: "basic",
       requires: polarRequires,
-      build: (c) => polarBuilt(A(int(c, 2, 10), M(int(c, 11, 20), F("Sin", "theta"))), POLAR_INTERVALS),
+      build: (c) => polarBuilt(A(int(c, 1, 9), M(int(c, 1, 9), F("Sin", "theta"))), POLAR_INTERVALS),
     },
     {
       key: "polar.basic.cosine_radius",
       role: "basic",
       requires: polarRequires,
-      build: (c) => polarBuilt(A(int(c, 2, 15), M(int(c, 2, 15), F("Cos", "theta"))), POLAR_INTERVALS),
+      build: (c) => polarBuilt(A(int(c, 1, 9), M(int(c, 1, 9), F("Cos", "theta"))), POLAR_INTERVALS),
     },
     {
       key: "polar.mix.sine_frequency",
       role: "mix",
       requires: [...polarRequires, "chain"],
-      build: (c) => polarBuilt(A(int(c, 2, 10), F("Sin", M(int(c, 2, 3), "theta"))), POLAR_INTERVALS),
+      build: (c) => polarBuilt(A(int(c, 1, 9), F("Sin", M(int(c, 2, 3), "theta"))), POLAR_INTERVALS),
     },
     {
       key: "polar.mix.cosine_frequency",
       role: "mix",
       requires: [...polarRequires, "chain"],
-      build: (c) => polarBuilt(A(int(c, 10, 20), M(int(c, 2, 15), F("Cos", M(int(c, 2, 3), "theta")))), POLAR_INTERVALS),
+      build: (c) => polarBuilt(A(int(c, 1, 9), M(int(c, 1, 9), F("Cos", M(int(c, 2, 3), "theta")))), POLAR_INTERVALS),
     },
   ],
 };
@@ -997,19 +1064,25 @@ for (const id of ["sin", "cos", "tan", "cot", "sec", "csc"] as const) {
     {
       key: `${id}.basic.scaled`,
       role: "basic",
-      build: (c) => ({ e: M(int(c, 2, 15), F(op, "x")), intervals: trigIntervals(id) }),
+      build: (c) => ({
+        e: M(c.pick([-5, -4, -3, -2, -1, 1, 2, 3, 4, 5]), F(op, "x")),
+        intervals: trigIntervals(id),
+      }),
     },
     {
       key: `${id}.basic.divided`,
       role: "basic",
-      build: (c) => ({ e: Q(F(op, "x"), int(c, 2, 15)), intervals: trigIntervals(id) }),
+      build: (c) => ({
+        e: Q(M(c.pick([-5, -4, -3, -2, -1, 1, 2, 3, 4, 5]), F(op, "x")), int(c, 1, 5)),
+        intervals: trigIntervals(id),
+      }),
     },
     {
       key: `${id}.mix.power_sum`,
       role: "mix",
       requires: ["sum", "power"],
       build: (c) => ({
-        e: A(M(int(c, 2, 15), F(op, "x")), M(int(c, 2, 15), P("x", int(c, 2, 8)))),
+        e: A(M(int(c, 1, 9), F(op, "x")), M(int(c, 1, 9), P("x", int(c, 2, 6)))),
         intervals: SAFE_TRIG_INTERVALS,
       }),
     },
@@ -1019,7 +1092,7 @@ for (const id of ["sin", "cos", "tan", "cot", "sec", "csc"] as const) {
       requires: ["sum"],
       pools: { h: SMOOTH_POOL.filter((fn) => fn !== id) },
       build: (c) => ({
-        e: A(M(int(c, 2, 15), F(op, "x")), M(int(c, 2, 15), pooled(c, "h"))),
+        e: A(M(int(c, 1, 9), F(op, "x")), M(int(c, 1, 9), pooled(c, "h"))),
         intervals: SAFE_TRIG_INTERVALS,
       }),
     },
@@ -1031,19 +1104,25 @@ for (const id of ["asin", "acos", "atan"] as const) {
     {
       key: `${id}.basic.scaled`,
       role: "basic",
-      build: (c) => ({ e: M(int(c, 2, 15), F(op, "x")), intervals: SAFE_TRIG_INTERVALS }),
+      build: (c) => ({
+        e: M(c.pick([-5, -4, -3, -2, -1, 1, 2, 3, 4, 5]), F(op, "x")),
+        intervals: SAFE_TRIG_INTERVALS,
+      }),
     },
     {
       key: `${id}.basic.divided_value`,
       role: "basic",
-      build: (c) => ({ e: Q(F(op, "x"), int(c, 2, 15)), intervals: SAFE_TRIG_INTERVALS }),
+      build: (c) => ({
+        e: Q(M(c.pick([-5, -4, -3, -2, -1, 1, 2, 3, 4, 5]), F(op, "x")), int(c, 1, 5)),
+        intervals: SAFE_TRIG_INTERVALS,
+      }),
     },
     {
       key: `${id}.mix.power_sum`,
       role: "mix",
       requires: ["sum", "power"],
       build: (c) => ({
-        e: A(M(int(c, 2, 15), F(op, "x")), M(int(c, 2, 15), P("x", int(c, 2, 8)))),
+        e: A(M(int(c, 1, 9), F(op, "x")), M(int(c, 1, 9), P("x", int(c, 2, 6)))),
         intervals: SAFE_TRIG_INTERVALS,
       }),
     },
@@ -1052,7 +1131,7 @@ for (const id of ["asin", "acos", "atan"] as const) {
       role: "mix",
       requires: ["sum", "root"],
       build: (c) => ({
-        e: A(F(op, "x"), M(int(c, 2, 15), F("Sqrt", "x"))),
+        e: A(M(int(c, 1, 9), F(op, "x")), M(int(c, 1, 9), F("Sqrt", "x"))),
         intervals: SAFE_TRIG_INTERVALS,
       }),
     },

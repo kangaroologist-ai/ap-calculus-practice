@@ -57,8 +57,8 @@ function instantiate(
       throw Error(`No open ${opts.role ?? ""} template for ${id}.`);
     v = candidates[Math.floor(r() * candidates.length)];
   }
-  const a = 2 + Math.floor(r() * 8),
-    b = 1 + Math.floor(r() * 9),
+  const a = 1 + Math.floor(r() * 5),
+    b = 1 + Math.floor(r() * 5),
     n = 2 + Math.floor(r() * 4);
   const template = list[v];
   const ok = typeof opts === "number" ? undefined : opts.ok;
