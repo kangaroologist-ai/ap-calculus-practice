@@ -362,14 +362,17 @@ The owner tags below follow this rule: “dsf → Codex → Claude”.
 - [x] **T7** (S7) `src/catalog.ts` (`CURRICULUM_VERSION`), `src/compact-progress.ts` (profile 4), `src/migrate.ts`, `src/transfer.ts`, `scripts/capture-fixtures.ts`, new frozen fixture, `tests/migrate.test.ts`, `tests/transfer.test.ts`, `tests/compact-progress.test.ts`, `tests/legacy-fixtures.test.ts`, `tests/generator-golden.test.ts`: curriculum `ap-derivatives-3` with the mastery fields and the new skill. *Verify:* all migration, transfer and legacy tests; QR size audit. *Owner:* dsf → Codex → Claude (L7). Done 2026-10-21: after dsf's questions, also `tests/progress.test.ts` (rounding) and `tests/app.spec.ts:396` (format 3); the v2 invariant “streak 2 implies passed” removed on purpose. Codex approved round 1 (corrupt v2 input now validated before conversion). Claude check: unit 443/443, `test:math` 0 failures, existing fixtures unchanged, new frozen fixtures `dsp2-profile3.txt`, `local-state-v2.json`. QR: frozen 26-skill fixture 1,200 → 1,181 chars, v28-M → v27-M; full 28-skill snapshot 1,862 chars, one QR v31-L. Sessions: dsf=268cfd6e-d8c0-4db8-814f-75649cf10e8c codex=01a15ede-ee00-7480-b38c-e33f7ebd508a .
 - [x] **T8** (S5) `src/storage.ts` or `src/main.ts`: request persistent storage once. *Verify:* unit test with a stub. *Owner:* dsf → Codex → Claude (L7). Done 2026-10-21: Codex approved round 0; unit 448/448. Sessions: dsf=aeeca4c0-2094-4a36-8174-d8e8db9d7066 codex=01a15eeb-96f4-75a2-b7d7-266f291c19aa .
 
+- [ ] **T11** (S4, S6, S7, S8) `tests/*.spec.ts`: adapt the browser tests to the intended behaviour changes (first e2e run 2026-10-21: 181 passed, 23 failed in 3 browsers, all from new path / one-answer pass / repair rule / level 6 off) and add the abstract-keyboard browser test left open in T6. *Verify:* `npx playwright test` all pass. *Owner:* dsf → Codex → Claude (L7).
+- [x] **T12** (P7) `scripts/skill-examples.ts`: notes for `combine`, `abstract`, re-scoped `mixed`/`nested`; skill count from the catalog. Regenerated: 28 skills, 112/112 verified. *Owner:* Claude (content notes). Done 2026-10-21, commit 8f8aa7c.
+
 Project obligations:
-- [ ] **P1** README and `help.html`: numbers, mastery rules, new skill, keyboard keys, storage tip. *Owner:* Claude (docs are not delegated).
-- [ ] **P2** `npm version 1.3.0 --no-git-tag-version`; What's new entry in `src/whats-new.ts`. *Owner:* Claude.
-- [ ] **P3** `docs/design/DESIGN.md` §6: the abstract-question keys. *Owner:* Claude.
+- [x] **P1** README and `help.html`: numbers, mastery rules, new skill, keyboard keys, storage tip. *Owner:* Claude (docs are not delegated).
+- [x] **P2** `npm version 1.3.0 --no-git-tag-version`; What's new entry in `src/whats-new.ts`. *Owner:* Claude.
+- [x] **P3** `docs/design/DESIGN.md` §6: the abstract-question keys. *Owner:* Claude.
 - [ ] **P4** Full design review: `npm run design:capture`, then the `design-reviewer` subagent with `reviews/context.md`; P0 and P1 cleared before release. *Owner:* Sonnet (design-reviewer), graded by Claude.
 - [ ] **P5** Build, test, e2e, push, deploy to Cloudflare Pages, check live `/` and `/help` (deploy after the owner's approval). *Owner:* Claude.
 - [ ] **P6** iPhone check by the owner: keyboard keys on an abstract question. *Owner:* owner.
-- [ ] **P7** Regenerate `skill-examples` (docs and public page); `npm run test:math`. *Owner:* Claude.
+- [x] **P7** Regenerate `skill-examples` (docs and public page); `npm run test:math`. *Owner:* Claude.
 - [ ] **P8** Mark `docs/reviews/2026-09-27-coefficients/plan.md` as replaced by this task. *Owner:* Claude.
 
 ## Acceptance
