@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { SKILLS } from '../src/catalog';
+import { parseAnswer } from '../src/grading';
 import { altFor, KEYBOARD_COLUMNS, layoutsFor, MATH_KEYS } from '../src/math-keyboard';
 import { generateQuestion } from '../src/questions';
 import { TEMPLATES } from '../src/templates';
@@ -305,6 +306,63 @@ describe.each(LAYOUT_CASES)('math keyboard for $vars', ({ vars, variable, latex:
   });
 });
 
+const ABSTRACT_FUNCTION_KEYS = [
+  { row: 1, column: 3, id: 'g', name: 'g', order: 0, latex: 'g(\\placeholder{})', command: 'g\\left(#?\\right)', spoken: 'g of' },
+  { row: 2, column: 1, id: 'f', name: 'f', order: 0, latex: 'f(\\placeholder{})', command: 'f\\left(#?\\right)', spoken: 'f of' },
+  { row: 2, column: 2, id: 'fprime', name: 'f', order: 1, latex: "f'(\\placeholder{})", command: "f'\\left(#?\\right)", spoken: 'f prime of' },
+  { row: 2, column: 3, id: 'gprime', name: 'g', order: 1, latex: "g'(\\placeholder{})", command: "g'\\left(#?\\right)", spoken: 'g prime of' },
+] as const;
+
+function insertedLatex(id: string): string {
+  const command = MATH_KEYS.find(key => key.id === id)?.command;
+  if (!Array.isArray(command) || command[0] !== 'insert') throw new Error(`${id} has no insert command.`);
+  return String(command[1]);
+}
+
+describe('math keyboard for abstract-function questions', () => {
+  const vars = ['x'];
+  const [layout] = layoutsFor([...vars], ['f', 'g']);
+  const [plain] = layoutsFor([...vars]);
+
+  it('puts f, f prime, g and g prime in the four function positions', () => {
+    ABSTRACT_FUNCTION_KEYS.forEach(({ row, column, id }) => {
+      const keycap = keyAt(layout, row, column);
+      expect(keyId(keycap), `row ${row}, column ${column}`).toBe(id);
+      expect(keycap.width).toBe(1);
+    });
+  });
+
+  it('gives every function key a LaTeX face, an inserting command and a spoken name', () => {
+    ABSTRACT_FUNCTION_KEYS.forEach(({ row, column, id, latex, command, spoken }) => {
+      const keycap = keyAt(layout, row, column);
+      expect(keycap.latex, `${id} face`).toBe(latex);
+      expect(keycap.label, `${id} should render through LaTeX`).toBeUndefined();
+      expect(keycap.command, `${id} command`).toEqual(expectedInsert(command));
+      expect(keycap.tooltip, `${id} spoken name`).toBe(spoken);
+      expect(shiftObject(keycap), `${id} should not have an alternate`).toBeUndefined();
+      expect(keycap.class?.split(/\s+/)).not.toContain('practice-has-alt');
+    });
+  });
+
+  it('leaves every other key and position equal to the plain layout', () => {
+    const replaced = new Set(ABSTRACT_FUNCTION_KEYS.map(({ row, column }) => `${row},${column}`));
+    for (let row = 1; row <= 4; row += 1) {
+      for (let column = 1; column <= KEYBOARD_COLUMNS; column += 1) {
+        if (replaced.has(`${row},${column}`)) continue;
+        expect(keyAt(layout, row, column), `row ${row}, column ${column}`)
+          .toEqual(keyAt(plain, row, column));
+      }
+    }
+  });
+
+  it('inserts LaTeX that parses as Fn nodes with the typed argument', () => {
+    ABSTRACT_FUNCTION_KEYS.forEach(({ id, name, order }) => {
+      expect(parseAnswer(insertedLatex(id).replace('#?', 'x^{3}'), vars, ['f', 'g']))
+        .toEqual(['Fn', name, order, ['Power', 'x', 3]]);
+    });
+  });
+});
+
 const ANSWER_HEAD_TO_KEY_ID: Record<string, string> = {
   Add: 'plus',
   Negate: 'minus',
@@ -324,12 +382,21 @@ const ANSWER_HEAD_TO_KEY_ID: Record<string, string> = {
   Rational: 'fraction',
 };
 
+function fnKeyId(expr: Expr): string | undefined {
+  if (!Array.isArray(expr) || expr[0] !== 'Fn') return undefined;
+  const [, name, order] = expr;
+  if ((name !== 'f' && name !== 'g') || (order !== 0 && order !== 1)) return undefined;
+  return `${name}${order === 1 ? 'prime' : ''}`;
+}
+
 function collectAnswerHeads(expr: Expr, visit: (head: string, keyId: string | undefined) => void): void {
   if (!Array.isArray(expr)) return;
   const head = expr[0];
-  const key = head === 'Power' && expr[1] === 'ExponentialE'
-    ? 'exponential'
-    : ANSWER_HEAD_TO_KEY_ID[head];
+  const key = head === 'Fn'
+    ? fnKeyId(expr)
+    : head === 'Power' && expr[1] === 'ExponentialE'
+      ? 'exponential'
+      : ANSWER_HEAD_TO_KEY_ID[head];
   visit(head, key);
   expr.slice(1).forEach(part => collectAnswerHeads(part, visit));
 }
@@ -346,7 +413,7 @@ it('can enter every answer operator head using a primary or alternate key', () =
           ok: () => true,
         });
         const vars = question.domain.curve ? ['x', 'y'] : [question.domain.variable];
-        const [layout] = layoutsFor(vars);
+        const [layout] = layoutsFor(vars, question.domain.functions ?? []);
         const availableKeyIds = new Set(layout.rows.flatMap(row => row.flatMap(keycap => {
           const id = keyId(keycap);
           if (!id || !MATH_KEYS.some(key => key.id === id)) return [];

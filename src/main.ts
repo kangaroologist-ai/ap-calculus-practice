@@ -460,7 +460,10 @@ function mountInputs() {
     ? ["x", "y"]
     : [c.question.domain.variable];
   window.mathVirtualKeyboard.editToolbar = "none";
-  window.mathVirtualKeyboard.layouts = layoutsFor(vars) as import("mathlive").VirtualKeyboardLayout[];
+  window.mathVirtualKeyboard.layouts = layoutsFor(
+    vars,
+    c.question.domain.functions ?? [],
+  ) as import("mathlive").VirtualKeyboardLayout[];
   renderAnswerVerdict();
   on("keyboard", () => {
     if (window.mathVirtualKeyboard.visible) window.mathVirtualKeyboard.hide();

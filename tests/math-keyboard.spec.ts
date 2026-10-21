@@ -153,8 +153,11 @@ test('custom math keys match physical input in every editing context', async ({ 
   test.setTimeout(120_000);
   await installMathLive(page);
   const initials = ['', 'x', 'x+1', '(x+1)', '\\sin(x)'];
+  // f, fprime, g and gprime insert a template with a selected placeholder, which typing cannot reproduce.
+  const templateKeyIds = new Set(['f', 'fprime', 'g', 'gprime']);
 
   for (const key of MATH_KEYS) {
+    if (templateKeyIds.has(key.id)) continue;
     for (const initial of initials) {
       for (const selectAll of [false, true]) {
         if (selectAll && !initial) continue;

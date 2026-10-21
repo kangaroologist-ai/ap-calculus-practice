@@ -24,6 +24,10 @@ export const MATH_KEYS = [
     latex: `\\${name}`,
     command: insert(`\\${name}`, 'after'),
   })),
+  { id: 'f', physical: 'f', latex: 'f(\\placeholder{})', command: insert('f\\left(#?\\right)') },
+  { id: 'fprime', physical: "f'", latex: "f'(\\placeholder{})", command: insert("f'\\left(#?\\right)") },
+  { id: 'g', physical: 'g', latex: 'g(\\placeholder{})', command: insert('g\\left(#?\\right)') },
+  { id: 'gprime', physical: "g'", latex: "g'(\\placeholder{})", command: insert("g'\\left(#?\\right)") },
   { id: 'log', physical: 'log', latex: '\\log_{\\placeholder{}}', command: insert('\\log_{#?}') },
   { id: 'theta', physical: 'theta', latex: '\\theta', command: insert('\\theta', 'after') },
   { id: 'pi', physical: 'pi', latex: '\\pi', command: insert('\\pi', 'after') },
@@ -150,7 +154,8 @@ function key(id: string, vars: string[], width = 1): KeyboardKeycap {
       open: 'left parenthesis', close: 'right parenthesis', fraction: 'fraction',
       power: 'power', sqrt: 'square root', exponential: 'e to the power',
       sin: 'sine', cos: 'cosine', tan: 'tangent', sec: 'secant', csc: 'cosecant',
-      cot: 'cotangent', ln: 'natural log', log: 'log base', theta: 'theta', pi: 'pi',
+      cot: 'cotangent', f: 'f of', fprime: 'f prime of', g: 'g of', gprime: 'g prime of',
+      ln: 'natural log', log: 'log base', theta: 'theta', pi: 'pi',
     } as Record<string, string>)[id] ?? id,
   };
 
@@ -180,13 +185,14 @@ const shiftKey = (): KeyboardKeycap => ({
   width: 1,
 });
 
-export function layoutsFor(vars: string[]): KeyboardLayout[] {
+export function layoutsFor(vars: string[], functions: string[] = []): KeyboardLayout[] {
   const variable = questionVariable(vars);
+  const abstract = functions.length > 0;
   return [{
     displayEditToolbar: true,
     rows: [
-      [key('sin', vars), key('cos', vars), key('tan', vars), key('7', vars), key('8', vars), key('9', vars), key('fraction', vars), key(variable, vars), shiftKey()],
-      [key('sec', vars), key('csc', vars), key('cot', vars), key('4', vars), key('5', vars), key('6', vars), key('multiply', vars), key('power', vars), key('sqrt', vars)],
+      [key('sin', vars), key('cos', vars), key(abstract ? 'g' : 'tan', vars), key('7', vars), key('8', vars), key('9', vars), key('fraction', vars), key(variable, vars), shiftKey()],
+      [key(abstract ? 'f' : 'sec', vars), key(abstract ? 'fprime' : 'csc', vars), key(abstract ? 'gprime' : 'cot', vars), key('4', vars), key('5', vars), key('6', vars), key('multiply', vars), key('power', vars), key('sqrt', vars)],
       [key('open', vars), key('close', vars), key('exponential', vars), key('1', vars), key('2', vars), key('3', vars), key('minus', vars), action('backspace', 'delete', 2)],
       [action('left', 'move left'), action('right', 'move right'), key('ln', vars), key('0', vars, 2), key('decimal', vars), key('plus', vars), enter()],
     ],
