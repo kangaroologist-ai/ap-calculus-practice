@@ -36,6 +36,26 @@ describe('natural display of products and negative terms', () => {
     expect(latex(mul('x', fn('Exp', 'x')))).toBe('x\\cdot e^{x}');
   });
 
+  it('writes a negative leading coefficient as a leading minus sign', () => {
+    expect(latex(mul(-4, fn('Ln', 'x')))).toBe('-4\\ln\\left(x\\right)');
+    expect(latex(mul(-4, 'x'))).toBe('-4x');
+    expect(latex(mul(-1, 'x'))).toBe('-x');
+    expect(latex(mul(-2, pow(5, 'x')))).toBe('-2\\cdot 5^{x}');
+  });
+
+  it('uses the leading minus sign inside sums and fractions', () => {
+    expect(latex(add(mul(3, 'x'), mul(-4, fn('Ln', 'x'))))).toBe(
+      '3x-4\\ln\\left(x\\right)',
+    );
+    expect(latex(div(mul(-4, fn('Ln', 'x')), fn('Ln', 2)))).toBe(
+      '\\frac{-4\\ln\\left(x\\right)}{\\ln\\left(2\\right)}',
+    );
+  });
+
+  it('keeps parentheses around a negative factor that is not first', () => {
+    expect(latex(mul('x', -4))).toBe('x\\cdot \\left(-4\\right)');
+  });
+
   it('writes a negated term as a subtraction without parentheses', () => {
     expect(latex(add(fn('Ln', 'x'), neg(mul(15, fn('Exp', 'x')))))).toBe(
       '\\ln\\left(x\\right)-15e^{x}',

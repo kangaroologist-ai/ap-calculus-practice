@@ -109,10 +109,17 @@ export function latex(e: Expr): string {
     case "Add":
       return a.map(latex).join("+").replace(/\+\-/g, "-");
     case "Multiply": {
-      const parts = a.map(factor);
-      return parts
+      // A negative leading coefficient becomes a leading minus sign; an
+      // absolute value of 1 disappears from the product. Later negative
+      // factors keep their parentheses.
+      const lead = a[0];
+      const negativeLead = typeof lead === "number" && lead < 0;
+      const factors: Expr[] = negativeLead ? [-lead, ...a.slice(1)] : a;
+      if (negativeLead && factors[0] === 1) factors.shift();
+      const body = factors
+        .map(factor)
         .map((text, i) => {
-          const previous = a[i - 1];
+          const previous = factors[i - 1];
           const implicit =
             i > 0 &&
             typeof previous === "number" &&
@@ -121,6 +128,7 @@ export function latex(e: Expr): string {
           return i === 0 || implicit ? text : `\\cdot ${text}`;
         })
         .join("");
+      return negativeLead ? `-${body}` : body;
     }
     case "Negate":
       return (Array.isArray(u) && ["Add", "Negate"].includes(u[0])) ||
