@@ -82,20 +82,43 @@ export function latex(e: Expr): string {
     u = a[0],
     v = a[1];
   const wrap = (x: Expr) => `\\left(${latex(x)}\\right)`;
+  const factor = (x: Expr) =>
+    (Array.isArray(x) && ["Add", "Negate"].includes(x[0])) ||
+    (typeof x === "number" && x < 0)
+      ? wrap(x)
+      : latex(x);
+  // Implicit multiplication is safe before a letter, a power, or an
+  // identifier-like command, but not before a fraction (2\frac{1}{3} is the
+  // mixed number 7/3) or another digit.
+  const implicitFactor = (text: string) => {
+    const command = /^\\([A-Za-z]+)/.exec(text)?.[1];
+    return (
+      /^[A-Za-z]/.test(text) ||
+      (command !== undefined && !["frac", "dfrac", "tfrac"].includes(command))
+    );
+  };
   switch (op) {
     case "Add":
       return a.map(latex).join("+").replace(/\+\-/g, "-");
-    case "Multiply":
-      return a
-        .map((x) =>
-          (Array.isArray(x) && ["Add", "Negate"].includes(x[0])) ||
-          (typeof x === "number" && x < 0)
-            ? wrap(x)
-            : latex(x),
-        )
-        .join("\\cdot ");
+    case "Multiply": {
+      const parts = a.map(factor);
+      return parts
+        .map((text, i) => {
+          const previous = a[i - 1];
+          const implicit =
+            i > 0 &&
+            typeof previous === "number" &&
+            previous >= 0 &&
+            implicitFactor(text);
+          return i === 0 || implicit ? text : `\\cdot ${text}`;
+        })
+        .join("");
+    }
     case "Negate":
-      return `-${wrap(u)}`;
+      return (Array.isArray(u) && ["Add", "Negate"].includes(u[0])) ||
+        (typeof u === "number" && u < 0)
+        ? `-${wrap(u)}`
+        : `-${latex(u)}`;
     case "Divide":
       return `\\frac{${latex(u)}}{${latex(v)}}`;
     case "Power":
