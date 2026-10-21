@@ -60,7 +60,7 @@ export interface SkillState {
   lastTemplate?: string;
 }
 export interface Progress {
-  formatVersion: 2;
+  formatVersion: 3;
   curriculumVersion: string;
   schedulerPackageVersion: string;
   fsrsAlgorithmVersion: string;
@@ -115,7 +115,7 @@ export const reviveCard = (c: StoredCard): Card => ({
 });
 export function freshProgress(config: Config, now = Date.now()): Progress {
   return {
-    formatVersion: 2,
+    formatVersion: 3,
     curriculumVersion: CURRICULUM_VERSION,
     schedulerPackageVersion: SCHEDULER_VERSION,
     fsrsAlgorithmVersion: ALGORITHM_VERSION,
@@ -172,12 +172,15 @@ export function masteryOf(p: Progress, id: string): number {
   const t = p.skills[id];
   if (!t) return startMastery(skillById(id).level);
   if (t.mastery === undefined)
-    t.mastery = seedMastery({
-      level: skillById(id).level,
-      ready: lineReady(t.basic) && lineReady(t.mix),
-      passed: !!t.basic.passed,
-      repair: !!t.basic.repair || !!t.mix.repair,
-    });
+    t.mastery =
+      Math.round(
+        seedMastery({
+          level: skillById(id).level,
+          ready: lineReady(t.basic) && lineReady(t.mix),
+          passed: !!t.basic.passed,
+          repair: !!t.basic.repair || !!t.mix.repair,
+        }) * 1000,
+      ) / 1000;
   if (t.basic.passed) unifyRepair(t);
   else {
     // The seed has read the old flag; before the first pass a low estimate is
@@ -274,7 +277,8 @@ export function recordOutcome(
       skills.indexOf(q.primarySkill),
     );
   states.forEach((t, i) => {
-    t.mastery = next[i];
+    // Three decimals fit the compact profile's per-mille integer exactly.
+    t.mastery = Math.round(next[i] * 1000) / 1000;
     if (skills[i] === q.primarySkill)
       t.observations = (t.observations ?? 0) + 1;
     if (next[i] >= PASS_THRESHOLD) t.basic.passed = true;

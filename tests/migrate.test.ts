@@ -7,7 +7,7 @@ import {
   validateCurrent,
 } from '../src/migrate';
 import { validateLocalState } from '../src/storage';
-import { decodeProgress } from '../src/transfer';
+import { decodeProgress, validateSnapshot } from '../src/transfer';
 import { questionFingerprint } from '../src/question-identity';
 import type { AppState } from '../src/progress';
 
@@ -27,12 +27,23 @@ function legacyWithPower(recent: LegacyProgress['skills']['power']['recent'], ne
   return input;
 }
 
-function expectCurrentV2(value: { formatVersion: number }) {
+function expectCurrent(value: { formatVersion: number }) {
   expect(value.formatVersion).toBe(LATEST_FORMAT);
 }
 
+function v2ProgressWithoutPasses(unlockedLevel = 3): LegacyProgress {
+  const state = JSON.parse(fixture('local-state-v2.json')) as AppState;
+  const progress = structuredClone(state.progress) as unknown as LegacyProgress;
+  progress.unlockedLevel = unlockedLevel;
+  for (const skill of Object.values(progress.skills) as LegacyProgress[]) {
+    skill.basic = { streak: 0, passed: false, repair: false };
+    skill.mix = { streak: 0, passed: false, repair: false };
+  }
+  return progress;
+}
+
 describe('versioned progress migration', () => {
-  it('migrates all frozen v1 progress inputs to format 2', () => {
+  it('migrates all frozen v1 progress inputs to format 3', () => {
     const compact = migrateProgress(rawSnapshot).progress;
     const dsp1 = decodeProgress(fixture('dsp1.txt'));
     const profile1 = decodeProgress(fixture('dsp2-profile1.txt'));
@@ -44,10 +55,10 @@ describe('versioned progress migration', () => {
       JSON.parse(fixture('local-state-v1-q2.json')) as AppState,
     );
 
-    [compact, dsp1, profile1, profile2, local.state.progress, localQ2.state.progress].forEach(expectCurrentV2);
+    [compact, dsp1, profile1, profile2, local.state.progress, localQ2.state.progress].forEach(expectCurrent);
     expect(dsp1).toEqual({ ...compact, exportedAt: rawSnapshot.exportedAt });
-    expect(profile1.formatVersion).toBe(2);
-    expect(profile2.formatVersion).toBe(2);
+    expect(profile1.formatVersion).toBe(LATEST_FORMAT);
+    expect(profile2.formatVersion).toBe(LATEST_FORMAT);
     expect(local.from).toBe(1);
     expect(localQ2.from).toBe(1);
     expect(local.state.session).toBeUndefined();
@@ -73,6 +84,8 @@ describe('versioned progress migration', () => {
     expect(migrated.mix).toEqual({ streak: 0, passed: false, repair: false });
     expect(migrated.card).toEqual(beforeCard);
     expect(migrated).not.toHaveProperty('recent');
+    expect(migrated.mastery).toBe(0.82);
+    expect(migrated.observations).toBe(0);
   });
 
   it('preserves basic access if a skill was Ready earlier in its evidence window', () => {
@@ -84,11 +97,12 @@ describe('versioned progress migration', () => {
     const migrated = migrateProgress(input).progress.skills.power;
 
     expect(migrated.basic).toEqual({
-      streak: 0,
+      streak: 2,
       lastQ: 'q2:00000013',
       passed: true,
       repair: false,
     });
+    expect(migrated.mastery).toBe(0.82);
   });
 
   it('keeps a below-unlock v1 skill passed while it remains in remediation', () => {
@@ -102,14 +116,15 @@ describe('versioned progress migration', () => {
     );
     const migrated = migrateProgress(input).progress;
 
-    expect(migrated.unlockedLevel).toBe(3);
+    expect(migrated.unlockedLevel).toBe(6);
     expect(migrated.skills.power.basic).toEqual({
-      streak: 0,
+      streak: 2,
       lastQ: 'q2:00000022',
       passed: true,
       repair: true,
     });
     expect(migrated.skills.power.mix).toEqual({ streak: 0, passed: false, repair: false });
+    expect(migrated.skills.power.mastery).toBe(0.82);
   });
 
   it('preserves every FSRS card field and monotonic progress counters', () => {
@@ -118,9 +133,56 @@ describe('versioned progress migration', () => {
     expect(migrated.sequence).toBe(rawSnapshot.sequence);
     expect(migrated.streak).toBe(rawSnapshot.streak);
     expect(migrated.practiceDays).toEqual(rawSnapshot.practiceDays);
-    expect(migrated.pendingDiagnostics).toEqual(rawSnapshot.pendingDiagnostics);
+    expect(migrated.pendingDiagnostics).toEqual([]);
     for (const id of Object.keys(rawSnapshot.skills))
       expect(migrated.skills[id].card).toEqual(rawSnapshot.skills[id].card);
+  });
+
+  it('seeds mastery and line flags from the frozen format-2 local state', () => {
+    const state = JSON.parse(fixture('local-state-v2.json')) as AppState;
+    const result = validateLocalState(state);
+    const progress = result.state.progress;
+
+    expect(result.from).toBe(2);
+    expect(result.migrated).toBe(true);
+    expect(progress.formatVersion).toBe(3);
+    expect(progress.curriculumVersion).toBe('ap-derivatives-3');
+    expect(progress.unlockedLevel).toBe(6);
+    expect(progress.pendingDiagnostics).toEqual([]);
+    expect(progress.skills.constant.mastery).toBe(0.82);
+    expect(progress.skills.power.mastery).toBe(0.92);
+    expect(progress.skills.power.mix).toMatchObject({ streak: 2, passed: true });
+    expect(progress.skills.sum.mastery).toBe(0.55);
+    expect(progress.skills.sum.basic.repair).toBe(true);
+    for (const skill of Object.values(progress.skills))
+      expect(skill.observations).toBe(0);
+  });
+
+  it.each([
+    ['out-of-range streak', (p: LegacyProgress) => { p.skills.power.basic.streak = 99; }],
+    ['non-boolean repair flag', (p: LegacyProgress) => { p.skills.power.basic.repair = 'false'; }],
+    ['non-boolean mixed pass flag', (p: LegacyProgress) => { p.skills.power.mix.passed = 'false'; }],
+    ['non-array diagnostics', (p: LegacyProgress) => { p.pendingDiagnostics = 'broken'; }],
+    ['zero unlock level', (p: LegacyProgress) => { p.unlockedLevel = 0; }],
+  ])('rejects corrupted v2 progress before conversion: %s', (_name, corrupt) => {
+    const state = JSON.parse(fixture('local-state-v2.json')) as AppState;
+    const progress = structuredClone(state.progress) as unknown as LegacyProgress;
+    corrupt(progress);
+
+    expect(() => migrateProgress(progress)).toThrow();
+    expect(() => validateSnapshot({ ...progress, exportedAt: Date.now() })).toThrow();
+  });
+
+  it.each([
+    ['chain', 4],
+    ['asin', 5],
+  ])('lifts the unlock to the new level of a passed %s skill', (id, level) => {
+    const input = v2ProgressWithoutPasses();
+    input.skills[id].basic = { streak: 2, passed: true, repair: false };
+    const migrated = migrateProgress(input).progress;
+
+    expect(migrated.unlockedLevel).toBeGreaterThanOrEqual(level);
+    expect(migrated.skills[id].mastery).toBe(0.82);
   });
 
   it('deduplicates colliding fingerprints by keeping each last occurrence in order', () => {
@@ -173,8 +235,9 @@ describe('versioned progress migration', () => {
   it.each([
     ['negative streak', (p: ReturnType<typeof migrateProgress>['progress']) => { p.skills.power.basic.streak = -1; }],
     ['streak above two', (p: ReturnType<typeof migrateProgress>['progress']) => { p.skills.power.basic.streak = 3; }],
-    ['two successes without passed', (p: ReturnType<typeof migrateProgress>['progress']) => { p.skills.power.basic.streak = 2; p.skills.power.basic.passed = false; p.skills.power.basic.repair = false; }],
     ['mixed passed without basic passed', (p: ReturnType<typeof migrateProgress>['progress']) => { p.skills.power.mix.passed = true; p.skills.power.basic.passed = false; }],
+    ['non-integer observations', (p: ReturnType<typeof migrateProgress>['progress']) => { p.skills.power.observations = 1.5; }],
+    ['mastery above one', (p: ReturnType<typeof migrateProgress>['progress']) => { p.skills.power.mastery = 1.5; }],
     ['non-q2 line fingerprint', (p: ReturnType<typeof migrateProgress>['progress']) => { p.skills.power.basic.lastQ = 'raw-signature'; }],
     ['v1 evidence field', (p: ReturnType<typeof migrateProgress>['progress']) => { (p.skills.power as unknown as Record<string, unknown>).recent = []; }],
     ['v1 remediation field', (p: ReturnType<typeof migrateProgress>['progress']) => { (p.skills.power as unknown as Record<string, unknown>).needsRemediation = false; }],

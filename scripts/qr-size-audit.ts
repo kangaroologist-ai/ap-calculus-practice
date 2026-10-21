@@ -145,8 +145,8 @@ function makeFullProgress(): PortableProgress {
     }
   }
   for (const skill of SKILLS) p.skills[skill.id].basic.passed = true;
-  if (Object.keys(p.skills).length !== 26 || Object.values(p.skills).some((s) => !s.basic || !s.mix))
-    throw new Error("Full audit fixture did not contain 26 pairs of learning lines.");
+  if (Object.keys(p.skills).length !== SKILLS.length || Object.values(p.skills).some((s) => !s.basic || !s.mix))
+    throw new Error("Full audit fixture did not contain one pair of learning lines per skill.");
   if (Object.keys(p.practiceDays ?? {}).length !== 31)
     throw new Error("Full audit fixture did not contain 31 practice days.");
   return makePortableProgress(p, anchor);

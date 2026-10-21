@@ -1,4 +1,5 @@
 import { SKILLS, CURRICULUM_VERSION, skillById } from "./catalog";
+import { seedMastery } from "./mastery";
 import { questionFingerprint } from "./question-identity";
 import {
   PARAMETERS,
@@ -11,7 +12,7 @@ import {
 const PROFILE1_PARAMETERS_JSON =
   '{"request_retention":0.9,"maximum_interval":180,"w":[0.212,1.2931,2.3065,8.2956,6.4133,0.8334,3.0194,0.001,1.8722,0.1666,0.796,1.4835,0.0614,0.2629,1.6483,0.6014,1.8729,0.5425,0.0912,0.0658,0.1542],"enable_fuzz":false,"enable_short_term":true,"learning_steps":["1m","10m"],"relearning_steps":["10m"]}';
 
-export const LATEST_FORMAT = 2;
+export const LATEST_FORMAT = 3;
 
 export class NewerProgressError extends Error {
   constructor(message: string) {
@@ -48,9 +49,18 @@ const KNOWN_IDENTITIES: Record<
     algorithm: ["v5.4.2 using FSRS-6.0"],
     parameters: [PROFILE1_PARAMETERS_JSON],
   },
+  3: {
+    curriculum: ["ap-derivatives-3"],
+    scheduler: ["5.4.2"],
+    algorithm: ["v5.4.2 using FSRS-6.0"],
+    parameters: [PROFILE1_PARAMETERS_JSON],
+  },
 };
 
-const STEPS: MigrationStep[] = [{ from: 1, to: 2, run: migrateV1toV2 }];
+const STEPS: MigrationStep[] = [
+  { from: 1, to: 2, run: migrateV1toV2 },
+  { from: 2, to: 3, run: migrateV2toV3 },
+];
 
 function unsupportedVersion() {
   throw Error(
@@ -193,6 +203,53 @@ function migrateV1toV2(p: MutableProgress): MutableProgress {
   return { ...p, formatVersion: 2, skills };
 }
 
+// v2 → v3 seeds the mastery estimate from the v2 lines and inserts the new
+// skills into the path. A Ready skill seeds at 0.92, a Basic-passed skill at
+// 0.82, a repairing one at 0.55, and anything else at its level start value.
+// Every Basic-passed skill lifts the unlock to at least its new catalog level,
+// so no passed skill loses its reviews; a started but unpassed skill waits for
+// its new level and prerequisites.
+function migrateV2toV3(p: MutableProgress): MutableProgress {
+  // Check the v2 fields before conversion overwrites them: seeding and queue
+  // clearing must not turn invalid input into a plausible state.
+  validateStructure(p);
+  const skills: Record<string, unknown> = {};
+  let unlockedLevel = p.unlockedLevel;
+  for (const [id, s] of Object.entries(p.skills ?? {}) as [string, any][]) {
+    const level = skillById(id).level;
+    const ready =
+      s.basic.passed && !s.basic.repair && s.mix.passed && !s.mix.repair;
+    const passed = !!s.basic.passed;
+    const repair = !!s.basic.repair || !!s.mix.repair;
+    const mastery =
+      Math.round(seedMastery({ level, ready, passed, repair }) * 1000) / 1000;
+    skills[id] = {
+      ...s,
+      basic: {
+        ...s.basic,
+        streak: passed ? 2 : s.basic.streak,
+        repair,
+      },
+      mix: {
+        ...s.mix,
+        streak: ready ? 2 : s.mix.streak,
+        passed: ready,
+        repair: false,
+      },
+      mastery,
+      observations: 0,
+    };
+    if (passed) unlockedLevel = Math.max(unlockedLevel, level);
+  }
+  return {
+    ...p,
+    formatVersion: 3,
+    unlockedLevel,
+    skills,
+    pendingDiagnostics: [],
+  };
+}
+
 function currentIdentity() {
   return {
     formatVersion: LATEST_FORMAT,
@@ -252,6 +309,13 @@ export function validateCurrent(value: unknown): Progress {
     unsupportedVersion();
   if (JSON.stringify(p.fsrsParameters) !== JSON.stringify(PARAMETERS))
     throw Error("Unsupported review settings. No progress was changed.");
+  return validateStructure(p);
+}
+
+function validateStructure(value: unknown): Progress {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw Error("Invalid progress data.");
+  const p = value as Progress;
   if (
     !finite(p.updatedAt, 946684800000, Date.now() + 86400000) ||
     !integer(p.unlockedLevel, 1, 6) ||
@@ -318,6 +382,7 @@ export function validateCurrent(value: unknown): Progress {
       throw Error("Invalid review dates or values.");
     for (const key of ["reps", "lapses", "learning_steps"] as const)
       if (!integer(card[key])) throw Error("Invalid review count.");
+    // A mix line may keep streak 2 without being ready; mastery decides readiness.
     const lines = [s.basic, s.mix] as any[];
     if (
       lines.some(
@@ -328,8 +393,7 @@ export function validateCurrent(value: unknown): Progress {
           typeof l.passed !== "boolean" ||
           typeof l.repair !== "boolean" ||
           (l.legacy !== undefined && l.legacy !== true) ||
-          (l.lastQ !== undefined && !/^q2:[a-f0-9]{8}$/.test(l.lastQ)) ||
-          (l.streak === 2 && !l.repair && !l.passed),
+          (l.lastQ !== undefined && !/^q2:[a-f0-9]{8}$/.test(l.lastQ)),
       ) ||
       (s.mix.passed && !s.basic.passed)
     )
@@ -338,6 +402,8 @@ export function validateCurrent(value: unknown): Progress {
       "recent" in s ||
       "needsRemediation" in s ||
       "lastFailureAt" in s ||
+      (s.mastery !== undefined && !finite(s.mastery, 0, 1)) ||
+      (s.observations !== undefined && !integer(s.observations)) ||
       typeof s.extraPracticeGiven !== "boolean" ||
       !(s.lastTemplate === undefined || typeof s.lastTemplate === "string") ||
       ![s.failureStreak, s.otherSinceFailure, s.lastSeen].every((item) =>

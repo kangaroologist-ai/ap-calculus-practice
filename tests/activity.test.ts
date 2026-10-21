@@ -130,13 +130,7 @@ describe("continuous activity counters", () => {
     expect(Object.keys(p.practiceDays!)).toHaveLength(31);
     expect(p.practiceDays![localPracticeDay(now)]).toBe(1);
     const portable = makePortableProgress(p, now);
-    const withoutMastery = structuredClone(portable);
-    for (const skill of Object.values(withoutMastery.skills)) {
-      delete skill.mastery;
-      delete skill.observations;
-    }
-    // T7 (profile 4) restores the full round trip for mastery and observations.
-    expect(decodeProgress(encodeProgress(portable))).toEqual(withoutMastery);
+    expect(decodeProgress(encodeProgress(portable))).toEqual(portable);
   });
   it("rejects distant future day keys and retains today if the local clock moves back", () => {
     const p = freshProgress(config, now);

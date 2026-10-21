@@ -182,16 +182,16 @@ describe('portable progress encoding and QR transfer', () => {
     let assembled: string | undefined;
     for (const frame of splitIntoQrFrames(code)) assembled = collector.add(frame).code ?? assembled;
     expect(assembled).toBe(code);
-    expect(decodeProgress(assembled!)).toEqual(expect.objectContaining({ formatVersion: 2 }));
+    expect(decodeProgress(assembled!)).toEqual(expect.objectContaining({ formatVersion: 3 }));
   });
 });
 
- it('imports DSP1 transport snapshots as current v2 progress', () => {
+ it('imports DSP1 transport snapshots as current format-3 progress', () => {
    const snapshot = portable();
    const body = base64Url(zlibSync(strToU8(JSON.stringify(snapshot))));
    const decoded = decodeProgress(`DSP1.${checksum(body)}.${body}`);
    expect(decoded).toEqual(snapshot);
-   expect(decoded.formatVersion).toBe(2);
+   expect(decoded.formatVersion).toBe(3);
  });
  it('uses one direct QR for compact progress and validates it on collection', () => {
    const code = encodeProgress(portable());
@@ -207,6 +207,8 @@ describe('portable progress encoding and QR transfer', () => {
    s.card.difficulty = 4.987654321098765;
    s.card.due = NOW + 0.25;
    s.card.last_review = NOW - 123.75;
+   s.mastery = 0.812;
+   s.observations = 3;
    expect(decodeProgress(encodeProgress(snapshot))).toEqual(snapshot);
  });
 

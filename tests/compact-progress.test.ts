@@ -66,11 +66,14 @@ describe("full compact progress transfer fixture", () => {
     }
   });
 
-  it("migrates the 26-skill fixture into v2 lines and retains its 31-day boundary", () => {
+  it("migrates the 26-skill fixture into format 3 lines and retains its 31-day boundary", () => {
     validateSnapshot(snapshot);
     expect(Object.keys(snapshot.skills)).toHaveLength(26);
     expect(Object.values(snapshot.skills).every((s) => !("recent" in s))).toBe(true);
     expect(Object.values(snapshot.skills).every((s) => s.basic && s.mix)).toBe(true);
+    expect(Object.values(snapshot.skills).every((s) => s.mastery === 0.82)).toBe(true);
+    expect(Object.values(snapshot.skills).every((s) => s.observations === 0)).toBe(true);
+    expect(snapshot.pendingDiagnostics).toEqual([]);
     expect(Object.keys(snapshot.practiceDays ?? {})).toHaveLength(31);
     const portable = validateSnapshot(snapshot);
     for (const skill of Object.values(portable.skills))
@@ -79,7 +82,7 @@ describe("full compact progress transfer fixture", () => {
     expect(portable.recentQuestionSignatures.every((q) => /^q2:[a-f0-9]{8}$/.test(q))).toBe(true);
   });
 
-  it("round-trips all FSRS fields and the full v2 line fixture through DSP2", () => {
+  it("round-trips all FSRS fields and the full format-3 line fixture through DSP2", () => {
     const code = encodeProgress(snapshot);
     const decoded = decodeProgress(code);
     expect(isDeepStrictEqual(decoded, snapshot)).toBe(true);
@@ -87,20 +90,23 @@ describe("full compact progress transfer fixture", () => {
   });
 
   it("keeps the latest profile skill table in curriculum order", () => {
-    expect(LATEST_PROFILE).toBe(3);
+    expect(LATEST_PROFILE).toBe(4);
     expect(LATEST_PROFILE_SKILLS).toEqual(SKILLS.map((skill) => skill.id));
   });
 
-  it("imports the frozen DSP1 and profile 1 and 2 fixtures as v2 snapshots", () => {
+  it("imports the frozen DSP1 and profile 1, 2 and 3 fixtures as format-3 snapshots", () => {
     const direct = decodeProgress(fixture("dsp1.txt"));
     const profile1 = decodeProgress(fixture("dsp2-profile1.txt"));
     const profile2 = decodeProgress(fixture("dsp2-profile2.txt"));
-    expect(direct.formatVersion).toBe(2);
-    expect(profile1.formatVersion).toBe(2);
-    expect(profile2.formatVersion).toBe(2);
+    const profile3 = decodeProgress(fixture("dsp2-profile3.txt"));
+    expect(direct.formatVersion).toBe(3);
+    expect(profile1.formatVersion).toBe(3);
+    expect(profile2.formatVersion).toBe(3);
+    expect(profile3.formatVersion).toBe(3);
     expect(direct.skills.constant.basic.passed).toBe(true);
     expect(profile1.skills.constant.basic.passed).toBe(true);
     expect(profile2.skills.constant.basic.passed).toBe(true);
+    expect(profile3.skills.constant.basic.passed).toBe(true);
     expect(direct.skills.constant.mix).toEqual({ streak: 0, passed: false, repair: false });
 
     const expectedFromFixture = {
@@ -110,9 +116,9 @@ describe("full compact progress transfer fixture", () => {
     expect(direct).toEqual(expectedFromFixture);
   });
 
-  it("round-trips profile 3 and rejects newer or malformed profile data", () => {
+  it("round-trips profile 4 and rejects newer or malformed profile data", () => {
     const tuple = packProgress(snapshot);
-    expect(tuple[0]).toBe(3);
+    expect(tuple[0]).toBe(4);
     expect(decodeProgress(encodeProgress(snapshot))).toEqual(snapshot);
 
     expect(() => unpackProgress([99])).toThrow(NewerProgressError);
@@ -143,6 +149,14 @@ describe("full compact progress transfer fixture", () => {
     const lastQRows = badLastQ[10] as unknown[][];
     (lastQRows[0][2] as unknown[])[4] = 999;
     expect(() => unpackProgress(badLastQ)).toThrow(/compact index/i);
+
+    const badMastery = structuredClone(tuple);
+    (badMastery[10] as unknown[][])[0][8] = 1001;
+    expect(() => unpackProgress(badMastery)).toThrow(/compact index/i);
+
+    const badObservations = structuredClone(tuple);
+    (badObservations[10] as unknown[][])[0][9] = -1;
+    expect(() => unpackProgress(badObservations)).toThrow(/compact index/i);
 
     const firstDay = Date.parse("2026-09-25T00:00:00.000Z") / 86400000;
     const badFlatDelta = structuredClone(tuple);

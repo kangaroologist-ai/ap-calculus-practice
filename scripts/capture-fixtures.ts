@@ -8,6 +8,7 @@ import {
   makePortableProgress,
   type PortableProgress,
 } from "../src/transfer";
+import { migrateProgress } from "../src/migrate";
 import { questionFingerprint } from "../src/question-identity";
 import type { Question } from "../src/types";
 
@@ -22,6 +23,39 @@ const FIXTURES = (name: string) => new URL(`../tests/fixtures/${name}`, import.m
 const raw = JSON.parse(
   readFileSync(FIXTURES("compact-full-snapshot.json"), "utf8"),
 ) as PortableProgress;
+
+// Profile 3 and the format-2 local state are the last samples of the formats
+// before the mastery fields. Captured together so this command exits before
+// the original frozen-fixture block below can rewrite any of its four outputs.
+if (process.argv.includes("--profile3-only")) {
+  // The compact-full-snapshot fixture is format 1, so the current encoder
+  // receives it after the registered v1 → v2 migration, like every import.
+  const snapshot = migrateProgress(raw).progress;
+  writeFileSync(
+    FIXTURES("dsp2-profile3.txt"),
+    `${encodeProgress(makePortableProgress(snapshot, raw.exportedAt))}\n`,
+  );
+
+  const state = JSON.parse(
+    readFileSync(FIXTURES("local-state-v1-q2.json"), "utf8"),
+  ) as { progress: Record<string, any> };
+  const progress = migrateProgress(state.progress).progress as Record<string, any>;
+  // The v1 source seeds every skill as Basic passed and none Ready or in
+  // repair, so set the two missing kinds explicitly on named skills.
+  progress.skills.power.basic = { streak: 2, passed: true, repair: false };
+  progress.skills.power.mix = { streak: 2, passed: true, repair: false };
+  progress.skills.sum.basic = { streak: 0, passed: false, repair: true };
+  progress.skills.sum.mix = { streak: 0, passed: false, repair: false };
+  writeFileSync(
+    FIXTURES("local-state-v2.json"),
+    `${JSON.stringify({ version: 1, progress }, null, 2)}\n`,
+  );
+
+  console.log(
+    "Captured tests/fixtures/dsp2-profile3.txt and tests/fixtures/local-state-v2.json",
+  );
+  process.exit(0);
+}
 
 // Phase 2 fixtures are captured separately so this command exits before the
 // original frozen-fixture block below can rewrite any of its four outputs.

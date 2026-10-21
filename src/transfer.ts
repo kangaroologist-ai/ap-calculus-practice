@@ -2,7 +2,9 @@ import { questionFingerprint } from "./question-identity";
 import { packProgress, unpackProgress } from "./compact-progress";
 import { strToU8, strFromU8, zlibSync, Unzlib } from "fflate";
 import QRCode from "qrcode";
-import { localPracticeDay, type Progress } from "./progress";
+import { SKILLS } from "./catalog";
+import { seedMastery } from "./mastery";
+import { lineReady, localPracticeDay, type Progress } from "./progress";
 import {
   dedupeKeepLast,
   migrateProgress,
@@ -16,8 +18,24 @@ export function makePortableProgress(
   now = Date.now(),
 ): PortableProgress {
   const copy = structuredClone(p);
-  for (const skill of Object.values(copy.skills)) {
+  for (const [id, skill] of Object.entries(copy.skills)) {
     delete skill.lastTemplate;
+    // Profile 4 always carries both fields, so export them explicitly to keep
+    // the decode result equal to the portable snapshot. Unknown ids are left
+    // for validateSnapshot to reject.
+    const level = SKILLS.find((s) => s.id === id)?.level;
+    if (level !== undefined) {
+      skill.mastery ??=
+        Math.round(
+          seedMastery({
+            level,
+            ready: lineReady(skill.basic) && lineReady(skill.mix),
+            passed: !!skill.basic.passed,
+            repair: !!skill.basic.repair || !!skill.mix.repair,
+          }) * 1000,
+        ) / 1000;
+      skill.observations ??= 0;
+    }
     for (const line of [skill.basic, skill.mix])
       if (line.lastQ !== undefined) line.lastQ = questionFingerprint(line.lastQ);
   }

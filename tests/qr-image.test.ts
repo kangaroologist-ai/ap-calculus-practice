@@ -30,6 +30,8 @@ test('full-curriculum snapshot survives raster QR encoding and local image decod
       passed: true,
       repair: false,
     };
+    state.mastery = Math.round((0.2 + index / 40) * 1000) / 1000;
+    state.observations = index;
   });
   const snapshot = makePortableProgress(p, now);
   const code = encodeProgress(snapshot);

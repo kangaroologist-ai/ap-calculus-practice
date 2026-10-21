@@ -180,7 +180,7 @@ describe('local progress and FSRS boundaries', () => {
     const state = p.skills.power;
     expect(state.basic).toMatchObject({ streak: 0, repair: false });
     expect(needsRemediation(state)).toBe(false);
-    expect(state.mastery!).toBeCloseTo(0.24555679, 7);
+    expect(state.mastery!).toBeCloseTo(0.246, 7);
     expect(reviveCard(state.card).stability).toBe(0.212);
   });
 
@@ -217,7 +217,7 @@ describe('local progress and FSRS boundaries', () => {
     expect(cur.hintsUsed).toBe(1);
     expect(cur.recorded).toBe(true);
     expect(p.skills.power.basic).toMatchObject({ streak: 0, repair: false });
-    expect(p.skills.power.mastery!).toBeCloseTo(0.24555679, 7);
+    expect(p.skills.power.mastery!).toBeCloseTo(0.246, 7);
     expect(reviveCard(p.skills.power.card).stability).toBe(0.212);
     const afterHint = structuredClone(p);
     expect(recordOutcome(p, cur, config(), correct, NOW)).toBe(false);
@@ -520,7 +520,7 @@ describe('local progress and FSRS boundaries', () => {
         ),
       ).toBe(true);
 
-    expect(s.mastery!).toBeCloseTo(0.94911725, 7);
+    expect(s.mastery!).toBeCloseTo(0.949, 7);
     expect(s.basic.repair).toBe(false);
     expect(s.mix.repair).toBe(false);
     expect(isReady(s)).toBe(true);
@@ -600,13 +600,13 @@ describe('local progress and FSRS boundaries', () => {
     const card = structuredClone(s.card);
 
     expect(recordOutcome(p, current(question('recover-1')), config(), correct, NOW)).toBe(true);
-    expect(s.mastery!).toBeCloseTo(0.79748849, 7);
+    expect(s.mastery!).toBeCloseTo(0.797, 7);
     expect(s.basic).toMatchObject({ passed: true, repair: true });
     expect(needsRemediation(s)).toBe(true);
     expect(isReady(s)).toBe(false);
 
     expect(recordOutcome(p, current(question('recover-2')), config(), correct, NOW + 1)).toBe(true);
-    expect(s.mastery!).toBeCloseTo(0.84550233, 7);
+    expect(s.mastery!).toBeCloseTo(0.845, 7);
     expect(s.basic).toMatchObject({ passed: true, repair: false });
     expect(needsRemediation(s)).toBe(false);
     expect(isReady(s)).toBe(true);
@@ -622,17 +622,17 @@ describe('local progress and FSRS boundaries', () => {
     s.card.last_review = NOW;
 
     expect(recordOutcome(p, current(question('first-miss')), config(), incorrect, NOW)).toBe(true);
-    expect(s.mastery!).toBeCloseTo(0.82088383, 7);
+    expect(s.mastery!).toBeCloseTo(0.821, 7);
     expect(s.basic.repair).toBe(false);
     expect(lineReady(s.basic)).toBe(true);
     expect(isReady(s)).toBe(true);
 
     expect(recordOutcome(p, current(question('second-miss')), config(), incorrect, NOW + 1)).toBe(true);
-    expect(s.mastery!).toBeCloseTo(0.6685121, 7);
+    expect(s.mastery!).toBeCloseTo(0.669, 7);
     expect(s.basic.repair).toBe(false);
 
     expect(recordOutcome(p, current(question('third-miss')), config(), incorrect, NOW + 2)).toBe(true);
-    expect(s.mastery!).toBeCloseTo(0.50823703, 7);
+    expect(s.mastery!).toBeCloseTo(0.509, 7);
     expect(s.basic.repair).toBe(true);
     expect(isReady(s)).toBe(false);
   });
@@ -642,29 +642,29 @@ describe('local progress and FSRS boundaries', () => {
     const s = stateFor(p, 'power', NOW);
     expect(recordOutcome(p, current(question('pass-first', 'power', 0)), config(), correct, NOW)).toBe(true);
     expect(s.basic.passed).toBe(true);
-    expect(s.mastery!).toBeCloseTo(0.81420197, 7);
+    expect(s.mastery!).toBeCloseTo(0.814, 7);
     expect(recordOutcome(p, current(question('failure-before-recovery', 'power', 1)), config(), incorrect, NOW + 1)).toBe(true);
     expect(needsRemediation(s)).toBe(true);
-    expect(s.mastery!).toBeCloseTo(0.5385409, 7);
+    expect(s.mastery!).toBeCloseTo(0.538, 7);
 
     const submit = (id: string, template: number, now: number) =>
       expect(recordOutcome(p, current(question(id, 'power', template)), config(), correct, now)).toBe(true);
 
     submit('recovery-one', 1, NOW + 2);
     expect(s.basic.repair).toBe(true);
-    expect(s.mastery!).toBeCloseTo(0.66815025, 7);
+    expect(s.mastery!).toBeCloseTo(0.668, 7);
 
     submit('recovery-two', 0, NOW + 3);
     expect(s.basic.repair).toBe(true);
-    expect(s.mastery!).toBeCloseTo(0.73724157, 7);
+    expect(s.mastery!).toBeCloseTo(0.737, 7);
 
     submit('recovery-three', 1, NOW + 4);
     expect(s.basic.repair).toBe(true);
-    expect(s.mastery!).toBeCloseTo(0.78489758, 7);
+    expect(s.mastery!).toBeCloseTo(0.785, 7);
 
     submit('recovery-four', 0, NOW + 5);
     expect(s.basic.repair).toBe(false);
-    expect(s.mastery!).toBeCloseTo(0.81899323, 7);
+    expect(s.mastery!).toBeCloseTo(0.819, 7);
     expect(needsRemediation(s)).toBe(false);
     expect(lineReady(s.basic)).toBe(true);
     expect(isReady(s)).toBe(false);
@@ -749,7 +749,7 @@ describe('local progress and FSRS boundaries', () => {
   });
 
   it.each([
-    ['format version', (p: Progress) => ({ ...p, formatVersion: 3 })],
+    ['format version', (p: Progress) => ({ ...p, formatVersion: 4 })],
     ['curriculum version', (p: Progress) => ({ ...p, curriculumVersion: 'future-curriculum' })],
     ['package version', (p: Progress) => ({ ...p, schedulerPackageVersion: '6.0.0' })],
     ['algorithm version', (p: Progress) => ({ ...p, fsrsAlgorithmVersion: 'future-fsrs' })],

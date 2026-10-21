@@ -393,7 +393,7 @@ test('boots with a frozen v1 state, migrates it, and retains the original before
       transaction.onerror = () => reject(transaction.error ?? new Error('Could not read migrated state.'));
     };
   }));
-  expect((records.current as AppState).progress.formatVersion).toBe(2);
+  expect((records.current as AppState).progress.formatVersion).toBe(3);
   expect((records.current as AppState).session).toBeUndefined();
   expect(records.preMigration).toEqual(saved);
 });

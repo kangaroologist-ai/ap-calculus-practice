@@ -1,5 +1,5 @@
 import type { Config, Skill } from "./types";
-export const CURRICULUM_VERSION = "ap-derivatives-2";
+export const CURRICULUM_VERSION = "ap-derivatives-3";
 const s = (
   id: string,
   label: string,

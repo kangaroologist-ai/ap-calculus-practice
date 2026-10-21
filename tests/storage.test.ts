@@ -136,7 +136,7 @@ describe('serialized local persistence and backup replacement', () => {
 
     expect(fakeIdb.records.get('pre-migration')).toEqual(before);
     expect(await storage.loadState()).toEqual(after);
-    expect(after.progress.formatVersion).toBe(2);
+    expect(after.progress.formatVersion).toBe(3);
     expect(after.session).toBeUndefined();
     expect(fakeIdb.records.get('backup')).toEqual(backup);
   });
