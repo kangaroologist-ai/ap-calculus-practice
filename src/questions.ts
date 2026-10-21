@@ -142,6 +142,7 @@ function finalize(
       intervals,
       curve: built.curve,
       guards: built.guards ?? [],
+      ...(built.functions ? { functions: built.functions } : {}),
     },
     domainText,
     hints: [
@@ -162,6 +163,7 @@ export function ruleFormula(id: string): string {
     product: "(uv)'=u'v+uv'",
     quotient: "\\left(\\frac{u}{v}\\right)'=\\frac{u'v-uv'}{v^2}",
     chain: "[f(g(x))]'=f'(g(x))g'(x)",
+    abstract: "[f(g(x))]'=f'(g(x))\\,g'(x)",
     nested: "[f(g(h(x)))]'=f'(g(h(x)))g'(h(x))h'(x)",
     exp: "(e^u)'=e^u u',\\quad (a^u)'=a^u\\ln(a)u'",
     log: "(\\ln u)'=\\frac{u'}{u}",
@@ -217,7 +219,12 @@ function derivationSteps(
     if (!Array.isArray(node)) return;
     for (const child of node.slice(1)) visit(child);
     const key = JSON.stringify(node);
-    if (top || seen.has(key) || !key.includes(`"${variable}"`)) return;
+    if (
+      (top && node[0] !== "Fn") ||
+      seen.has(key) ||
+      !key.includes(`"${variable}"`)
+    )
+      return;
     seen.add(key);
     const rule: Record<string, string> = {
       Add: "Differentiate each term.",
@@ -229,7 +236,10 @@ function derivationSteps(
       Exp: "Differentiate the exponential and multiply by the inner derivative.",
     };
     steps.push({
-      text: rule[node[0]] ?? "Differentiate this inner function.",
+      text:
+        node[0] === "Fn"
+          ? `Differentiate ${node[1]} at the inside and multiply by the derivative of the inside.`
+          : rule[node[0]] ?? "Differentiate this inner function.",
       math: `${ddx(variable)}\\left[${L(node)}\\right]=${L(d(node, variable))}`,
     });
   }

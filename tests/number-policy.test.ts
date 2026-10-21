@@ -150,6 +150,12 @@ function walkSource(
     checkExponent(exponent, template, question, fail);
     return;
   }
+  if (op === 'Fn') {
+    // The function name and derivative order are structural metadata, not
+    // source numbers; the numbers inside the argument still follow the policy.
+    walkSource(args[2], role, template, question, fail);
+    return;
+  }
   if (
     template.key === 'log.basic.scaled' &&
     op === 'Ln' &&

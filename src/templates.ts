@@ -39,6 +39,9 @@ export interface Built {
   variable?: Domain["variable"];
   curve?: Domain["curve"];
   guards?: Expr[];
+  // Non-empty on abstract-function questions; copied into domain.functions so
+  // the grader substitutes concrete functions and the keyboard swaps keys.
+  functions?: ("f" | "g")[];
   steps?: { text: string; math: string }[];
   // SPEC-G5: steps shown before the standard rule-reminder/derivation/apply
   // sequence below, e.g. rewriting a radical as a fractional power before the
@@ -111,6 +114,20 @@ function higherBuilt(
     title: `Find the ${order === 3 ? "third" : "second"} derivative`,
     intervals,
     steps,
+  };
+}
+const ABSTRACT_FUNCTIONS: ("f" | "g")[] = ["f", "g"];
+const abstractFn = (name: "f" | "g", arg: Expr): Expr => ["Fn", name, 0, arg];
+function abstractBuilt(source: Expr, intervals: [number, number][]): Built {
+  return {
+    source: [source],
+    functions: ABSTRACT_FUNCTIONS,
+    prompt: `h(x)=${L(source)}`,
+    labels: ["h'(x)"],
+    title: "Find the derivative",
+    domainText:
+      "f and g are differentiable functions. Write f′ for the derivative of f.",
+    intervals,
   };
 }
 function parametricBuilt(
@@ -955,6 +972,122 @@ export const TEMPLATES: Record<string, readonly Template[]> = {
       pools: { h: SMOOTH_POOL },
       meta: { derivativeOrder: 2 },
       build: (c) => higherBuilt(M(P("x", int(c, 2, 6)), pooled(c, "h")), 2, SAFE_TRIG_INTERVALS),
+    },
+  ],
+  abstract: [
+    {
+      key: "abstract.basic.inner",
+      role: "basic",
+      requires: ["chain"],
+      build: (c) => {
+        const kind = c.pick([
+          "power",
+          "linear",
+          "sin",
+          "cos",
+          "exp",
+          "ln",
+        ] as const);
+        let arg: Expr;
+        let intervals = X_INTERVALS;
+        if (kind === "power") arg = M(int(c, 1, 5), P("x", int(c, 2, 6)));
+        else if (kind === "linear") arg = M(int(c, 2, 5), "x");
+        else if (kind === "sin") arg = F("Sin", "x");
+        else if (kind === "cos") arg = F("Cos", "x");
+        else if (kind === "exp") arg = F("Exp", "x");
+        else {
+          arg = F("Ln", "x");
+          intervals = POSITIVE_INTERVALS;
+        }
+        return abstractBuilt(abstractFn("f", arg), intervals);
+      },
+    },
+    {
+      key: "abstract.basic.outer",
+      role: "basic",
+      requires: ["chain"],
+      build: (c) => {
+        const kind = c.pick([
+          "power",
+          "exp",
+          "log",
+          "sqrt",
+          "sin",
+          "cos",
+        ] as const);
+        let source: Expr;
+        if (kind === "power") {
+          const n = int(c, 2, 5);
+          const coefficient = c.r() < 0.5 ? 1 : int(c, 1, 5);
+          source = M(coefficient, P(abstractFn("f", "x"), n));
+        } else if (kind === "exp") source = F("Exp", abstractFn("f", "x"));
+        else if (kind === "log") source = F("Ln", abstractFn("f", "x"));
+        else if (kind === "sqrt") source = F("Sqrt", abstractFn("f", "x"));
+        else if (kind === "sin") source = F("Sin", abstractFn("f", "x"));
+        else source = F("Cos", abstractFn("f", "x"));
+        return abstractBuilt(source, X_INTERVALS);
+      },
+    },
+    {
+      key: "abstract.mix.product",
+      role: "mix",
+      requires: ["product"],
+      build: (c) => {
+        const kind = c.pick([
+          "scaled_power",
+          "function_pair",
+          "power_g",
+          "exponential",
+        ] as const);
+        let source: Expr;
+        if (kind === "scaled_power")
+          source = M(
+            int(c, 1, 9),
+            P("x", int(c, 2, 6)),
+            abstractFn("f", "x"),
+          );
+        else if (kind === "function_pair")
+          source = M(abstractFn("f", "x"), abstractFn("g", "x"));
+        else if (kind === "power_g")
+          source = M(P("x", int(c, 2, 6)), abstractFn("g", "x"));
+        else source = M(F("Exp", "x"), abstractFn("f", "x"));
+        return abstractBuilt(source, X_INTERVALS);
+      },
+    },
+    {
+      key: "abstract.mix.quotient",
+      role: "mix",
+      requires: ["quotient"],
+      build: (c) => {
+        const kind = c.pick([
+          "f_over_power",
+          "function_pair",
+          "power_over_f",
+        ] as const);
+        let source: Expr;
+        if (kind === "f_over_power")
+          source = Q(abstractFn("f", "x"), P("x", int(c, 2, 6)));
+        else if (kind === "function_pair")
+          source = Q(abstractFn("f", "x"), abstractFn("g", "x"));
+        else source = Q(P("x", int(c, 2, 6)), abstractFn("f", "x"));
+        return abstractBuilt(source, X_INTERVALS);
+      },
+    },
+    {
+      key: "abstract.mix.composition",
+      role: "mix",
+      requires: ["chain"],
+      build: (c) => {
+        const kind = c.pick(["f_of_g", "g_of_f", "scaled_g"] as const);
+        let source: Expr;
+        if (kind === "f_of_g")
+          source = abstractFn("f", abstractFn("g", "x"));
+        else if (kind === "g_of_f")
+          source = abstractFn("g", abstractFn("f", "x"));
+        else
+          source = abstractFn("f", M(int(c, 2, 9), abstractFn("g", "x")));
+        return abstractBuilt(source, X_INTERVALS);
+      },
     },
   ],
   parametric: [

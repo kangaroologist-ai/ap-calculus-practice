@@ -83,12 +83,12 @@ function contentFields(value: Record<string, unknown>) {
 
 describe('frozen v1.1.0 generator history', () => {
   it('keeps the fixture loadable at its original coverage and size', () => {
-    expect(golden).toHaveLength(SKILLS.length * 2 * 20);
+    expect(golden).toHaveLength(26 * 2 * 20);
     expect(statSync(fixtureUrl).size).toBeGreaterThan(500_000);
   });
 
   it('maps each historical family:index to an existing current key', () => {
-    expect(Object.keys(CURRENT_KEY_BY_LEGACY_ID)).toHaveLength(SKILLS.length * 2);
+    expect(Object.keys(CURRENT_KEY_BY_LEGACY_ID)).toHaveLength(26 * 2);
     for (const [legacyId, key] of Object.entries(CURRENT_KEY_BY_LEGACY_ID)) {
       const [family] = legacyId.split(':');
       expect(TEMPLATES[family]?.some((template) => template.key === key), legacyId).toBe(true);

@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { grade, parseAnswer, sampleValues } from '../src/grading';
+import {
+  ABSTRACT_CHOICES,
+  grade,
+  instantiate,
+  parseAnswer,
+  sampleValues,
+} from '../src/grading';
 import { add, div, evaluator, fn, latex, mul, neg, pow } from '../src/math';
 import { generateQuestion } from '../src/questions';
 import { TEMPLATES } from '../src/templates';
@@ -80,11 +86,14 @@ describe('generated LaTeX round-trips through the grader parser', () => {
       const variables = q.domain.curve
         ? ['x', 'y']
         : [q.domain.variable];
+      const functions = q.domain.functions ?? [];
+      const instantiateIfAbstract = (expr: Expr) =>
+        functions.length ? instantiate(expr, ABSTRACT_CHOICES[0]) : expr;
       for (const expr of [...q.source, ...q.answers]) {
         const tex = latex(expr);
         let parsed: Expr;
         try {
-          parsed = parseAnswer(tex, variables);
+          parsed = parseAnswer(tex, variables, functions);
         } catch (error) {
           throw new Error(
             `${q.id} (${q.templateKey}) failed to parse ${tex}: ${(error as Error).message}`,
@@ -94,8 +103,8 @@ describe('generated LaTeX round-trips through the grader parser', () => {
           const point = sampleValues(q, i);
           let expected, actual;
           try {
-            expected = calc(expr, point);
-            actual = calc(parsed, point);
+            expected = calc(instantiateIfAbstract(expr), point);
+            actual = calc(instantiateIfAbstract(parsed), point);
           } catch {
             continue;
           }

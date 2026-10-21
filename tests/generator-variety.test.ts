@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { SKILLS } from '../src/catalog';
+import { ABSTRACT_CHOICES, instantiate } from '../src/grading';
 import { evaluator } from '../src/math';
 import { questionFingerprint } from '../src/question-identity';
 import { generateQuestion } from '../src/questions';
@@ -18,9 +19,12 @@ const PROBES = [
 
 function answerKey(q: Question): string {
   const { calc, D } = evaluator(30);
+  const answers = q.domain.functions?.length
+    ? q.answers.map((expr) => instantiate(expr, ABSTRACT_CHOICES[0]))
+    : q.answers;
   return JSON.stringify(
     PROBES.map((point) =>
-      q.answers.map((expr) => {
+      answers.map((expr) => {
         try {
           return calc(
             expr,

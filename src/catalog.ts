@@ -129,6 +129,13 @@ export const SKILLS: Skill[] = [
     ["product", "chain"],
   ),
   s(
+    "abstract",
+    "Abstract functions",
+    5,
+    "Treat f and g like any other function: differentiate the outer function at the inside, then multiply by the derivative of the inside. Write f′ for the derivative of f.",
+    ["chain", "product"],
+  ),
+  s(
     "parametric",
     "Parametric derivatives",
     6,
