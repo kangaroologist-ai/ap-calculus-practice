@@ -378,3 +378,9 @@ Project obligations:
 ## Acceptance
 
 Not started.
+
+## Status at pause (2026-10-21, usage limit)
+
+- Done and committed on `practice-quality`: T1, T1b, T2, T3, T4, T5, T6, T7, T8, T9, T11, T12; P1, P2 (1.3.0), P3, P7. Unit 448/448, e2e 208 passed / 0 failed, `test:math` 11,200 / 0 failures, build passes.
+- Open: P4 full design review (the `design-reviewer` subagent was started; screenshots in `artifacts/design/1.3.0/`, scope in `reviews/context.md`). Claude found one likely P1 before the review: at 390 px the keys f(▫), f′(▫), g′(▫) are clipped (`artifacts/e2e/webkit-mobile-abstract-function-keyboard.png`); also `f\left(5x\right)` renders with a gap (“f (5x)”). Fix both through the T6 Qoder session `d6123eba-53b3-4ce8-86cd-31bdf0c7cea7` (keys) and the T4 session `8fe724ef-288b-43f1-92e7-c90d8cfaa788` (latex of Fn).
+- Open: P5 deploy (needs the owner's approval), P6 iPhone check by the owner, P8 mark the coefficients plan replaced, worktrees `pq-t2`, `pq-t3`, `pq-t5`, `pq-docs` to remove, acceptance walk.
