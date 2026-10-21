@@ -48,7 +48,9 @@ Size class: large - six independent topics, one new skill with a format migratio
 | L5 | A correct combined question also counts as an FSRS review of its due component skills (R7) | **Yes** / no | “别的按推荐” → yes | 2026-10-21 |
 | L6 | Re-ask of G10 after the answer in R5 | **Add the persistent-storage request and the Home Screen tip in this release; online saving comes with the accounts task** / no change now | “别的按推荐” → recommended | 2026-10-21 |
 | L7 | Spec talk-through: go-ahead? | **Agree; start with S3 on branch `practice-quality`** / change the Spec | “同意，codex的工作和你能分出的代码工作都可以交给qoder的dsf，审核可以交给codex，codex和dsf意见一致了你再看一眼就行。” Later: “记得保留qoder的session这样有修改可以直接回调” → see the delegation rule under To Do | 2026-10-21 |
-| L8 | Owner during T3 review: “70太高了吧，我觉得要定一个，如果每道题都做对，product rule在10-15题就应该出现了” — how to meet ≤ 15 for an always-correct student? Measured on the branch (27 skills, T3 merged): always-correct student meets product at question 23 (15 skills come first); truth students 65 / 11 / 26 of 40. Moving cot, sec, csc, asin, acos, atan after chain (level 3): always-correct 14; truth students 32 / 8 / 23 of 40. | **Move those six skills after chain (level 3); new S4 targets: always-correct ≤ 15, truth-student median ≤ 35** / keep the order (23 is the minimum) | | |
+| L8 | Owner during T3 review: “70太高了吧，我觉得要定一个，如果每道题都做对，product rule在10-15题就应该出现了” — how to meet ≤ 15 for an always-correct student? Measured on the branch (27 skills, T3 merged): always-correct student meets product at question 23 (15 skills come first); truth students 65 / 11 / 26 of 40. Moving cot, sec, csc, asin, acos, atan after chain (level 3): always-correct 14; truth students 32 / 8 / 23 of 40. | **Move those six skills after chain (level 3); new S4 targets: always-correct ≤ 15, truth-student median ≤ 35** / keep the order (23 is the minimum) | “我不同意只把那 6 个技能移到链式法则之后。1. tan、cot、sec、csc 放在商法则之后（tan 留在前面也可以，但建议放在商法则之后）。2. arcsin、arccos、arctan 放在反函数求导之后。3. 乘积法则一定要以 tan 为前置吗？乘积法则应该先掌握，组合放到后面再练。4. 组合本身也是一种技能，可以分成几个级别：简单的两种法则组合算第一级；商法则加链式法则、链式法则加链式法则属于更高级的组合技能。” → R8 | 2026-10-21 |
+| L9 | Path from the owner's four points (R8): accept the level table? | **Yes, as in R8 (product at question 12 for an always-correct student)** / change it | | |
+| L10 | Combination skills (owner point 4): re-scope `mixed` as “Combinations I” (two simple rules) and `nested` as “Combinations II” (chain+chain, quotient+chain, three rules), both on level 4 after chain, II after I | **Yes, both on level 4** / Combinations II on level 5 | | |
 
 Default assumptions (not answered): none yet.
 Owner agrees with this understanding: round 2 answers, 2026-10-21 (“4我觉得按85%吧……别的按推荐”). Spec talk-through: “同意” (L7), 2026-10-21.
@@ -239,6 +241,28 @@ Labels: **[F]** fact (source), **[I]** inference, **[U]** unknown, **[P]** probl
 - **[I]** Format: the estimate and its observation count are new fields per skill. They go into the same curriculum migration as the abstract skill (`ap-derivatives-3`, profile 4). Migration seeds the estimate from today's state: Ready → 0.92, Basic passed → 0.82, repair → 0.55, not started → the start value.
 - **[I]** Implicit FSRS credit (FIRe precedent: credit flows down, penalties do not) is a separate choice (L5). It cuts separate reviews of simple skills.
 - **[U]** Real student behaviour: no answer data exists. The truth model and the parameters are assumptions.
+
+### R8. Path from the owner's four points (L8, 2026-10-21)
+
+- **[F]** Point 3: `product` lists `tan` as a prerequisite only because of one Mixed template, `product.mix.tangent_secant` (x^n·tan x or x^n·sec x). That template has its own pool gate (`pools: { h: ["tan","sec"] }`), so it opens by itself after tan or sec passes. Removing `tan` from the product prerequisites is safe.
+- **[F]** Proposed levels (skill IDs unchanged; order inside a level is the catalog order):
+
+  | Level | Skills | Prerequisite changes |
+  |---|---|---|
+  | 1 Foundations | constant, power, sum, root | none |
+  | 2 Essential functions | exp, log, sin, cos | none |
+  | 3 Products and quotients | product, quotient, tan, cot, sec, csc | product: sum, power, sin, cos, exp (no tan); tan, cot, sec, csc: quotient |
+  | 4 Chains and combinations | chain, mixed (Combinations I), nested (Combinations II) | mixed: product, quotient, chain; nested: chain, mixed |
+  | 5 Implicit, inverse and more | implicit, inverse, asin, acos, atan, higher, abstract | asin, acos: inverse, root; atan: inverse |
+  | 6 Curves and coordinates | parametric, vector, polar | none |
+
+- **[F]** Simulation on the branch (T3 merged, 27 skills; scratch tests, same truth model as S4):
+  - Always-correct student: product at question 12 (today 23); chain at 30 (today 29); tan at 18; arcsin at 65.
+  - Truth students, 40, median: first product/quotient/chain 29 (today 65); remedial 10 (today 11); weak skill targeted 30/40 (today 26/40).
+- **[I]** This order is close to the AP CED order (R3), but it comes from the owner's own points.
+- **[I]** Owner point 4 maps onto two existing skills. Today `mixed` (Mixed differentiation) has product+chain, quotient+chain, three-rule and log·product templates; `nested` (Nested chain rule) has chain+chain templates. Re-scope: Combinations I = two simple rules (product+chain with a linear inside, product with a logarithm of a polynomial, product with a quotient of simple factors); Combinations II = chain+chain, quotient+chain, three rules. The quotient+chain and three-rule templates move from `mixed` to `nested` with new keys. Old saved questions keep grading because they carry their own trees.
+- **[I]** The per-skill Mixed lines stay: they combine a skill only with skills that already passed, one question in three.
+- **[I]** Cost: catalog levels, order, prerequisites, labels and rules; template moves; level titles in `src/main.ts`; the migration (T7) must keep every open skill open; README, help, skill examples and `docs/skill-hierarchy-review.md`.
 
 ## Spec
 
