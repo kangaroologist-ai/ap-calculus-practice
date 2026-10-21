@@ -1,0 +1,4 @@
+current              mixedBeforeAllBasic=95 L6=208 allBasic=256 firstP/C=106 allReady=268 remediation=150 (56%) onWeakSpot=7% weakDetectedAfter=-17q weakTargeted=40/40 falseReadyAvg=0.03 weakSpotLabelledReady=1/40
+BKT (state model)    mixedBeforeAllBasic=50 L6=90 allBasic=110 firstP/C=43 allReady=112 remediation=1 (1%) onWeakSpot=0% weakDetectedAfter=31q weakTargeted=12/40 falseReadyAvg=0.93 weakSpotLabelledReady=37/40
+Elo/IRT ready .90    mixedBeforeAllBasic=93 L6=183 allBasic=236 firstP/C=68 allReady=370 remediation=6 (2%) onWeakSpot=89% weakDetectedAfter=49q weakTargeted=40/40 falseReadyAvg=0.03 weakSpotLabelledReady=1/40
+Elo/IRT ready .85    mixedBeforeAllBasic=84 L6=189 allBasic=227 firstP/C=63 allReady=241 remediation=4 (2%) onWeakSpot=40% weakDetectedAfter=30q weakTargeted=22/40 falseReadyAvg=0.53 weakSpotLabelledReady=21/40

@@ -1,0 +1,10 @@
+current                      firstProduct/Chain=120 allBasic=313 allReady=342 remediation=66% longestNoNewSkill=44
+basics before mixed          firstProduct/Chain=57 allBasic=131 allReady=226 remediation=55% longestNoNewSkill=20
+diagnostic cap 1             firstProduct/Chain=107 allBasic=232 allReady=247 remediation=51% longestNoNewSkill=26
+1-question pass L1-2 basic   firstProduct/Chain=99 allBasic=281 allReady=308 remediation=67% longestNoNewSkill=38
+level-gated (L basics, L mixed, L+1) firstProduct/Chain=106 allBasic=254 allReady=284 remediation=63% longestNoNewSkill=47
+level-gated + diag cap 1     firstProduct/Chain=99 allBasic=203 allReady=226 remediation=52% longestNoNewSkill=32
+basics first + diag cap 1    firstProduct/Chain=57 allBasic=131 allReady=202 remediation=49% longestNoNewSkill=19
+basics first, 1 in 3 mixed + cap 1 firstProduct/Chain=84 allBasic=183 allReady=209 remediation=51% longestNoNewSkill=24
+basics first, 1 in 2 mixed + cap 1 firstProduct/Chain=107 allBasic=232 allReady=247 remediation=51% longestNoNewSkill=26
+all three                    firstProduct/Chain=38 allBasic=117 allReady=184 remediation=51% longestNoNewSkill=24

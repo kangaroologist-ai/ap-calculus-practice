@@ -1,0 +1,101 @@
+higher.basic.third_power                 basic src med/max   11/  15  ans med/max    2352/  19800 | f(x)=15\cdot x^{12} => 19\,800x^9
+higher.mix.third_chain                   mix   src med/max    9/  15  ans med/max     375/   1875 | f(x)=15\cdot e^{5\cdot x} => 1\,875\exp(5x)
+inverse.basic.cubic                      basic src med/max    9/  15  ans med/max      88/    258 | f(x)=x^{3}+15\cdot x,\quad f(9)=864.\quad (f^{-1})'(864)=? => \frac{1}{258}
+constant.mix.power_sum                   mix   src med/max   12/  15  ans med/max      54/    180 | f(x)=5+15\cdot x^{12} => 180x^{11}
+power.mix.negative_sum                   mix   src med/max   12/  15  ans med/max      54/    180 | f(x)=15\cdot x^{-12}+14\cdot x => 14-\frac{180}{x^{13}}
+parametric.basic.power_second            basic src med/max    9/  15  ans med/max      50/    784 | x(t)=14\cdot t^{2},\quad y(t)=t^{3} => \frac{3}{784t}
+power.mix.polynomial_sum                 mix   src med/max   13/  15  ans med/max      46/    130 | f(x)=12\cdot x^{5}+14\cdot x^{5}+4 => 130x^4
+sum.mix.square_root                      mix   src med/max   12/  15  ans med/max      40/    120 | f(x)=2\cdot \sqrt{x}+15\cdot x^{8} => 120x^7+\frac{1}{\sqrt{x}}
+sum.mix.fractional_root                  mix   src med/max   12/  15  ans med/max      40/    120 | f(x)=15\cdot x^{-8}+14\cdot x^{\frac{2}{3}} => \frac{28}{3\sqrt[3]{x}}-\frac{120}{x^9}
+root.mix.square_root_power               mix   src med/max   12/  15  ans med/max      40/    120 | f(x)=2\cdot \sqrt{x}+15\cdot x^{8} => 120x^7+\frac{1}{\sqrt{x}}
+exp.mix.polynomial                       mix   src med/max   12/  15  ans med/max      40/    120 | f(x)=2\cdot e^{x}+15\cdot x^{8} => 120x^7+2\exponentialE^{x}
+log.mix.polynomial                       mix   src med/max   12/  15  ans med/max      40/    120 | f(x)=2\cdot \ln\left(x\right)+15\cdot x^{8} => 120x^7+\frac{2}{x}
+sin.mix.power_sum                        mix   src med/max   12/  15  ans med/max      40/    120 | f(x)=2\cdot \sin\left(x\right)+15\cdot x^{8} => 120x^7+2\cos(x)
+cos.mix.power_sum                        mix   src med/max   12/  15  ans med/max      40/    120 | f(x)=2\cdot \cos\left(x\right)+15\cdot x^{8} => 120x^7-2\sin(x)
+tan.mix.power_sum                        mix   src med/max   12/  15  ans med/max      40/    120 | f(x)=2\cdot \tan\left(x\right)+15\cdot x^{8} => 120x^7+2\sec(x)^2
+cot.mix.power_sum                        mix   src med/max   12/  15  ans med/max      40/    120 | f(x)=2\cdot \cot\left(x\right)+15\cdot x^{8} => 120x^7-2\csc(x)^2
+sec.mix.power_sum                        mix   src med/max   12/  15  ans med/max      40/    120 | f(x)=2\cdot \sec\left(x\right)+15\cdot x^{8} => 120x^7+2\tan(x)\sec(x)
+csc.mix.power_sum                        mix   src med/max   12/  15  ans med/max      40/    120 | f(x)=2\cdot \csc\left(x\right)+15\cdot x^{8} => 120x^7-2\csc(x)\cot(x)
+asin.mix.power_sum                       mix   src med/max   12/  15  ans med/max      40/    120 | f(x)=2\cdot \arcsin\left(x\right)+15\cdot x^{8} => 120x^7+\frac{2}{\sqrt{1-x^2}}
+acos.mix.power_sum                       mix   src med/max   12/  15  ans med/max      40/    120 | f(x)=2\cdot \arccos\left(x\right)+15\cdot x^{8} => 120x^7-\frac{2}{\sqrt{1-x^2}}
+atan.mix.power_sum                       mix   src med/max   12/  15  ans med/max      40/    120 | f(x)=2\cdot \arctan\left(x\right)+15\cdot x^{8} => 120x^7+\frac{2}{x^2+1}
+quotient.basic.reciprocal_power          basic src med/max   12/  15  ans med/max      39/    120 | f(x)=\frac{15}{x^{8}+14} => \frac{-120x^7}{(x^8+14)^2}
+sum.basic.polynomial_linear              basic src med/max   13/  15  ans med/max      36/    120 | f(x)=15\cdot x^{8}+11\cdot x+5 => 120x^7+11
+vector.basic.polynomial_exponential      basic src med/max    9/  15  ans med/max      36/    120 | \mathbf{r}(t)=\langle 15\cdot t^{8}+9,e^{t}\rangle => 120t^7
+chain.basic.power_linear                 basic src med/max    8/   9  ans med/max      35/    162 | f(x)=\left(9\cdot x+6\right)^{2} => 162x+108
+higher.basic.second_polynomial           basic src med/max    9/  15  ans med/max      30/     72 | f(x)=x^{9}+14\cdot x^{2} => 72x^7+28
+nested.mix.power_outer                   mix   src med/max    8/   9  ans med/max      24/    126 | f(x)=\left(\sin\left(7\cdot x+3\right)+9\right)^{2} => 7\sin(14x+6)+126\cos(7x+3)
+implicit.mix.exponential_curve           mix   src med/max   21/  25  ans med/max      18/     30 | e^{y}+15\cdot x^{2}-24=0 => \frac{-30x}{\exponentialE^{y}}
+polar.mix.cosine_frequency               mix   src med/max   15/  20  ans med/max      16/     45 | r(\theta)=16+15\cdot \cos\left(3\cdot \theta\right) => \frac{(15\cos(3\theta)+16)\cos(\theta)-45\sin(\theta)\sin(3\theta)}{-45\sin(3\theta)\cos(\theta)-(15\cos(3\theta)+16)\sin(\theta)}
+inverse.mix.cubic_sine                   mix   src med/max   10/  15  ans med/max      15/     29 | f(x)=x^{3}+15\cdot x+14\cdot \sin\left(x\right),\quad f(0)=0.\quad (f^{-1})'(0)=? => \frac{1}{29}
+quotient.basic.polynomial_linear         basic src med/max   13/  15  ans med/max      14/    105 | f(x)=\frac{x^{2}+15}{14\cdot x+3} => \frac{2(-7x^2+x(14x+3)-105)}{(14x+3)^2}
+exp.basic.base                           basic src med/max   12/  15  ans med/max      13/     39 | f(x)=13\cdot 8^{x} => 39\ln(2)\times8^{x}
+polar.basic.sine_radius                  basic src med/max   16/  20  ans med/max      13/     20 | r(\theta)=9+20\cdot \sin\left(\theta\right) => \frac{9\cos(\theta)+20\sin(2\theta)}{-20\sin(\theta)^2-9\sin(\theta)+20\cos(\theta)^2}
+log.basic.scaled                         basic src med/max   12/  16  ans med/max      12/     16 | f(x)=\frac{2\cdot \ln\left(x\right)}{\ln\left(16\right)} => \frac{2}{x\ln(16)}
+sin.mix.function_sum                     mix   src med/max   12/  15  ans med/max      12/     15 | f(x)=15\cdot \sin\left(x\right)+14\cdot e^{x} => 14\exponentialE^{x}+15\cos(x)
+cos.mix.function_sum                     mix   src med/max   12/  15  ans med/max      12/     15 | f(x)=15\cdot \cos\left(x\right)+14\cdot e^{x} => 14\exponentialE^{x}-15\sin(x)
+tan.mix.function_sum                     mix   src med/max   12/  15  ans med/max      12/     15 | f(x)=15\cdot \tan\left(x\right)+14\cdot e^{x} => 14\exponentialE^{x}+15\sec(x)^2
+cot.mix.function_sum                     mix   src med/max   12/  15  ans med/max      12/     15 | f(x)=15\cdot \cot\left(x\right)+14\cdot e^{x} => 14\exponentialE^{x}-15\csc(x)^2
+sec.mix.function_sum                     mix   src med/max   12/  15  ans med/max      12/     15 | f(x)=15\cdot \sec\left(x\right)+14\cdot e^{x} => 14\exponentialE^{x}+15\tan(x)\sec(x)
+csc.mix.function_sum                     mix   src med/max   12/  15  ans med/max      12/     15 | f(x)=15\cdot \csc\left(x\right)+14\cdot e^{x} => 14\exponentialE^{x}-15\csc(x)\cot(x)
+nested.basic.function_quadratic          basic src med/max    7/   9  ans med/max      12/     18 | f(x)=e^{\left(9\cdot x+7\right)^{2}} => 18(9x+7)\exp((9x+7)^2)
+mixed.basic.product_chain                basic src med/max   12/  15  ans med/max      12/     15 | f(x)=\left(x^{2}+15\right)\cdot e^{15\cdot x} => 15(x^2+15)\exp(15x)+2x\exp(15x)
+higher.mix.second_product                mix   src med/max    4/   5  ans med/max      12/     20 | f(x)=x^{5}\cdot \sin\left(x\right) => -(\sin(x)x^5)+10\cos(x)x^4+20\sin(x)x^3
+root.basic.fractional_power              basic src med/max    9/  15  ans med/max      11/     70 | f(x)=14\cdot x^{\frac{5}{3}} => \frac{1}{3}(70x^{\frac{2}{3}})
+quotient.mix.product_linear              mix   src med/max   10/  15  ans med/max      10/     15 | f(x)=\frac{x^{8}\cdot e^{x}}{x+15} => \frac{(x+15)(x^8\exponentialE^{x}+8x^7\exponentialE^{x})-x^8\exponentialE^{x}}{(x+15)^2}
+mixed.mix.quotient_power                 mix   src med/max   10/  15  ans med/max      10/     15 | f(x)=\frac{x^{8}\cdot e^{9\cdot x+7}}{x+15} => \frac{(x+15)(9x^8\exp(9x+7)+8x^7\exp(9x+7))-x^8\exp(9x+7)}{(x+15)^2}
+inverse.mix.linear_exponential           mix   src med/max    9/  15  ans med/max      10/     16 | f(x)=15\cdot x+e^{x},\quad f(0)=1.\quad (f^{-1})'(1)=? => \frac{1}{16}
+exp.basic.natural                        basic src med/max    9/  15  ans med/max       9/     15 | f(x)=15\cdot e^{x} => 15\exponentialE^{x}
+log.basic.natural                        basic src med/max    9/  15  ans med/max       9/     15 | f(x)=15\cdot \ln\left(x\right) => \frac{15}{x}
+log.mix.exponential                      mix   src med/max    9/  15  ans med/max       9/     15 | f(x)=\ln\left(x\right)-\left(15\cdot e^{x}\right) => \frac{1}{x}-15\exponentialE^{x}
+sin.basic.scaled                         basic src med/max    9/  15  ans med/max       9/     15 | f(x)=15\cdot \sin\left(x\right) => 15\cos(x)
+sin.basic.divided                        basic src med/max    9/  15  ans med/max       9/     15 | f(x)=\frac{\sin\left(x\right)}{15} => \frac{\cos(x)}{15}
+cos.basic.scaled                         basic src med/max    9/  15  ans med/max       9/     15 | f(x)=15\cdot \cos\left(x\right) => -15\sin(x)
+cos.basic.divided                        basic src med/max    9/  15  ans med/max       9/     15 | f(x)=\frac{\cos\left(x\right)}{15} => \frac{-\sin(x)}{15}
+tan.basic.scaled                         basic src med/max    9/  15  ans med/max       9/     15 | f(x)=15\cdot \tan\left(x\right) => 15\sec(x)^2
+tan.basic.divided                        basic src med/max    9/  15  ans med/max       9/     15 | f(x)=\frac{\tan\left(x\right)}{15} => \frac{\sec(x)^2}{15}
+cot.basic.scaled                         basic src med/max    9/  15  ans med/max       9/     15 | f(x)=15\cdot \cot\left(x\right) => -15\csc(x)^2
+cot.basic.divided                        basic src med/max    9/  15  ans med/max       9/     15 | f(x)=\frac{\cot\left(x\right)}{15} => \frac{1}{15}(-\csc(x)^2)
+sec.basic.scaled                         basic src med/max    9/  15  ans med/max       9/     15 | f(x)=15\cdot \sec\left(x\right) => 15\tan(x)\sec(x)
+sec.basic.divided                        basic src med/max    9/  15  ans med/max       9/     15 | f(x)=\frac{\sec\left(x\right)}{15} => \frac{\tan(x)\sec(x)}{15}
+csc.basic.scaled                         basic src med/max    9/  15  ans med/max       9/     15 | f(x)=15\cdot \csc\left(x\right) => -15\csc(x)\cot(x)
+csc.basic.divided                        basic src med/max    9/  15  ans med/max       9/     15 | f(x)=\frac{\csc\left(x\right)}{15} => \frac{1}{15}(-\csc(x)\cot(x))
+asin.basic.scaled                        basic src med/max    9/  15  ans med/max       9/     15 | f(x)=15\cdot \arcsin\left(x\right) => \frac{15}{\sqrt{1-x^2}}
+asin.basic.divided_value                 basic src med/max    9/  15  ans med/max       9/     15 | f(x)=\frac{\arcsin\left(x\right)}{15} => (15\sqrt{1-x^2})^{-1}
+acos.basic.scaled                        basic src med/max    9/  15  ans med/max       9/     15 | f(x)=15\cdot \arccos\left(x\right) => \frac{-15}{\sqrt{1-x^2}}
+acos.basic.divided_value                 basic src med/max    9/  15  ans med/max       9/     15 | f(x)=\frac{\arccos\left(x\right)}{15} => (-1)(15\sqrt{1-x^2})^{-1}
+atan.basic.scaled                        basic src med/max    9/  15  ans med/max       9/     15 | f(x)=15\cdot \arctan\left(x\right) => \frac{15}{x^2+1}
+atan.basic.divided_value                 basic src med/max    9/  15  ans med/max       9/     15 | f(x)=\frac{\arctan\left(x\right)}{15} => (15(x^2+1))^{-1}
+product.mix.quadratic_function           mix   src med/max    9/  15  ans med/max       9/     15 | f(x)=\left(x^{2}+15\right)\cdot e^{x} => (x^2+15)\exponentialE^{x}+2x\exponentialE^{x}
+quotient.mix.function_quadratic          mix   src med/max    9/  15  ans med/max       9/     15 | f(x)=\frac{\sin\left(x\right)}{x^{2}+15} => \frac{(x^2+15)\cos(x)-2x\sin(x)}{(x^2+15)^2}
+mixed.basic.quotient_chain               basic src med/max    9/  15  ans med/max       9/     15 | f(x)=\frac{\sin\left(4\cdot x+9\right)}{x^{2}+15} => \frac{4(x^2+15)\cos(4x+9)-2x\sin(4x+9)}{(x^2+15)^2}
+mixed.mix.log_product                    mix   src med/max    9/  15  ans med/max       9/     15 | f(x)=\ln\left(x^{2}+15\right)\cdot e^{x} => \frac{2x\exponentialE^{x}}{x^2+15}+\ln(x^2+15)\exponentialE^{x}
+inverse.basic.linear                     basic src med/max    9/  15  ans med/max       9/     15 | f(x)=15\cdot x+9,\quad f(9)=144.\quad (f^{-1})'(144)=? => \frac{1}{15}
+vector.mix.product_chain                 mix   src med/max    9/  15  ans med/max       9/     15 | \mathbf{r}(t)=\langle \left(t^{2}+15\right)\cdot e^{t},e^{t^{2}}\rangle => (t^2+15)\exponentialE^{t}+2t\exponentialE^{t}
+vector.mix.log_product                   mix   src med/max    9/  15  ans med/max       9/     15 | \mathbf{r}(t)=\langle \ln\left(t^{2}+15\right),t\cdot e^{t}\rangle => \frac{2t}{t^2+15}
+power.basic.negative                     basic src med/max    7/  12  ans med/max       8/     13 | f(x)=x^{-12} => \frac{-12}{x^{13}}
+power.basic.positive                     basic src med/max    7/  12  ans med/max       7/     12 | f(x)=x^{12} => 12x^{11}
+product.mix.tangent_secant               mix   src med/max    7/  12  ans med/max       7/     12 | f(x)=x^{12}\cdot \sec\left(x\right) => \tan(x)\sec(x)x^{12}+12\sec(x)x^{11}
+chain.basic.function_linear              basic src med/max    7/   9  ans med/max       7/      9 | f(x)=e^{9\cdot x+7} => 9\exp(9x+7)
+chain.mix.square_root_quadratic          mix   src med/max   12/  15  ans med/max       7/     15 | f(x)=\sqrt{15\cdot x^{2}+14} => \frac{15x}{\sqrt{15x^2+14}}
+nested.basic.function_pair               basic src med/max    7/   9  ans med/max       7/      9 | f(x)=e^{e^{9\cdot x+7}} => 9\exp(9x+\exp(9x+7)+7)
+parametric.basic.linear_slope            basic src med/max    9/  15  ans med/max       7/     15 | x(t)=15\cdot t+9,\quad y(t)=t^{8} => \frac{8t^7}{15}
+polar.basic.cosine_radius                basic src med/max   12/  15  ans med/max       7/     15 | r(\theta)=15+14\cdot \cos\left(\theta\right) => \frac{-14\sin(\theta)^2+14\cos(\theta)^2+15\cos(\theta)}{-15\sin(\theta)-14\sin(2\theta)}
+root.basic.square_root                   basic src med/max    9/  15  ans med/max       6/     15 | f(x)=15\cdot \sqrt{x} => \frac{15}{2\sqrt{x}}
+exp.mix.square_root                      mix   src med/max    9/  15  ans med/max       6/     15 | f(x)=e^{x}+15\cdot \sqrt{x} => \frac{15}{2\sqrt{x}}+\exponentialE^{x}
+asin.mix.square_root                     mix   src med/max    9/  15  ans med/max       6/     15 | f(x)=\arcsin\left(x\right)+15\cdot \sqrt{x} => \frac{1}{\sqrt{1-x^2}}+\frac{15}{2\sqrt{x}}
+acos.mix.square_root                     mix   src med/max    9/  15  ans med/max       6/     15 | f(x)=\arccos\left(x\right)+15\cdot \sqrt{x} => \frac{15}{2\sqrt{x}}-\frac{1}{\sqrt{1-x^2}}
+atan.mix.square_root                     mix   src med/max    9/  15  ans med/max       6/     15 | f(x)=\arctan\left(x\right)+15\cdot \sqrt{x} => \frac{1}{x^2+1}+\frac{15}{2\sqrt{x}}
+product.basic.function_pair              basic src med/max    6/   9  ans med/max       6/     18 | f(x)=9\cdot e^{x}\cdot e^{x} => 18\exp(2x)
+implicit.mix.sine_curve                  mix   src med/max   14/  25  ans med/max       6/     15 | x^{2}+15\cdot \sin\left(y\right)-24=0 => \frac{-2x}{15\cos(y)}
+parametric.mix.exponential_product       mix   src med/max    6/   9  ans med/max       6/      9 | x(t)=e^{t},\quad y(t)=9\cdot t\cdot e^{t} => 9t+9
+polar.mix.sine_frequency                 mix   src med/max    6/  10  ans med/max       6/     10 | r(\theta)=10+\sin\left(3\cdot \theta\right) => \frac{3\sin(\theta)\cos(3\theta)+(\sin(3\theta)+10)\cos(\theta)}{3\cos(\theta)\cos(3\theta)-(\sin(3\theta)+10)\sin(\theta)}
+chain.mix.function_power_sum             mix   src med/max    5/   9  ans med/max       5/      9 | f(x)=e^{x^{3}+9} => 3x^2\exp(x^3+9)
+parametric.mix.linear_chain              mix   src med/max    9/  15  ans med/max       5/     15 | x(t)=15\cdot t+1,\quad y(t)=\sin\left(2\cdot t\right) => \frac{1}{15}(2\cos(2t))
+vector.basic.power_function              basic src med/max    9/  15  ans med/max       5/      8 | \mathbf{r}(t)=\langle t^{8},14\cdot e^{t}\rangle => 8t^7
+product.basic.power_function             basic src med/max    4/   5  ans med/max       4/      5 | f(x)=x^{5}\cdot \sin\left(x\right) => \cos(x)x^5+5\sin(x)x^4
+implicit.basic.ellipse                   basic src med/max   64/ 400  ans med/max       4/      5 | 5\cdot x^{2}+2\cdot y^{2}-60=0 => \frac{-5x}{2y}
+implicit.basic.hyperbola                 basic src med/max   64/ 400  ans med/max       4/      5 | 2\cdot y^{2}-\left(5\cdot x^{2}\right)-60=0 => \frac{5x}{2y}
+nested.mix.function_power_sum            mix   src med/max    3/   3  ans med/max       3/      3 | f(x)=e^{\sin\left(x^{3}-1\right)} => 3\cos(x^3-1)x^2\exp(\sin(x^3-1))
+constant.basic.forms                     basic src med/max    9/  15  ans med/max       0/      0 | f(x)=\ln\left(13\right) => 0
+constant.basic.rational                  basic src med/max   12/  15  ans med/max       0/      0 | f(x)=13+\frac{5}{3} => 0

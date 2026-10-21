@@ -1,0 +1,329 @@
+---
+task: practice-quality
+phase: implement      # grill | research | spec | todo | implement | acceptance | done
+scope: ap-calculus-practice / question numbers, scheduler, learning path, new abstract-function skill, site access, accounts
+branch: practice-quality
+version: 1.2.1 → 1.3.0 (one release, G1)
+commits: []
+---
+
+<!-- Write this document in English, in the ASD-STE100 core style (see SKILL.md, Writing). Owner answers stay verbatim. -->
+
+# Question quality, promotion speed, learning path, and an abstract-function skill
+
+Source: the owner's request of 2026-10-21, six points (verbatim in substance):
+
+1. 题目生成：有些题目选用的数字太怪太复杂、没有必要，请优化数字的选取。
+2. 复习算法：检查练习中的复习算法是否合理，学习难题曲线怎么样，晋升速度是否有点慢。
+3. 新增练习类型：把 AP Calculus 中新出现的"抽象函数"练习部分加进来，做成随机生成的题型，并作为一个独立的技能。
+4. 学习路径：题目需要由浅入深，否则学生很容易放弃。请据此重新评估技能的学习路径。
+5. 页面整体：请就整个页面在访问方面给出你的意见。
+6. 学生进度与账号：我想让每个学生都有自己的账号来保存进度。这是否必须向 Cloudflare 付费？每月 5 美元够不够？
+
+GRSTA signals: a new skill (user-visible, version bump), a curriculum and progress-format migration, more than three files, and work for Codex.
+
+This task replaces `docs/reviews/2026-09-27-coefficients/plan.md` (not started). Its only open question (G1 there) is G2 here.
+
+## Grill (decision log)
+
+Recon: read `src/catalog.ts`, `src/templates.ts`, `src/questions.ts`, `src/progress.ts`, `src/grading.ts`, `src/math.ts`, `src/skill-inference.ts`, `src/domains.ts`, `src/compact-progress.ts` (profiles), `src/math-keyboard.ts` (alt letters), `src/main.ts` (prompt render, path view), `README.md`, `docs/design/DESIGN.md` §1–3, `docs/skill-hierarchy-review.md`, the golden and variety tests, the 2026-09-27 coefficients plan, and the owner's worksheet `../20261020 Abstract Function Practice/source/questions.tex`. Ran scratch measurements and simulations (scripts in the session scratchpad, not in the repo). Fetched Cloudflare pricing pages and checked the live site.
+Size class: large - six independent topics, one new skill with a format migration, and a possible server component.
+
+| # | Question | Options (recommendation first) | Owner's answer | Date |
+|---|---|---|---|---|
+| G1 | How to split the work into releases | **A = numbers, display, scheduler order, diagnostic limit (1.3.0, no format change); B = AP-order path, abstract skill, keyboard keys, curriculum migration (1.4.0); C = accounts as a separate task** / one release for all / other | “一次发布全部。” (see L1) | 2026-10-21 |
+| G2 | Number policy (R1) | **Prompt numbers 1–5 on Basic lines and 1–9 on Mixed lines; answer coefficients at most 20 on Basic and at most 60 on Mixed; higher-derivative answers at most 120; plus the special rules in S2** / no two-digit number anywhere (prompt and answer) / keep the current ranges | “你来把握，不同的题尽量多。答案至少不要出现三位数。高阶导数到二阶应该差不多，最多到三阶；三阶导数的答案里可以有不超过 200 的数。” | 2026-10-21 |
+| G3 | Selection order (R2) | **Basic lines first, with one Mixed question in every three** / all Basic lines first, Mixed lines after / level by level (level N Basic, then level N Mixed) / keep the current order | Not clear to the owner. Owner's own model (with G4): “知识点可以按难度分级。简单的知识点答对一题就算掌握了 80%，可以往后走，后面就可以出现组合题。每次组合题出现时，都反过来判断前面的知识点掌握得好不好。这有点像 IRT（Item Response Theory）。请你研究一下，看能不能加到我们的算法里：不只用遗忘算法，再加一个估计每个知识点掌握情况的算法。” → R7 | 2026-10-21 |
+| G4 | Diagnostic checks after a miss (R2) | **At most one check: the most advanced Ready skill that the question uses** / no diagnostic checks / keep (all Ready required skills) | Answered together with G3 (combined questions judge the earlier skills) → R7 | 2026-10-21 |
+| G5 | One-question pass for easy skills (R2) | **No: keep two correct answers per line; measure again after release A** / Basic lines of levels 1–2 pass after one first-try correct answer | “要。” | 2026-10-21 |
+| G6 | Learning path (R3) | **Move skills to the AP CED order (table in R3) in release B, with the same migration as the new skill** / keep the current levels | “我没明白 Release B 是什么意思。我不想改成 AP 大纲的顺序，就按我现在的顺序一点一点加。” → keep the current levels | 2026-10-21 |
+| G7 | Abstract-function skill content (R4) | **Level 4 after the chain rule; Basic line = write h′(x) with one abstract layer; Mixed line = values from a table (chain, product, quotient, inverse); keyboard gets f, g and ′ on these questions** / symbolic questions only / table questions only | “放到后面做。抽象函数的内容你弄清楚就行。题目要很简单，只有一层函数，不要表格题。就像我们也没有图像题一样，这里只把最基础的技能练好。” (placement: see L2) | 2026-10-21 |
+| G8 | Accounts (R6) | **Separate task after releases A and B; free Cloudflare plan; teacher-issued class code plus a personal login code; local progress stays primary; no-account use stays** / start now in this task / not needed | “可以，给每个学生一个码。但每人一个码，是不是就只能在一台设备上用？” → answered in R6 (one code, many devices) | 2026-10-21 |
+| G9 | Where students open the site (R5) | **Tell us; if any student uses a mainland-China network, add a custom domain and test it from there** / all students are outside mainland China (keep `pages.dev`) | “没有学生用中国大陆的网络，都是属于海外访问。” → keep `pages.dev` | 2026-10-21 |
+| G10 | Quick access fixes in release A (R5) | **Ask the browser for persistent storage and tell iPhone students to add the site to the Home Screen** / also add offline support (service worker) / no change | Answered with a question: “长期保存进度是不是有点难？能不能比如让学生导出进度？还是说必须付费，把进度保存在线上才行？” → answered in R5; asked again as L6 | 2026-10-21 |
+| L1 | Loop-back on G1: does “one release” include accounts? | **No: accounts stay a separate task after this release (as in G8)** / yes, accounts in the same release | “别的按推荐” → recommended | 2026-10-21 |
+| L2 | Loop-back on G7: what does “放到后面做” mean? | **Later in the path: level 5, next to implicit, inverse and higher; prerequisites chain and product** / later in time (a release after this one) | “别的按推荐” → recommended | 2026-10-21 |
+| L3 | Mastery model family (R7) | **IRT/Elo-style: a continuous estimate per skill, updated by every question, with blame on the weakest skill** / BKT (mastered or not mastered) | “别的按推荐” → recommended | 2026-10-21 |
+| L4 | Ready threshold of the mastery estimate (R7) | **90%** / 85% | “我觉得按85%吧，因为课上课下还能练到的。” → 85% | 2026-10-21 |
+| L5 | A correct combined question also counts as an FSRS review of its due component skills (R7) | **Yes** / no | “别的按推荐” → yes | 2026-10-21 |
+| L6 | Re-ask of G10 after the answer in R5 | **Add the persistent-storage request and the Home Screen tip in this release; online saving comes with the accounts task** / no change now | “别的按推荐” → recommended | 2026-10-21 |
+| L7 | Spec talk-through: go-ahead? | **Agree; start with S3 on branch `practice-quality`** / change the Spec | “同意，codex的工作和你能分出的代码工作都可以交给qoder的dsf，审核可以交给codex，codex和dsf意见一致了你再看一眼就行。” Later: “记得保留qoder的session这样有修改可以直接回调” → see the delegation rule under To Do | 2026-10-21 |
+
+Default assumptions (not answered): none yet.
+Owner agrees with this understanding: round 2 answers, 2026-10-21 (“4我觉得按85%吧……别的按推荐”). Spec talk-through: “同意” (L7), 2026-10-21.
+
+## Research
+
+Labels: **[F]** fact (source), **[I]** inference, **[U]** unknown, **[P]** problem that was there before this task.
+
+### R1. Numbers in generated questions (point 1)
+
+- **[F]** Most templates use `int(c, 2, 15)` for coefficients and constants, and `int(c, 2, 12)` or `int(c, 2, 8)` for exponents (`src/templates.ts`). The linear inner function `lin(c)` is `ax+b` with `a` 2–9 and `b` 1–9 (`src/questions.ts:66-68`).
+- **[F]** Measurement: 120 seeds per template; the answer was simplified by the compute engine; the value is the largest number in the simplified answer (scratch `nums.ts`, output `nums.txt`).
+  - `higher.basic.third_power`: median 2,352, maximum 19,800 (`f(x)=15x^{12}` → `19800x^9`).
+  - `constant.mix.power_sum` and `power.mix.negative_sum`: median 54, maximum 180.
+  - 20 templates of the form `a·g(x) + b·x^n`: median 40, maximum 120 (`15x^8` → `120x^7`).
+  - `inverse.basic.cubic`: `f(x)=x^3+15x`, `f(9)=864`, answer `1/258`.
+  - `parametric.basic.power_second`: answer `3/(784t)`.
+- **[F]** Unnatural forms:
+  - `power.mix.polynomial_sum` can repeat an exponent: `12x^5+14x^5+4`.
+  - `product.basic.function_pair` can pick the same function twice: `9·e^x·e^x`.
+  - `log.basic.scaled` gives `2 ln x / ln 16`; `constant.basic.rational` gives `13 + 5/3`.
+  - Implicit constants go up to 400 (median 64); polar constants go up to 20.
+- **[F]** Display: `latex()` in `src/math.ts` writes every product with `\cdot` and puts parentheses around a negated term. Prompts show `15·x^{12}`, `ln(x) − (15·e^x)` and `2·y^2 − (5·x^2) − 60 = 0`.
+- **[F]** The owner said on 2026-09-27: “出题的系数尽量不要两位数吧，计算量不是考察要点。” (`docs/reviews/2026-09-27-coefficients/plan.md`).
+- **[F]** Limits for the new ranges:
+  - `tests/generator-variety.test.ts:59-62` needs at least 10 distinct questions and 6 distinct answers per template.
+  - `tests/generator-golden.test.ts` compares no byte-identical template now, so new ranges do not break it.
+  - Saved questions keep their own source and answers, so new ranges do not change saved work.
+- **[I]** Narrow ranges reduce variety. For example, `x^n` with `n` 2–5 gives only 4 questions. Variety must come from structure (two small parameters, more templates), not from large numbers.
+- **[I]** `latex()` output also feeds the grader's normalisation (`src/grading.ts`, `normalize`). A display change must keep the parse result equal; the math corpus and grading tests check this.
+
+### R2. Review algorithm and promotion speed (point 2)
+
+- **[F]** Mechanism (`src/progress.ts`):
+  - One FSRS-6 card per skill (`ts-fsrs` 5.4.2, retention 0.9, maximum 180 days, steps 1 min and 10 min).
+  - The rating is Good for a first-try correct answer without a hint, else Again. The card changes only when it is due.
+  - A line (Basic or Mixed) passes after two first-try correct answers on different questions. A pass is permanent.
+  - A level opens when every Basic line of the level below has passed.
+- **[F]** FSRS intervals, all Good: 10 min → 2 d → 11 d → 46 d → 163 d → 181 d. With one Again at the third review: 10 min → 1 d → 3 d → 7 d → 17 d (scratch `fsrs.ts`). **[I]** These intervals are normal. The FSRS parameters need no change.
+- **[F]** Selection order (`chooseNext`): diagnostic checks, then rebuild questions, then due reviews, then each skill in catalog order with its Basic line before its Mixed line. So the Mixed line of every earlier skill comes before the Basic line of every later skill.
+- **[F]** The README says the Mixed line does not block later Basic lessons. That is true for the level gate. The selection order still puts Mixed questions in front of later Basic lines.
+- **[F]** Diagnostic checks: the first miss on a skill adds every Ready skill in the question's `requiredSkills` to the check queue. A mixed question can add up to 5 checks.
+- **[F]** Simulation, 45 s per question, scratch `sim.ts`:
+  - A student who is always correct: level 3 opens at question 70, level 6 at 110, all skills Ready at 127.
+  - A student who is correct 80% of the time: level 3 at 124, level 6 at 228, all Ready at 279.
+- **[I]** Accuracy model for the comparison (an assumption, not data): 0.92, 0.88, 0.80, 0.75, 0.72, 0.70 for levels 1–6, and 0.08 less on Mixed questions.
+- **[F]** Comparison, 40 runs, median (scratch `sim2.ts`, output `variants.txt`). “First P/C” is the first product, quotient or chain question.
+
+  | Variant | First P/C | All Basic passed | All Ready |
+  |---|---:|---:|---:|
+  | Current | 120 | 313 | 342 |
+  | Diagnostic limit 1 | 107 | 232 | 247 |
+  | Level by level + limit 1 | 99 | 203 | 226 |
+  | Basic first, 1 Mixed in 3 + limit 1 | 84 | 183 | 209 |
+  | All Basic first + limit 1 | 57 | 131 | 202 |
+  | All Basic first + limit 1 + one-question pass (levels 1–2) | 38 | 117 | 184 |
+
+- **[F]** In the current variant, an average run has 321 questions and 62 misses. The misses cause 97 diagnostic checks and 106 rebuild questions: about 3.3 extra questions per miss (scratch `sim3.ts`).
+- **[I]** Conclusion: promotion is slow mainly at the start. A typical student does about 120 questions (about 90 minutes) of single-function work before the first product or chain question. The causes, in order of effect: the diagnostic fan-out, the Mixed-before-Basic order, and the 11 skills of level 2 (44 questions minimum). The two-answer pass rule is not the main cause.
+- **[U]** Real accuracy: the site keeps no answer history, so the model numbers are not measured.
+
+### R3. Learning path (point 4)
+
+- **[F]** Owner decision G6: keep the current levels and order. The AP-order proposal below is a record only.
+
+- **[F]** Current levels (`src/catalog.ts`): 1 constant, power, sum, root; 2 exp, log, sin, cos, tan, cot, sec, csc, asin, acos, atan; 3 product, quotient, chain; 4 nested, mixed; 5 implicit, inverse, higher; 6 parametric, vector, polar.
+- **[F]** AP CED order (Fiveable unit pages for the CED topic list): 2.5 power rule; 2.6 constant, sum, difference, constant multiple; 2.7 cos x, sin x, eˣ, ln x; 2.8 product; 2.9 quotient; 2.10 tan, cot, sec, csc; 3.1 chain; 3.2 implicit; 3.3 inverse functions; 3.4 inverse trigonometric functions; 3.5 selecting procedures; 3.6 higher-order derivatives; Unit 9 (BC) parametric, vector, polar.
+- **[I]** A class that follows the CED learns product and quotient before tan and sec, and the chain rule before arcsin. On the site, product, quotient and chain stay locked until seven of these later skills pass. A student who practises along with the class finds locked content that the class already learned, and drills content that the class did not teach yet.
+- **[F]** No ramp inside a line: the first question of a line is a random template of that role with full-range numbers. For example, the first quotient question can be `(x²+13)/(11x+14)`.
+- **[F]** Proposed AP-order levels (skill IDs do not change):
+
+  | Level | Skills | CED |
+  |---|---|---|
+  | 1 Foundations | constant, power, sum, root | 2.5–2.6 |
+  | 2 Essential functions | sin, cos, exp, log | 2.7 |
+  | 3 Product and quotient | product, quotient, tan, cot, sec, csc | 2.8–2.10 |
+  | 4 Chain rule | chain, abstract (new), nested, asin, acos, atan | 3.1, 3.4 |
+  | 5 Implicit, inverse, higher | implicit, inverse, higher, mixed | 3.2, 3.3, 3.5, 3.6 |
+  | 6 Curves and coordinates | parametric, vector, polar | Unit 9 |
+
+- **[F]** `product` lists `tan` as a prerequisite; in the AP order `tan` is on the same level, so the prerequisite must go.
+- **[F]** Simulation of the AP-order path (scratch `sim4.ts`): with level by level + limit 1, the first P/C question comes at 61 (current path: 99); with all Basic first + limit 1, at 45 (current path: 57).
+- **[I]** The totals for the AP path look a little higher (for example 233 against 226 Ready). The cause is the model: it gives lower accuracy to skills on higher levels, and tan, sec and the other moved skills are on higher levels now. The main gain of the AP order is the match with class teaching, not the total.
+- **[I]** Migration: `unlockedLevel` keeps its number but levels hold other skills. A rule must make sure that no student loses a skill that was open: new `unlockedLevel` = the larger of the old value and the new level of every skill that the student started.
+
+### R4. Abstract-function skill (point 3)
+
+- **[F]** Source: the owner's worksheet (`../20261020 Abstract Function Practice/source/questions.tex`, 9 questions):
+  - Q1: write h′(x) for `f(x^3)`, `[f(x)]^3`, `e^{f(x^2)}`, `√f(x)`, `1/[f(sin x)]^2`, `f(g(x))`, `f(f(x))`, `x^2 f(3x)`, `f(x^2)/g(x)`, `ln g(x)`, `f(x) arcsin 2x`.
+  - Q2: read values from a table of f, f′, g, g′.
+  - Q3: find h′(a) from the table (chain, product, quotient, power).
+  - Q4–Q5: inverse values from the table, and two or three layers.
+  - Q6 and Q9: f′ given by a formula, plus f(a).
+  - Q7: f′(u) compared with d/dx f(u). Q8: inverse value with a formula.
+- **[F]** Parsing (scratch `parse.ts`, `parse2.ts`): the compute engine reads `f'(x^3)` as `["Apply",["Derivative","f",1],["Power","x",3]]` with no set-up. It reads `f(x)` as the product `f·(x)`, unless `f` is declared as a function; then it reads `["f","x"]`.
+- **[I]** Declare `f` and `g` only in a second engine instance for abstract questions, so the parse of all other questions stays the same.
+- **[F]** The grader compares values at sample points of x only, with an operator whitelist (`src/grading.ts`).
+- **[I]** Grading route: at grade time, replace `f` and `g` by 3–4 hidden concrete functions with known derivatives. Evaluate the expected tree and the student tree for each choice. Accept only if all choices agree.
+- **[I]** Places that must change: `parseAnswer`; `derivative()` and `latex()` for f-nodes; `inferSkills` (`f(u)` with u ≠ x means chain); `checkExtraDomains` (`√f`, `ln g`, `1/f`); the SymPy oracle (`Function('f')`); the keyboard.
+- **[F]** The keyboard has no `f`, `g` or prime key (`src/math-keyboard.ts`, `altFor`: x y z, u v w, r s t).
+- **[I]** On iPhone, symbolic answers need these keys. A keyboard change brings `DESIGN.md` §6, the layout tests, a full design review and an iPhone check.
+- **[F]** The prompt is drawn by MathLive `convertLatexToMarkup` (`src/main.ts:240`). **[U]** How a table looks at 390 px, and how a screen reader reads it; an HTML table can be better.
+- **[F]** A new skill changes the curriculum:
+  - `CURRICULUM_VERSION` goes from `ap-derivatives-2` to `ap-derivatives-3`.
+  - The compact profiles fix the skill order (`PROFILE3_SKILLS`, 26 skills), so a profile 4 is necessary.
+  - `src/migrate.ts` needs a registered path, and a new frozen fixture is necessary.
+  - `tests/generator-golden.test.ts` uses `SKILLS.length * 2 * 20`; it must use the frozen count 26.
+- **[I]** This is a data-format migration that must land with its readers (owner: Claude).
+- **[I]** Release A must limit the diagnostic checks first. The abstract skill uses chain, product and quotient, so each miss now adds three or more checks.
+
+### R5. Site access (point 5)
+
+- **[F]** First visit (live site, this machine): main script 326 KB (brotli), style sheet 13 KB, grading worker 876 KB brotli (3.2 MB raw) at the first check. Time to first byte 0.33 s (Cloudflare location TPE).
+- **[F]** There is no service worker and no `navigator.storage.persist()` call (`src/main.ts`). `DESIGN.md` §1 says the site is offline first.
+- **[I]** Later visits use the browser cache for the scripts, but the site does not open with no network.
+- **[F]** Safari deletes all script-writable storage of a site, IndexedDB included, after 7 days of Safari use with no user interaction on that site. Home Screen web apps are exempt (WebKit policy, summarised by Didomi; WebKit Bugzilla 211775).
+- **[I]** An iPhone student who stops for a holiday can lose all progress. **[U]** Whether `persist()` gives an exemption in Safari.
+- **[F]** The Cloudflare China Network FAQ says Pages is not available in mainland China (the `pages.dev` certificate). Community reports describe intermittent blocks.
+- **[U]** Where the students open the site.
+- **[F]** Accessibility work is in place: contrast tests, spoken text for formulas (`role="math"` with `aria-label`), reduced motion, and focus management (`DESIGN.md`, tests). **[I]** This recon found no large accessibility gap; no new audit ran.
+- **[F]** G9: all students are outside mainland China. The `pages.dev` address stays.
+- Answer to the owner's G10 question (2026-10-21):
+  - **[F]** Export exists now: Move progress → Export progress gives a code and a QR image (README).
+  - **[I]** Export protects only a student who remembers it. Safari deletes the data with no warning, so most students will not have a recent code.
+  - **[F]** A site on the iPhone Home Screen is exempt from the 7-day rule (WebKit Bugzilla 211775 comment).
+  - **[U]** Whether `navigator.storage.persist()` stops the 7-day rule in Safari. The call costs one line, so it is still worth it.
+  - **[I]** Online saving is the robust fix. It needs accounts (R6), and it is free at this size. Payment is not necessary.
+
+### R6. Accounts and Cloudflare cost (point 6)
+
+- **[F]** Cloudflare Workers pricing page:
+  - Free: 100,000 requests per day; 10 ms CPU per request.
+  - Paid: USD 5 per month minimum; 10 million requests per month; 30 million CPU ms.
+  - Pages Functions are billed as Workers.
+- **[F]** Cloudflare D1 pricing page (updated 2026-04-21):
+  - Free: 5 million rows read per day, 100,000 rows written per day, 5 GB storage. At the daily limit, queries stop.
+  - Paid: 25 billion rows read and 50 million rows written per month, 5 GB storage.
+- **[I]** Load estimate: 100 students × 60 questions per day × 1 write is 6,000 rows per day, 6% of the free write limit. Requests are of the same order.
+- **[I]** A paid plan is not necessary at class or school size. USD 5 per month is much more than enough.
+- **[I]** The paid plan matters only in three cases:
+  - Password hashing needs more than 10 ms CPU (**[U]**, not measured).
+  - Login by email code needs Cloudflare Email Sending (beta, paid plan only).
+  - Use grows past about 1,000 active students per day.
+- **[F]** Cloudflare Access (Zero Trust) is free for up to 50 users, according to third-party pages. **[U]** Not checked on the official plan page.
+- **[F]** The README and `DESIGN.md` §1 say the site has no accounts and no student database. Accounts move student data to a server, so privacy and the help text change.
+- **[I]** Proposed design for task C:
+  - Local progress stays primary.
+  - One Pages Function stores the existing compact snapshot (about 1.2 KB per student, README) in D1.
+  - The newer `updatedAt` wins, and the student sees a prompt before a replacement.
+  - Use with no account stays possible.
+- **[I]** Login options:
+  - Teacher-issued class code plus a personal login code: no email, works in mainland China. A random code needs no slow hashing.
+  - Email one-time code: needs Email Sending (paid, beta) or Cloudflare Access.
+  - Google sign-in: blocked in mainland China.
+- Answer to the owner's G8 question (one code, one device?), 2026-10-21:
+  - **[I]** No. The code is a key, not a device lock. A student types the same code on a phone and on a laptop, and both load the same progress from the server.
+  - **[I]** Each answer sends the new copy to the server. When the site opens, it gets the newest copy.
+  - **[I]** The only conflict: two devices that practise at the same time with no network. Then the newer copy wins, and the student sees a prompt first. The README rule “no automatic merge of two histories” stays.
+
+### R7. Mastery model (owner's G3 and G4 answer)
+
+- **[F]** The owner's model: grade skills by difficulty; one correct answer on an easy skill means 80% mastery and opens the next skill; later combined questions judge the earlier skills again; add a mastery estimate next to the forgetting model (FSRS).
+- **[F]** Prior art:
+  - Bayesian Knowledge Tracing (BKT, Corbett and Anderson 1995): a probability that a skill is in the “mastered” state.
+  - Conjunctive knowledge tracing (Koedinger, Pavlik, Stamper, Nixon, Ritter, EDM 2011): when a step needs several skills, a simple update lowers all of them after an error. Their Bayesian update gives the blame to the likely cause. In their tutor logs, about one third of the problems (441 of 1,370) were not necessary.
+  - Elo for learner models (Pelánek, Computers & Education 2016): each answer is a match between student and item; it estimates skill and item difficulty online. Abdi et al. (arXiv 1910.12581) extend Elo to items with several concepts.
+  - Math Academy FIRe (Skycak): a correct advanced review also gives fractional review credit to the simpler skills inside it; a failure penalty flows up to the advanced skills, not down.
+- **[I]** IRT needs answer data from many students to calibrate item difficulty. The site keeps no answer data, so a full IRT model is not possible now. An Elo-style update is the online form of the same idea, with difficulty set by hand. With accounts (task C), answer logs can calibrate the difficulty of each template later.
+- **[F]** Prototype (`research/mastery.ts`, `research/sim5.ts`), two families:
+  - BKT: state probability with slip 0.08, guess 0.05, learn 0.1; priors by level.
+  - IRT/Elo-style: estimate = chance to apply the skill correctly. Start values by level: 0.62, 0.58, 0.45, 0.40, 0.35, 0.35. Combined question: predicted chance = product of the estimates. Update = gradient step: a correct answer raises each skill by `K(1 − m)`; a wrong answer lowers each skill by `K·P(1 − m)/(1 − P)`, so the weakest skill gets most of the blame. Step `K = max(1, 2.6/(1 + 0.6n))`, half on component skills.
+  - Both: pass (move on) at 80%; Ready at the threshold, sticky; weak below 60% → targeted Basic practice after two other questions; one combined question in every three; FSRS stays for review timing; a correct combined question also counts as an FSRS review of due component skills.
+- **[I]** With these start values, one correct answer passes a level 1 or level 2 skill (0.62 → 0.81, 0.58 → 0.80). Level 3 and higher need two. This matches G5.
+- **[F]** Truth model for the test (an assumption): each skill has a real chance to be applied correctly (0.90 at level 1 down to 0.55 at level 6) that grows with practice. Each student has one hidden weak skill from levels 1–3, stuck at 0.5 until 3 targeted practice questions. A question is correct only if each skill in it is applied correctly.
+- **[F]** Results, 40 students, median (`research/mastery-results.txt`, `evidence/mastery-model.png`):
+
+  | Scheduler | First P/C | All Basic passed | Level 6 | Extra questions | Share on weak skill | Weak skill found | Weak skill marked mastered |
+  |---|---:|---:|---:|---:|---:|---:|---:|
+  | Current | 106 | 256 | 208 | 150 | 7% | 40/40 | 1/40 |
+  | BKT | 43 | 110 | 90 | 1 | 0% | 12/40 | 37/40 |
+  | IRT/Elo, Ready 90% | 68 | 236 | 183 | 6 | 89% | 40/40 | 1/40 |
+  | IRT/Elo, Ready 85% | 63 | 227 | 189 | 4 | 40% | 22/40 | 21/40 |
+
+- **[I]** BKT is fastest, but it marks the hidden weak skill as mastered in 37 of 40 students. Its binary state does not fit partial knowledge. Reject it.
+- **[I]** IRT/Elo with Ready at 90% finds the weak skill in all 40 students and puts 89% of its extra practice on it. The current scheduler adds 150 extra questions, and 93% of them go to other skills. The time saved goes to new and combined questions.
+- **[I]** The speed gain is clear at the start (first P/C 106 → 68) and moderate later (level 6 208 → 183). The mix ratio and the start values can change the speed; the implementation must tune them against this simulation as a test.
+- **[I]** The “all Ready” totals are not comparable: today Ready means two correct answers per line; in the model it is an estimate threshold.
+- **[I]** Format: the estimate and its observation count are new fields per skill. They go into the same curriculum migration as the abstract skill (`ap-derivatives-3`, profile 4). Migration seeds the estimate from today's state: Ready → 0.92, Basic passed → 0.82, repair → 0.55, not started → the start value.
+- **[I]** Implicit FSRS credit (FIRe precedent: credit flows down, penalties do not) is a separate choice (L5). It cuts separate reviews of simple skills.
+- **[U]** Real student behaviour: no answer data exists. The truth model and the parameters are assumptions.
+
+## Spec
+
+Final draft after round 2, for the talk-through. One release (G1); version 1.2.1 → 1.3.0. Accounts are a separate task after this release (L1).
+
+Requirements that stay: the 6 levels and their order (G6); the Basic and Mixed lines and their kinds of question; the FSRS parameters; the grading thresholds; use with no account; English-only student text; the `pages.dev` address (G9).
+Requirements that change: number ranges (S1, S2), display (S3), progression and remediation (S4). New: storage request and Home Screen tip (S5), the abstract-function skill (S6), the curriculum and progress format (S7).
+
+- **S1 Number limits.** *From:* G2, R1
+  - Prompt coefficients and constants: 1–5 on Basic lines, 1–9 on Mixed lines. Exponents: 2–6; negative exponents −1 to −4; fractional exponents with denominator 2 or 3.
+  - In the simplified answer, every whole number is less than 100. A third-derivative answer can have numbers up to 200.
+  - Higher derivatives are mostly second order. Each line has at most one third-order template.
+  - Variety stays: each template gives at least 10 different questions and 6 different answers.
+  - *Accept:* a new test generates 200 questions per template and checks these limits; `tests/generator-variety.test.ts` passes.
+- **S2 Natural forms.** *From:* R1
+  - No repeated exponent in one sum. No product of a function with itself.
+  - Bases of exponentials and logarithms come from {2, 3, 5, 10}.
+  - Inverse-function points come from {−1, 0, 1, 2}, and f(a) is less than 100.
+  - Constants in implicit equations are at most 36; polar constants are at most 9.
+  - *Accept:* the S1 test checks these forms.
+- **S3 Natural display.** *From:* R1
+  - A number in front of a letter, a power or a function has no dot (`15x^{8}` style). A negative term shows as a subtraction with no parentheses.
+  - The grader result stays the same for every question.
+  - *Accept:* display snapshot test; `npm run test:math`; the grading regression tests.
+- **S4 Mastery model.** *From:* G3, G4, G5, L3, L4, L5, R7
+  - Each skill has a mastery estimate: the chance that the student applies the skill correctly (IRT/Elo-style, L3). Every graded question updates the estimate of each skill that it uses.
+  - A correct answer raises each skill; a wrong answer lowers each skill, most for the skill with the lowest estimate (conjunctive update, R7).
+  - Start values depend on the level. One first-try correct answer passes a level 1 or level 2 skill; level 3 and higher need two.
+  - A skill at 80% or more passes (sticky) and opens the skills and levels that need it.
+  - A skill at 85% or more is Ready (sticky, L4). A skill under 60% is weak: it gets targeted Basic practice after two other questions, until it is at 80% again. A weak skill shows as not Ready until then.
+  - One question in every three is a combined (Mixed) question when one is available.
+  - The diagnostic queue for all Ready required skills and the two-correct rebuild rule go away.
+  - FSRS stays for review timing. A hint or a wrong first try still rates Again. A correct combined question also counts as a Good review of each component skill that is due (L5).
+  - The interface keeps its current labels; README and help describe the new rules.
+  - *Accept:* unit tests for the update; a simulation test with the R7 truth model, 40 students, median: first product or chain question ≤ 70; extra (remedial) questions ≤ 20; weak skill found in ≥ 20 of 40 (prototype at 85%: 63, 4, 22/40); the existing no-deadlock simulations pass.
+- **S5 Keep progress on iPhone.** *From:* R5, L6
+  - The site asks the browser for persistent storage once at start.
+  - Help tells iPhone students to add the site to the Home Screen, and to export a code before a long break.
+  - *Accept:* unit test for the call; help text check.
+- **S6 Abstract-function skill.** *From:* G7, L2, R4
+  - New skill `abstract` on level 5, after implicit, inverse and higher in the path. Prerequisites: chain and product (Mixed templates that divide also need quotient).
+  - Questions are random and symbolic, with one layer of composition and no tables.
+  - Basic forms: `f(x^n)`, `f(ax)`, `f(sin x)`, `f(cos x)`, `f(e^x)`, `f(ln x)`, `[f(x)]^n`, `e^{f(x)}`, `ln f(x)`, `√f(x)`, `sin f(x)`.
+  - Mixed forms: `x^n·f(x)`, `f(x)/x^n`, `f(x)·g(x)`, `f(x)/g(x)`, `f(g(x))`.
+  - Numbers follow S1. The answer uses `f`, `f′`, `g`, `g′`.
+  - On these questions only, the keyboard keys tan, sec, csc and cot change to `f(□)`, `f′(□)`, `g(□)` and `g′(□)`. These questions do not use tan, sec, csc or cot. The exact arrangement is set in implementation and checked by the design review.
+  - The grader puts 3–4 hidden concrete functions in place of `f` and `g`; all must agree. The parse of other questions does not change.
+  - *Accept:* generator, grader and SymPy-oracle tests; full design review; iPhone check by the owner.
+- **S7 Curriculum `ap-derivatives-3`.** *From:* R4, R7
+  - Profile 4 holds 27 skills and the mastery fields. A registered migration from `ap-derivatives-2` seeds the estimates (R7).
+  - Old codes (DSP1, profiles 1–3) still import. A new frozen fixture is added; the golden test keeps the frozen count of 26.
+  - *Accept:* migration and transfer tests; legacy-fixture tests.
+
+## To Do
+
+Branch `practice-quality` from `main`. Order: T1, then T2 and T3 at the same time (no shared files), then T4, T5, T6, T7, T8, then the obligations. One commit per item after review.
+
+Delegation rule (owner, L7, 2026-10-21; it replaces the default Claude/Codex split for this task):
+- **dsf** = Qoder CLI (`qodercli`) with model `DeepSeek-Flash`. dsf writes the code of every T item.
+- **Codex** (`gpt-6.1-sol`, high, read-only sandbox) reviews each dsf result against the Spec and the step prompt.
+- dsf fixes the findings or answers them with a reason, in the same Qoder session. Codex reviews again in its same session. The loop stops when Codex approves, or after 3 rounds (then Claude decides).
+- Claude writes each step prompt and the design decisions in it, takes a last look (diff, full tests), commits, and writes all documents.
+- Keep every Qoder session (no `--no-session-persistence`). Record each session id under the T item, so a later change can resume it (`qodercli -r <id>`).
+- dsf runs with `--permission-mode bypass_permissions` and denied commands: `git commit`, `git push`, `npx wrangler`, `npm install`.
+
+The owner tags below follow this rule: “dsf → Codex → Claude”.
+
+- [ ] **T1** (S3) `src/math.ts` (`latex`), `tests/notation.test.ts` or a new display test: write number–letter products without a dot and negative terms as subtraction. *Verify:* display test; `npm test`; `npm run test:math`; grading regression tests unchanged. *Owner:* dsf → Codex → Claude (L7).
+- [ ] **T2** (S1, S2) `src/templates.ts`, new `tests/number-policy.test.ts`: apply the number limits and natural forms to every existing template. *Verify:* new test (200 seeds per template); variety test; `npm run test:math`. *Owner:* dsf → Codex → Claude (L7).
+- [ ] **T3** (S4) new `src/mastery.ts`; `src/progress.ts` (`recordOutcome`, `chooseNext`, readiness helpers, `SkillState`); `tests/mastery.test.ts`; `tests/progress.test.ts`; `tests/simulation.test.ts`; `tests/helpers/simulate.ts`: build the mastery model and the new selection rules. *Verify:* unit tests; S4 simulation thresholds; no-deadlock simulations. *Owner:* dsf → Codex → Claude (L7).
+- [ ] **T4** (S6) `src/math.ts` (derivative, evaluation, display of `f`/`g` nodes), `src/grading.ts` (second parse engine, substitution grading), `src/domains.ts`, `src/skill-inference.ts`, `scripts/math-corpus.ts`, `scripts/check_math.py`: abstract-function math and grading, to a node design that Claude writes in the step prompt. *Verify:* new grader tests (correct, wrong, equivalent forms, `f'` notation, no change for other questions); SymPy oracle with `Function('f')`. *Owner:* dsf → Codex → Claude (L7).
+- [ ] **T5** (S6) `src/catalog.ts`, `src/templates.ts` (abstract templates), `src/questions.ts` (hints, rule formula): add skill `abstract` with its Basic and Mixed templates. *Verify:* generator tests; variety and number-policy tests; skill examples. *Owner:* dsf → Codex → Claude (L7).
+- [ ] **T6** (S6) `src/math-keyboard.ts`, `src/main.ts` (pass the question kind), `tests/math-keyboard-layout.test.ts`, `tests/math-keyboard.spec.ts`: `f(□)`, `f′(□)`, `g(□)`, `g′(□)` keys on abstract questions. *Verify:* layout tests; browser test that types an abstract answer; screenshots at 390 px and 1280 px, light and dark. *Owner:* dsf → Codex → Claude (L7).
+- [ ] **T7** (S7) `src/catalog.ts` (`CURRICULUM_VERSION`), `src/compact-progress.ts` (profile 4), `src/migrate.ts`, `src/transfer.ts`, `scripts/capture-fixtures.ts`, new frozen fixture, `tests/migrate.test.ts`, `tests/transfer.test.ts`, `tests/compact-progress.test.ts`, `tests/legacy-fixtures.test.ts`, `tests/generator-golden.test.ts`: curriculum `ap-derivatives-3` with the mastery fields and the new skill. *Verify:* all migration, transfer and legacy tests; QR size audit. *Owner:* dsf → Codex → Claude (L7).
+- [ ] **T8** (S5) `src/storage.ts` or `src/main.ts`: request persistent storage once. *Verify:* unit test with a stub. *Owner:* dsf → Codex → Claude (L7).
+
+Project obligations:
+- [ ] **P1** README and `help.html`: numbers, mastery rules, new skill, keyboard keys, storage tip. *Owner:* Claude (docs are not delegated).
+- [ ] **P2** `npm version 1.3.0 --no-git-tag-version`; What's new entry in `src/whats-new.ts`. *Owner:* Claude.
+- [ ] **P3** `docs/design/DESIGN.md` §6: the abstract-question keys. *Owner:* Claude.
+- [ ] **P4** Full design review: `npm run design:capture`, then the `design-reviewer` subagent with `reviews/context.md`; P0 and P1 cleared before release. *Owner:* Sonnet (design-reviewer), graded by Claude.
+- [ ] **P5** Build, test, e2e, push, deploy to Cloudflare Pages, check live `/` and `/help` (deploy after the owner's approval). *Owner:* Claude.
+- [ ] **P6** iPhone check by the owner: keyboard keys on an abstract question. *Owner:* owner.
+- [ ] **P7** Regenerate `skill-examples` (docs and public page); `npm run test:math`. *Owner:* Claude.
+- [ ] **P8** Mark `docs/reviews/2026-09-27-coefficients/plan.md` as replaced by this task. *Owner:* Claude.
+
+## Acceptance
+
+Not started.
