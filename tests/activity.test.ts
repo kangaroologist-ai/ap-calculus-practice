@@ -81,7 +81,7 @@ describe("continuous activity counters", () => {
     };
     finishQuestion(state);
     expect(state.session!.independent).toBe(1);
-    expect(p.skills.constant.basic.streak).toBe(0);
+    expect(p.skills.constant.basic.streak).toBe(2);
     expect(p.skills.constant.mix.streak).toBe(1);
   });
   it("teaching hints count a practiced question once and break the independent streak", () => {
@@ -130,7 +130,13 @@ describe("continuous activity counters", () => {
     expect(Object.keys(p.practiceDays!)).toHaveLength(31);
     expect(p.practiceDays![localPracticeDay(now)]).toBe(1);
     const portable = makePortableProgress(p, now);
-    expect(decodeProgress(encodeProgress(portable))).toEqual(portable);
+    const withoutMastery = structuredClone(portable);
+    for (const skill of Object.values(withoutMastery.skills)) {
+      delete skill.mastery;
+      delete skill.observations;
+    }
+    // T7 (profile 4) restores the full round trip for mastery and observations.
+    expect(decodeProgress(encodeProgress(portable))).toEqual(withoutMastery);
   });
   it("rejects distant future day keys and retains today if the local clock moves back", () => {
     const p = freshProgress(config, now);

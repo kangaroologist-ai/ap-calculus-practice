@@ -5,6 +5,7 @@ import { SKILLS } from '../src/catalog';
 import { random } from '../src/math';
 import type { Config } from '../src/types';
 import { simulate } from './helpers/simulate';
+import { student } from './helpers/truth-student';
 
 const baseConfig = (disabledFamilies: string[] = []): Config => ({
   schemaVersion: 1,
@@ -89,4 +90,51 @@ describe('scheduler convergence (SPEC-C7-style, Phase 1 scheduler)', () => {
     expect(allEnabledReady(p, c)).toBe(true);
     expect(p.unlockedLevel).toBe(6);
   });
+});
+
+describe('S4 mastery acceptance', () => {
+  const median = (values: number[]) =>
+    [...values].sort((a, b) => a - b)[Math.floor(values.length / 2)];
+
+  it('meets the mastery thresholds for 40 truth students', () => {
+    const runs = Array.from({ length: 40 }, (_, i) => {
+      const truth = student(`t-${i}`);
+      let index = 0,
+        firstPC = -1,
+        remedial = 0,
+        targetedWeak = false;
+      const { questions } = simulate(
+        baseConfig(),
+        (q, reason) => truth.answer(q, reason),
+        6000,
+        {
+          stepMs: 45_000,
+          onQuestion: (q, reason) => {
+            // Acceptance thresholds count questions from one.
+            if (
+              firstPC < 0 &&
+              ['product', 'quotient', 'chain'].includes(q.primarySkill)
+            )
+              firstPC = index + 1;
+            if (reason === 'Rebuild this skill') {
+              remedial++;
+              if (q.primarySkill === truth.weakId) targetedWeak = true;
+            }
+            index++;
+          },
+        },
+      );
+      return { firstPC: firstPC < 0 ? questions : firstPC, remedial, targetedWeak };
+    });
+    const firstPC = median(runs.map((r) => r.firstPC));
+    const remedial = median(runs.map((r) => r.remedial));
+    const targeted = runs.filter((r) => r.targetedWeak).length;
+    console.log(
+      `S4 medians over 40 truth students: first product/quotient/chain ${firstPC}, ` +
+        `remedial ${remedial}, weak skill targeted ${targeted}/40`,
+    );
+    expect(firstPC).toBeLessThanOrEqual(70);
+    expect(remedial).toBeLessThanOrEqual(20);
+    expect(targeted).toBeGreaterThanOrEqual(20);
+  }, 300_000);
 });

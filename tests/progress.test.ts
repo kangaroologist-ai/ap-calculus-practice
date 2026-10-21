@@ -135,9 +135,10 @@ describe('local progress and FSRS boundaries', () => {
     const p = freshProgress(config(), NOW);
     const q1 = 'q1:12345678aaaaaaaaaaaaaaaaaaaaaaaa';
     const q2 = questionFingerprint(q1);
-    const state = stateFor(p, 'power', NOW);
+    // A level 3 skill needs two correct answers, so the line stays unpassed.
+    const state = stateFor(p, 'chain', NOW);
     state.basic = { streak: 1, lastQ: q2, passed: false, repair: false };
-    const cur = current({ ...question('mixed-q-fingerprint'), signature: q1 });
+    const cur = current({ ...question('mixed-q-fingerprint', 'chain'), signature: q1 });
 
     expect(recordOutcome(p, cur, config(), correct, NOW)).toBe(true);
     expect(state.basic).toEqual({
@@ -177,8 +178,9 @@ describe('local progress and FSRS boundaries', () => {
     const cur = current(question('hint-before-submit-1'), 1);
     expect(recordOutcome(p, cur, config(), correct, NOW)).toBe(true);
     const state = p.skills.power;
-    expect(state.basic).toMatchObject({ streak: 0, repair: true });
-    expect(needsRemediation(state)).toBe(true);
+    expect(state.basic).toMatchObject({ streak: 0, repair: false });
+    expect(needsRemediation(state)).toBe(false);
+    expect(state.mastery!).toBeCloseTo(0.24555679, 7);
     expect(reviveCard(state.card).stability).toBe(0.212);
   });
 
@@ -186,8 +188,26 @@ describe('local progress and FSRS boundaries', () => {
     const p = freshProgress(config(), NOW);
     const cur = current(question('input-help-1'), 0);
     expect(recordOutcome(p, cur, config(), correct, NOW)).toBe(true);
-    expect(p.skills.power.basic.streak).toBe(1);
+    expect(p.skills.power.basic.passed).toBe(true);
     expect(needsRemediation(p.skills.power)).toBe(false);
+  });
+
+  it('keeps an unpassed skill out of repair after a wrong answer', () => {
+    const c = config({
+      disabledFamilies: SKILLS.filter((item) => item.id !== 'power').map((item) => item.id),
+    });
+    const p = freshProgress(c, NOW);
+
+    expect(recordOutcome(p, current(question('unpassed-weak')), c, incorrect, NOW)).toBe(true);
+    const state = p.skills.power;
+    expect(state.basic.passed).toBe(false);
+    expect(state.basic.repair).toBe(false);
+    expect(needsRemediation(state)).toBe(false);
+
+    const next = chooseNext(p, c, NOW);
+    expect(next.reason).toBe('Keep building');
+    expect(next.question.role).toBe('basic');
+    expect(next.question.primarySkill).toBe('power');
   });
 
   it('records a pre-submit hint as one assisted Again and does not double-count submit', () => {
@@ -196,7 +216,8 @@ describe('local progress and FSRS boundaries', () => {
     recordHint(p, cur, config(), NOW);
     expect(cur.hintsUsed).toBe(1);
     expect(cur.recorded).toBe(true);
-    expect(p.skills.power.basic).toMatchObject({ streak: 0, repair: true });
+    expect(p.skills.power.basic).toMatchObject({ streak: 0, repair: false });
+    expect(p.skills.power.mastery!).toBeCloseTo(0.24555679, 7);
     expect(reviveCard(p.skills.power.card).stability).toBe(0.212);
     const afterHint = structuredClone(p);
     expect(recordOutcome(p, cur, config(), correct, NOW)).toBe(false);
@@ -224,94 +245,86 @@ describe('local progress and FSRS boundaries', () => {
     expect(p.skills.power.card.last_review).toBe(due);
   });
 
-  it('schedules a due incorrect answer as Again and queues diagnostics for Ready supporting skills', () => {
+  it('records a due wrong answer as Again, lowers the components, and leaves the diagnostic queue alone', () => {
     const p = freshProgress(config(), NOW);
-    // Diagnostics are only meaningful for skills the learner has actually
-    // reached Ready on; make sum and power Ready first (SPEC-S1).
     p.skills.sum = readyState(0, NOW);
     p.skills.power = readyState(1, NOW);
+    p.pendingDiagnostics = ['sum'];
     const cur = current(question('wrong-1', 'product', 0, ['sum', 'power']));
     expect(recordOutcome(p, cur, config(), incorrect, NOW)).toBe(true);
-    expect(needsRemediation(p.skills.product)).toBe(true);
+    // A new skill below 60% is still ordinary learning, not repair.
+    expect(p.skills.product.basic.passed).toBe(false);
+    expect(needsRemediation(p.skills.product)).toBe(false);
     expect(p.skills.product.failureStreak).toBe(1);
-    expect(p.pendingDiagnostics).toEqual(['sum', 'power']);
+    // Old queued checks are kept in the type but never added to or consumed.
+    expect(p.pendingDiagnostics).toEqual(['sum']);
     expect(reviveCard(p.skills.product.card).stability).toBe(0.212);
+    // A wrong answer does not touch component cards.
+    expect(p.skills.sum.card.reps).toBe(0);
+    expect(p.skills.power.card.reps).toBe(0);
+    expect(p.skills.sum.mastery!).toBeLessThan(0.92);
+    expect(chooseNext(p, config(), NOW).reason).not.toBe('Targeted check');
+    expect(p.pendingDiagnostics).toEqual(['sum']);
   });
 
-  it('queues a diagnostic only on the first failure of a streak, and again once a success resets it', () => {
+  it('keeps the failure streak and estimate after repeated misses without a diagnostic queue', () => {
     const c = config();
     const p = freshProgress(c, NOW);
     p.skills.sum = readyState(0, NOW);
+    const miss = (id: string, now: number) =>
+      recordOutcome(p, current(question(id, 'product', 0, ['sum'])), c, incorrect, now);
 
-    expect(
-      recordOutcome(p, current(question('streak-1', 'product', 0, ['sum'])), c, incorrect, NOW),
-    ).toBe(true);
+    expect(miss('streak-1', NOW)).toBe(true);
     expect(p.skills.product.failureStreak).toBe(1);
-    expect(p.pendingDiagnostics).toEqual(['sum']);
-
-    // chooseNext consumes the queued diagnostic exactly as it does in real play.
-    const picked = chooseNext(p, c, NOW);
-    expect(picked.question.primarySkill).toBe('sum');
-    expect(picked.reason).toBe('Targeted check');
-    expect(picked.question.role).toBe('basic');
     expect(p.pendingDiagnostics).toEqual([]);
-
-    // A second consecutive failure on the same skill must not re-queue it.
-    expect(
-      recordOutcome(p, current(question('streak-2', 'product', 0, ['sum'])), c, incorrect, NOW + 1),
-    ).toBe(true);
+    const afterFirst = p.skills.product.mastery!;
+    expect(miss('streak-2', NOW + 1)).toBe(true);
     expect(p.skills.product.failureStreak).toBe(2);
+    expect(p.skills.product.mastery!).toBeLessThan(afterFirst);
     expect(p.pendingDiagnostics).toEqual([]);
-
-    // Nor does a third.
-    expect(
-      recordOutcome(p, current(question('streak-3', 'product', 0, ['sum'])), c, incorrect, NOW + 2),
-    ).toBe(true);
+    expect(miss('streak-3', NOW + 2)).toBe(true);
     expect(p.skills.product.failureStreak).toBe(3);
-    expect(p.pendingDiagnostics).toEqual([]);
-
-    // A success resets the streak...
     expect(
-      recordOutcome(p, current(question('streak-recover', 'product', 1, ['sum'])), c, correct, NOW + 3),
+      recordOutcome(
+        p,
+        current(question('streak-recover', 'product', 1, ['sum'])),
+        c,
+        correct,
+        NOW + 3,
+      ),
     ).toBe(true);
     expect(p.skills.product.failureStreak).toBe(0);
-
-    // ...so the next failure queues the diagnostic again.
-    expect(
-      recordOutcome(p, current(question('streak-4', 'product', 0, ['sum'])), c, incorrect, NOW + 4),
-    ).toBe(true);
-    expect(p.skills.product.failureStreak).toBe(1);
-    expect(p.pendingDiagnostics).toEqual(['sum']);
+    expect(p.pendingDiagnostics).toEqual([]);
   });
 
-  it('drops required skills that are not Ready, locked, or disabled, but keeps Ready ones', () => {
+  it('updates only the enabled skills that a question uses', () => {
     const c = config({ disabledFamilies: ['log'] });
     const p = freshProgress(c, NOW);
-    p.skills.sum = readyState(0, NOW); // Ready, enabled, and unlocked.
-    // power: never practiced, so not Ready. exp: level 2, but unlockedLevel is
-    // still 1, so locked. log: explicitly disabled.
-    const cur = current(question('mixed-fail-1', 'product', 0, ['power'], ['power', 'exp', 'log', 'sum']));
+    const cur = current(
+      question('mixed-fail-1', 'product', 0, ['power'], ['power', 'exp', 'log', 'sum']),
+    );
     expect(recordOutcome(p, cur, c, incorrect, NOW)).toBe(true);
-    expect(p.pendingDiagnostics).toEqual(['sum']);
+    for (const id of ['product', 'power', 'exp', 'sum'])
+      expect(p.skills[id]?.mastery).toBeDefined();
+    expect(p.skills.log).toBeUndefined();
+    expect(p.pendingDiagnostics).toEqual([]);
   });
 
-  it('reads requiredSkills for diagnostics when present, and falls back to supportingSkills for legacy questions', () => {
+  it('reads requiredSkills when present, and falls back to supportingSkills for legacy questions', () => {
     const c = config();
     const p = freshProgress(c, NOW);
-    p.skills.sum = readyState(0, NOW);
-    p.skills.power = readyState(1, NOW);
 
     // requiredSkills (SPEC-G3) takes precedence over supportingSkills.
     const withRequired = current(question('inferred-1', 'product', 0, ['power'], ['sum']));
-    expect(recordOutcome(p, withRequired, c, incorrect, NOW)).toBe(true);
-    expect(p.pendingDiagnostics).toEqual(['sum']);
+    expect(recordOutcome(p, withRequired, c, correct, NOW)).toBe(true);
+    expect(p.skills.sum).toBeDefined();
+    expect(p.skills.power).toBeUndefined();
 
     // A legacy question with no requiredSkills falls back to supportingSkills.
-    // Use a different primary skill so its failure streak starts fresh.
-    p.pendingDiagnostics = [];
     const legacy = current(question('legacy-1', 'quotient', 0, ['power']));
-    expect(recordOutcome(p, legacy, c, incorrect, NOW + 60_000)).toBe(true);
-    expect(p.pendingDiagnostics).toEqual(['power']);
+    expect(recordOutcome(p, legacy, c, correct, NOW + 60_000)).toBe(true);
+    expect(p.skills.power).toBeDefined();
+    expect(p.skills.sum).toBeDefined();
   });
 
   it('does not schedule a second FSRS update for a retry after an incorrect answer', () => {
@@ -367,17 +380,20 @@ describe('local progress and FSRS boundaries', () => {
   });
 
   it('pauses instead of generating another question when every eligible skill is remediation-blocked', () => {
-    const p = freshProgress(config(), NOW);
+    const c = config({
+      disabledFamilies: SKILLS.filter((item) => item.level > 1).map((item) => item.id),
+    });
+    const p = freshProgress(c, NOW);
     p.pendingDiagnostics = [];
     for (const skill of SKILLS.filter((item) => item.level === 1)) {
       const state = stateFor(p, skill.id, NOW);
-      state.basic = { streak: 0, passed: false, repair: true };
+      state.basic = { streak: 2, passed: true, repair: true };
       state.otherSinceFailure = 0;
       state.card.due = NOW + 60_000;
       state.card.last_review = NOW;
     }
 
-    expect(() => chooseNext(p, config(), NOW)).toThrow('PRACTICE_PAUSE');
+    expect(() => chooseNext(p, c, NOW)).toThrow('PRACTICE_PAUSE');
   });
 
   it('allows the only enabled skill to resume at the exact one-minute Again due time', () => {
@@ -385,8 +401,12 @@ describe('local progress and FSRS boundaries', () => {
       disabledFamilies: SKILLS.filter((item) => item.id !== 'power').map((item) => item.id),
     });
     const p = freshProgress(onlyPower, NOW);
+    const state = stateFor(p, 'power', NOW);
+    state.basic = { streak: 2, passed: true, repair: false };
+    state.mastery = 0.82;
     expect(recordOutcome(p, current(question('only-power-again')), onlyPower, incorrect, NOW)).toBe(true);
-    expect(reviveCard(p.skills.power.card).due.getTime()).toBe(NOW + 60_000);
+    expect(state.basic.repair).toBe(true);
+    expect(reviveCard(state.card).due.getTime()).toBe(NOW + 60_000);
     expect(() => chooseNext(p, onlyPower, NOW)).toThrow('PRACTICE_PAUSE');
 
     const resumed = chooseNext(p, onlyPower, NOW + 60_000);
@@ -430,7 +450,9 @@ describe('local progress and FSRS boundaries', () => {
     expect(recordOutcome(p, cur, config(), incorrect, NOW)).toBe(true);
     expect(p.unlockedLevel).toBe(2);
     expect(p.skills.power.basic.passed).toBe(true);
+    expect(p.skills.power.basic.streak).toBe(2);
     expect(p.skills.power.basic.repair).toBe(true);
+    expect(p.skills.power.mix.streak).toBe(2);
     expect(needsRemediation(p.skills.power)).toBe(true);
     expect(isReady(p.skills.power)).toBe(false);
   });
@@ -439,7 +461,6 @@ describe('local progress and FSRS boundaries', () => {
     const p = freshProgress(config(), NOW);
     p.unlockedLevel = 4;
     p.skills.power = readyState(0, NOW);
-    const basicBefore = structuredClone(p.skills.power.basic);
 
     expect(
       recordOutcome(
@@ -451,10 +472,76 @@ describe('local progress and FSRS boundaries', () => {
       ),
     ).toBe(true);
 
-    expect(p.skills.power.basic).toEqual(basicBefore);
-    expect(p.skills.power.mix).toMatchObject({ streak: 0, passed: true, repair: true });
+    // A miss that takes the shared estimate below 60% starts repair, but the
+    // pass and the unlocked level stay sticky.
+    expect(p.skills.power.basic.passed).toBe(true);
+    expect(p.skills.power.basic.repair).toBe(true);
+    expect(p.skills.power.mix).toMatchObject({ streak: 2, passed: true, repair: false });
     expect(p.unlockedLevel).toBe(4);
     expect(needsRemediation(p.skills.power)).toBe(true);
+  });
+
+  it('keeps a newly passed component line at a two-answer streak', () => {
+    const p = freshProgress(config(), NOW);
+    const sum = stateFor(p, 'sum', NOW);
+    sum.mastery = 0.79;
+
+    expect(
+      recordOutcome(
+        p,
+        current(question('component-pass', 'product', 0, ['sum'])),
+        config(),
+        correct,
+        NOW,
+      ),
+    ).toBe(true);
+
+    expect(sum.basic.passed).toBe(true);
+    expect(sum.basic.streak).toBe(2);
+  });
+
+  it('clears a legacy mixed repair flag once the estimate recovers', () => {
+    const p = freshProgress(config(), NOW);
+    const s = (p.skills.power = readyState(0, NOW));
+    s.mix = { ...s.mix, streak: 0, repair: true };
+
+    expect(isReady(s)).toBe(false);
+    expect(s.basic.repair).toBe(true);
+    expect(s.mix.repair).toBe(false);
+
+    for (let i = 0; i < 12; i++)
+      expect(
+        recordOutcome(
+          p,
+          current(question(`legacy-repair-${i}`)),
+          config(),
+          correct,
+          NOW + i,
+        ),
+      ).toBe(true);
+
+    expect(s.mastery!).toBeCloseTo(0.94911725, 7);
+    expect(s.basic.repair).toBe(false);
+    expect(s.mix.repair).toBe(false);
+    expect(isReady(s)).toBe(true);
+  });
+
+  it('schedules a legacy mixed repair directly as rebuilding, before the due review', () => {
+    const c = config({
+      disabledFamilies: SKILLS.filter((item) => item.id !== 'constant').map((item) => item.id),
+    });
+    const p = freshProgress(c, NOW);
+    const s = (p.skills.constant = readyState(0, NOW));
+    s.mix = { ...s.mix, streak: 0, repair: true };
+    s.otherSinceFailure = 2;
+    s.card.due = NOW;
+
+    const picked = chooseNext(p, c, NOW);
+
+    expect(picked.reason).toBe('Rebuild this skill');
+    expect(picked.question.role).toBe('basic');
+    expect(s.basic.repair).toBe(true);
+    expect(s.mix.repair).toBe(false);
   });
 
   it('chooses basic, mixed, repair, and due-review roles with their branch reasons', () => {
@@ -466,27 +553,20 @@ describe('local progress and FSRS boundaries', () => {
     expect(first.reason).toBe('New skill');
     expect(first.question.role).toBe('basic');
     expect(recordOutcome(p, current(question('basic-one')), c, correct, NOW)).toBe(true);
-    expect(recordOutcome(p, current(question('basic-two')), c, correct, NOW + 1)).toBe(true);
 
-    const mixed = chooseNext(p, c, NOW + 2);
+    // One correct answer passes a level 1 skill but leaves it below Ready.
+    const mixed = chooseNext(p, c, NOW + 1);
     expect(mixed.reason).toBe('Mix it up');
     expect(mixed.question.role).toBe('mix');
 
     const repairing = freshProgress(c, NOW);
     const repairState = (repairing.skills.power = readyState(0, NOW));
-    repairState.mix = { streak: 0, lastQ: 'q2:00000003', passed: true, repair: true };
+    repairState.mastery = 0.55;
+    repairState.basic.repair = true;
     repairState.otherSinceFailure = 2;
     const repair = chooseNext(repairing, c, NOW + 1);
     expect(repair.reason).toBe('Rebuild this skill');
-    expect(repair.question.role).toBe('mix');
-
-    const repairingBasic = freshProgress(c, NOW);
-    const basicRepairState = (repairingBasic.skills.power = readyState(0, NOW));
-    basicRepairState.basic = { streak: 0, lastQ: 'q2:00000004', passed: true, repair: true };
-    basicRepairState.otherSinceFailure = 2;
-    const basicRepair = chooseNext(repairingBasic, c, NOW + 1);
-    expect(basicRepair.reason).toBe('Rebuild this skill');
-    expect(basicRepair.question.role).toBe('basic');
+    expect(repair.question.role).toBe('basic');
 
     const reviewing = freshProgress(c, NOW);
     reviewing.skills.power = readyState(0, NOW);
@@ -494,96 +574,129 @@ describe('local progress and FSRS boundaries', () => {
     expect(review.reason).toBe('Spaced review');
     expect(review.question.role).toBe('mix');
 
-    const reviewingBasic = freshProgress(c, NOW);
-    stateFor(reviewingBasic, 'power', NOW).card.due = NOW;
-    const basicReview = chooseNext(reviewingBasic, c, NOW + 1);
+    // constant's mixed templates need sum, which is still unpassed, so the
+    // review has to use the Basic line.
+    const basicConfig = config({
+      disabledFamilies: SKILLS.filter(
+        (item) => !['constant', 'sum'].includes(item.id),
+      ).map((item) => item.id),
+    });
+    const reviewingBasic = freshProgress(basicConfig, NOW);
+    const basicReviewState = (reviewingBasic.skills.constant = readyState(0, NOW));
+    basicReviewState.mastery = 0.9;
+    const basicReview = chooseNext(reviewingBasic, basicConfig, NOW + 1);
     expect(basicReview.reason).toBe('Spaced review');
     expect(basicReview.question.role).toBe('basic');
   });
 
-  it('clears a line repair after two new independent successes and preserves the card timeline', () => {
+  it('keeps repair after one recovery answer and clears it at 80%', () => {
     const p = freshProgress(config(), NOW);
     const s = (p.skills.power = readyState(0, NOW));
-    s.failureStreak = 2;
-    s.card = storeCard(createEmptyCard(new Date(NOW)));
-    expect(recordOutcome(p, current(question('repair-miss')), config(), incorrect, NOW)).toBe(true);
-    expect(s.basic).toMatchObject({ streak: 0, passed: true, repair: true });
-    expect(s.mix).toMatchObject({ streak: 2, passed: true, repair: false });
-    const cardAfterMiss = structuredClone(s.card);
-    expect(recordOutcome(p, current(question('recover-1')), config(), correct, NOW + 1)).toBe(true);
-    expect(s.basic).toMatchObject({ streak: 1, passed: true, repair: true });
+    s.mastery = 0.55;
+    s.basic = { streak: 0, lastQ: 'q2:00000001', passed: true, repair: true };
+    s.mix = { streak: 2, lastQ: 'q2:00000002', passed: true, repair: false };
+    s.card.due = NOW + 1_000_000;
+    s.card.last_review = NOW;
+    const card = structuredClone(s.card);
+
+    expect(recordOutcome(p, current(question('recover-1')), config(), correct, NOW)).toBe(true);
+    expect(s.mastery!).toBeCloseTo(0.79748849, 7);
+    expect(s.basic).toMatchObject({ passed: true, repair: true });
     expect(needsRemediation(s)).toBe(true);
-    expect(recordOutcome(p, current(question('recover-2')), config(), correct, NOW + 2)).toBe(true);
-    expect(s.basic).toMatchObject({ streak: 2, passed: true, repair: false });
+    expect(isReady(s)).toBe(false);
+
+    expect(recordOutcome(p, current(question('recover-2')), config(), correct, NOW + 1)).toBe(true);
+    expect(s.mastery!).toBeCloseTo(0.84550233, 7);
+    expect(s.basic).toMatchObject({ passed: true, repair: false });
     expect(needsRemediation(s)).toBe(false);
-    expect(s.failureStreak).toBe(0);
     expect(isReady(s)).toBe(true);
-    expect(s.card).toEqual(cardAfterMiss);
+    expect(s.card).toEqual(card);
   });
 
-  it('does not let earlier successes hide a line miss before two new successes', () => {
+  it('starts repair only after a miss takes the estimate below 60%', () => {
     const p = freshProgress(config(), NOW);
     const s = (p.skills.power = readyState(0, NOW));
-    expect(recordOutcome(p, current(question('latest-error')), config(), incorrect, NOW)).toBe(true);
-    expect(lineReady(s.basic)).toBe(false);
-    expect(s.basic.passed).toBe(true);
-    expect(recordOutcome(p, current(question('recovery-success-1')), config(), correct, NOW + 1)).toBe(true);
-    expect(lineReady(s.basic)).toBe(false);
-    expect(s.basic.repair).toBe(true);
-    expect(recordOutcome(p, current(question('recovery-success-2')), config(), correct, NOW + 2)).toBe(true);
+    s.mastery = 0.92;
+    s.observations = 10;
+    s.card.due = NOW + 1_000_000;
+    s.card.last_review = NOW;
+
+    expect(recordOutcome(p, current(question('first-miss')), config(), incorrect, NOW)).toBe(true);
+    expect(s.mastery!).toBeCloseTo(0.82088383, 7);
+    expect(s.basic.repair).toBe(false);
     expect(lineReady(s.basic)).toBe(true);
+    expect(isReady(s)).toBe(true);
+
+    expect(recordOutcome(p, current(question('second-miss')), config(), incorrect, NOW + 1)).toBe(true);
+    expect(s.mastery!).toBeCloseTo(0.6685121, 7);
+    expect(s.basic.repair).toBe(false);
+
+    expect(recordOutcome(p, current(question('third-miss')), config(), incorrect, NOW + 2)).toBe(true);
+    expect(s.mastery!).toBeCloseTo(0.50823703, 7);
+    expect(s.basic.repair).toBe(true);
+    expect(isReady(s)).toBe(false);
   });
 
-  it('keeps remediation active after one post-miss success', () => {
+  it('keeps remediation active after one post-miss success and clears it at 80%', () => {
     const p = freshProgress(config(), NOW);
-    expect(recordOutcome(p, current(question('failure-before-recovery', 'power', 0)), config(), incorrect, NOW)).toBe(true);
-    expect(needsRemediation(p.skills.power)).toBe(true);
+    const s = stateFor(p, 'power', NOW);
+    expect(recordOutcome(p, current(question('pass-first', 'power', 0)), config(), correct, NOW)).toBe(true);
+    expect(s.basic.passed).toBe(true);
+    expect(s.mastery!).toBeCloseTo(0.81420197, 7);
+    expect(recordOutcome(p, current(question('failure-before-recovery', 'power', 1)), config(), incorrect, NOW + 1)).toBe(true);
+    expect(needsRemediation(s)).toBe(true);
+    expect(s.mastery!).toBeCloseTo(0.5385409, 7);
 
-    const submitAtDue = (id: string, template: number) => {
-      const now = Math.max(NOW, p.skills.power.card.due);
+    const submit = (id: string, template: number, now: number) =>
       expect(recordOutcome(p, current(question(id, 'power', template)), config(), correct, now)).toBe(true);
-    };
 
-    submitAtDue('recovery-one', 1);
-    expect(p.skills.power.basic.streak).toBe(1);
-    expect(p.skills.power.basic.repair).toBe(true);
-    expect(needsRemediation(p.skills.power)).toBe(true);
-    expect(isReady(p.skills.power)).toBe(false);
+    submit('recovery-one', 1, NOW + 2);
+    expect(s.basic.repair).toBe(true);
+    expect(s.mastery!).toBeCloseTo(0.66815025, 7);
 
-    submitAtDue('recovery-two', 0);
-    expect(p.skills.power.basic.streak).toBe(2);
-    expect(p.skills.power.basic.repair).toBe(false);
-    expect(needsRemediation(p.skills.power)).toBe(false);
-    expect(lineReady(p.skills.power.basic)).toBe(true);
+    submit('recovery-two', 0, NOW + 3);
+    expect(s.basic.repair).toBe(true);
+    expect(s.mastery!).toBeCloseTo(0.73724157, 7);
+
+    submit('recovery-three', 1, NOW + 4);
+    expect(s.basic.repair).toBe(true);
+    expect(s.mastery!).toBeCloseTo(0.78489758, 7);
+
+    submit('recovery-four', 0, NOW + 5);
+    expect(s.basic.repair).toBe(false);
+    expect(s.mastery!).toBeCloseTo(0.81899323, 7);
+    expect(needsRemediation(s)).toBe(false);
+    expect(lineReady(s.basic)).toBe(true);
+    expect(isReady(s)).toBe(false);
   });
 
-  it('passes a line after two independent questions without changing a not-due FSRS card', () => {
+  it('passes a level 1 basic line after one first-try correct answer without changing a not-due card', () => {
     const p = freshProgress(config(), NOW);
     recordOutcome(p, current(question('constant-first', 'constant', 0)), config(), correct, NOW);
-    expect(isReady(p.skills.constant)).toBe(false);
-    expect(chooseNext(p, config(), NOW + 1).question.primarySkill).toBe('constant');
-    const card = structuredClone(p.skills.constant.card);
-    recordOutcome(p, current(question('constant-second', 'constant', 1)), config(), correct, NOW + 2);
     expect(p.skills.constant.basic.passed).toBe(true);
     expect(lineReady(p.skills.constant.basic)).toBe(true);
     expect(isReady(p.skills.constant)).toBe(false);
+    expect(chooseNext(p, config(), NOW + 1).question.primarySkill).toBe('power');
+    const card = structuredClone(p.skills.constant.card);
+    recordOutcome(p, current(question('constant-second', 'constant', 1)), config(), correct, NOW + 2);
     expect(p.skills.constant.card).toEqual(card);
+    expect(p.skills.constant.basic.passed).toBe(true);
+    expect(isReady(p.skills.constant)).toBe(true);
     expect(chooseNext(p, config(), NOW + 3).question.primarySkill).toBe('power');
   });
 
-  it('requires two distinct questions on a line but permits the same template', () => {
+  it('passes a level 3 skill after two correct answers and permits the same template', () => {
     const p = freshProgress(config(), NOW);
-    const s = stateFor(p, 'power', NOW);
-    const repeated = current(question('repeat-one', 'power', 0));
-    expect(recordOutcome(p, repeated, config(), correct, NOW)).toBe(true);
-    const sameQuestion = current({ ...question('repeat-two', 'power', 0), signature: repeated.question.signature });
-    expect(recordOutcome(p, sameQuestion, config(), correct, NOW + 1)).toBe(true);
+    const s = stateFor(p, 'chain', NOW);
+    recordOutcome(p, current(question('chain-one', 'chain', 0)), config(), correct, NOW);
     expect(s.basic.streak).toBe(1);
     expect(s.basic.passed).toBe(false);
+    expect(s.mastery!).toBeLessThan(0.8);
 
-    expect(recordOutcome(p, current(question('different-question', 'power', 0)), config(), correct, NOW + 2)).toBe(true);
+    recordOutcome(p, current(question('chain-two', 'chain', 0)), config(), correct, NOW + 1);
     expect(s.basic.streak).toBe(2);
     expect(s.basic.passed).toBe(true);
+    expect(s.mastery!).toBeGreaterThanOrEqual(0.8);
   });
 
   it('pauses rather than recycling Ready skills before due, but reviews them when due', () => {

@@ -11,6 +11,15 @@ import {
 import { SKILLS, skillById, CURRICULUM_VERSION } from "./catalog";
 import { generateQuestion } from "./questions";
 import { TEMPLATES, open } from "./templates";
+import {
+  PASS_THRESHOLD,
+  READY_THRESHOLD,
+  questionSkills,
+  seedMastery,
+  startMastery,
+  staysInRepair,
+  updateMasteries,
+} from "./mastery";
 import type { Question, Config, Role, Skill, Verdict } from "./types";
 export const SCHEDULER_VERSION = "5.4.2";
 export const ALGORITHM_VERSION = FSRSVersion;
@@ -24,9 +33,9 @@ export type StoredCard = Omit<Card, "due" | "last_review"> & {
   due: number;
   last_review?: number;
 };
-// One learning line: two independent first-try successes on different
-// questions pass it. `passed` is sticky so unlocking never goes backwards; a
-// later miss only sets `repair` until two new successes clear it again.
+// A learning line keeps its old streak bookkeeping, but the mastery estimate
+// now decides pass and repair. `passed` is sticky so unlocking never goes
+// backwards; `basic.repair` is the weak-skill repair flag.
 export interface LineState {
   streak: number;
   lastQ?: string;
@@ -43,6 +52,10 @@ export interface SkillState {
   otherSinceFailure: number;
   extraPracticeGiven: boolean;
   lastSeen: number;
+  // Absent on saves made before the mastery model; seeded lazily on first read.
+  mastery?: number;
+  // Questions where this skill was the primary skill.
+  observations?: number;
   // Local only (not exported): rotates templates within a skill.
   lastTemplate?: string;
 }
@@ -133,14 +146,47 @@ export const freshLine = (): LineState => ({
   passed: false,
   repair: false,
 });
-export const lineReady = (l?: LineState) => !!l && l.streak >= 2 && !l.repair;
-export const isReady = (s?: SkillState) =>
-  lineReady(s?.basic) && lineReady(s?.mix);
-export const needsRemediation = (s?: SkillState) =>
-  !!s && (s.basic.repair || s.mix.repair);
+export const lineReady = (l?: LineState) => !!l && l.passed && !l.repair;
+function unifyRepair(s: SkillState) {
+  // An old save may mark an unpassed line as repairing. Keep that flag until
+  // masteryOf seeds from it, so the seed does not depend on call order.
+  if (!s.basic.passed) return;
+  s.basic.repair = s.basic.repair || s.mix.repair;
+  s.mix.repair = false;
+}
+export function isReady(s?: SkillState) {
+  if (!s) return false;
+  unifyRepair(s);
+  return s.basic.passed && s.mix.passed && !s.basic.repair;
+}
+export function needsRemediation(s?: SkillState) {
+  if (!s) return false;
+  unifyRepair(s);
+  return s.basic.passed && s.basic.repair;
+}
 // A disabled skill never blocks anything that depends on it.
 export const basicPassed = (p: Progress, c: Config, id: string) =>
   c.disabledFamilies.includes(id) || !!p.skills[id]?.basic.passed;
+// Read the mastery estimate, seeding old saves from their line state.
+export function masteryOf(p: Progress, id: string): number {
+  const t = p.skills[id];
+  if (!t) return startMastery(skillById(id).level);
+  if (t.mastery === undefined)
+    t.mastery = seedMastery({
+      level: skillById(id).level,
+      ready: lineReady(t.basic) && lineReady(t.mix),
+      passed: !!t.basic.passed,
+      repair: !!t.basic.repair || !!t.mix.repair,
+    });
+  if (t.basic.passed) unifyRepair(t);
+  else {
+    // The seed has read the old flag; before the first pass a low estimate is
+    // ordinary learning, not repair.
+    t.basic.repair = false;
+    t.mix.repair = false;
+  }
+  return t.mastery;
+}
 export function unlock(p: Progress, c: Config) {
   p.unlockedLevel = Math.max(p.unlockedLevel, c.initialUnlockedLevel);
   while (
@@ -166,18 +212,13 @@ export function allEnabledReady(p: Progress, c: Config): boolean {
     isReady(p.skills[s.id]),
   );
 }
-function updateLine(l: LineState, fingerprint: string, good: boolean) {
+function updateStreak(l: LineState, fingerprint: string, good: boolean) {
   if (!good) {
-    Object.assign(l, { streak: 0, lastQ: fingerprint, repair: true });
+    Object.assign(l, { streak: 0, lastQ: fingerprint });
     return;
   }
   if (l.lastQ !== fingerprint)
     Object.assign(l, { streak: Math.min(2, l.streak + 1), lastQ: fingerprint });
-  if (l.streak >= 2) {
-    l.passed = true;
-    l.repair = false;
-    delete l.legacy;
-  }
 }
 export function localPracticeDay(now = Date.now()): string {
   const d = new Date(now);
@@ -222,12 +263,50 @@ export function recordOutcome(
       ).card,
     );
   }
+  const skills = questionSkills(q, c.disabledFamilies),
+    states = skills.map((id) => stateFor(p, id, now)),
+    masteries = skills.map((id) => masteryOf(p, id)),
+    wasRepair = states.map((t) => !!t.basic.repair),
+    next = updateMasteries(
+      masteries,
+      good,
+      states.map((t) => t.observations ?? 0),
+      skills.indexOf(q.primarySkill),
+    );
+  states.forEach((t, i) => {
+    t.mastery = next[i];
+    if (skills[i] === q.primarySkill)
+      t.observations = (t.observations ?? 0) + 1;
+    if (next[i] >= PASS_THRESHOLD) t.basic.passed = true;
+    if (t.basic.passed && next[i] >= READY_THRESHOLD) t.mix.passed = true;
+    // Before the first pass a low estimate is ordinary learning, not repair.
+    t.basic.repair =
+      !!t.basic.passed && staysInRepair(next[i], t.basic.repair);
+  });
+  // A correct combined question also reviews each component card that is due.
+  if (good)
+    skills.forEach((id, i) => {
+      const t = states[i];
+      if (id === q.primarySkill || now < t.card.due) return;
+      t.card = storeCard(
+        fsrs(p.fsrsParameters).next(
+          reviveCard(t.card),
+          new Date(now),
+          Rating.Good,
+        ).card,
+      );
+    });
   // Questions saved before Phase 2 carry no role; they count as basic.
-  updateLine(
+  updateStreak(
     s[q.role ?? "basic"],
     questionFingerprint(q.signature),
     good,
   );
+  // Passed lines stay at two so older saved-progress readers agree.
+  for (const t of states) {
+    if (t.basic.passed) t.basic.streak = 2;
+    if (t.mix.passed) t.mix.streak = 2;
+  }
   current.firstOutcome = good ? "good" : "again";
   s.lastSeen = ++p.sequence;
   s.lastTemplate = q.templateKey;
@@ -238,23 +317,10 @@ export function recordOutcome(
     s.failureStreak++;
     s.otherSinceFailure = 0;
     s.extraPracticeGiven = false;
-    // Only the first failure of a streak is informative; repeated misses on the
-    // same skill would otherwise keep re-queuing diagnostics for skills we
-    // already know are shaky (SPEC-S1).
-    if (s.failureStreak === 1) {
-      const diagnostic = (q.requiredSkills ?? q.supportingSkills).filter(
-        (id) =>
-          !c.disabledFamilies.includes(id) &&
-          skillById(id).level <= p.unlockedLevel &&
-          isReady(p.skills[id]),
-      );
-      if (diagnostic.length) {
-        p.pendingDiagnostics = [
-          ...new Set([...p.pendingDiagnostics, ...diagnostic]),
-        ];
-      }
-    }
   }
+  states.forEach((t, i) => {
+    if (t !== s && t.basic.repair && !wasRepair[i]) t.otherSinceFailure = 0;
+  });
   p.updatedAt = now;
   unlock(p, c);
   return true;
@@ -285,6 +351,10 @@ export function chooseNext(
   );
   if (!available.length)
     throw Error("No enabled skills. Please contact your teacher.");
+  for (const s of available) {
+    const t = p.skills[s.id];
+    if (t) unifyRepair(t);
+  }
   const ok = (k: string) => basicPassed(p, c, k);
   const slot = (id: string, role: Role, reason: string) => {
     const candidates = openTemplates(p, c, id, role);
@@ -314,60 +384,73 @@ export function chooseNext(
     ].slice(-10);
     return { question, reason };
   };
-  // Mixed work only once the skill's basic line is solid; otherwise basic.
-  const reviewRole = (s: Skill): Role =>
-    mixOpen(p, c, s) && !p.skills[s.id].basic.repair ? "mix" : "basic";
-  const repairRole = (s: Skill): Role =>
-    p.skills[s.id].mix.repair && !p.skills[s.id].basic.repair && mixOpen(p, c, s)
-      ? "mix"
-      : "basic";
-  const ready = (t: SkillState) =>
-    !needsRemediation(t) || t.otherSinceFailure >= 2;
-  // Diagnostics first; resolving one is not evidence against any other skill.
-  const diag = p.pendingDiagnostics.find((id) =>
-    available.some((s) => s.id === id),
-  );
-  if (diag) {
-    p.pendingDiagnostics = p.pendingDiagnostics.filter((x) => x !== diag);
-    const picked = slot(diag, "basic", "Targeted check");
-    if (picked) return picked;
-  }
   const sorted = [...available].sort(
     (a, b) =>
       (p.skills[a.id]?.lastSeen ?? -1) - (p.skills[b.id]?.lastSeen ?? -1),
   );
-  for (const s of sorted) {
+  // 1. A weak skill gets targeted Basic practice after two other questions.
+  const repairCand = available
+    .filter((s) => {
+      const t = p.skills[s.id];
+      return (
+        !!t &&
+        t.basic.passed &&
+        t.basic.repair &&
+        t.otherSinceFailure >= 2
+      );
+    })
+    .sort((a, b) => masteryOf(p, b.id) - masteryOf(p, a.id));
+  for (const s of repairCand) {
     const t = p.skills[s.id];
-    if (
-      !t ||
-      !needsRemediation(t) ||
-      t.otherSinceFailure < 2 ||
-      (t.extraPracticeGiven && now < t.card.due)
-    )
-      continue;
     t.extraPracticeGiven = true;
-    const picked = slot(s.id, repairRole(s), "Rebuild this skill");
+    const picked = slot(s.id, "basic", "Rebuild this skill");
     if (picked) return picked;
   }
+  // 2. Due FSRS reviews of passed skills that are not in repair.
   const due = sorted
-    .filter((s) => p.skills[s.id]?.card.due <= now && ready(p.skills[s.id]))
+    .filter((s) => {
+      const t = p.skills[s.id];
+      return !!t && t.basic.passed && !t.basic.repair && t.card.due <= now;
+    })
     .sort((a, b) => p.skills[a.id].card.due - p.skills[b.id].card.due);
   for (const s of due) {
-    const picked = slot(s.id, reviewRole(s), "Spaced review");
+    const picked = slot(
+      s.id,
+      mixOpen(p, c, s) ? "mix" : "basic",
+      "Spaced review",
+    );
     if (picked) return picked;
   }
-  for (const s of available) {
+  const mixCand = available.filter((s) => {
     const t = p.skills[s.id];
-    if (t && !ready(t)) continue;
-    if (baseOpen(p, c, s) && !lineReady(t?.basic)) {
-      const picked = slot(s.id, "basic", t ? "Keep building" : "New skill");
-      if (picked) return picked;
-    }
-    if (mixOpen(p, c, s) && !lineReady(t?.mix)) {
+    return (
+      !!t &&
+      t.basic.passed &&
+      !isReady(t) &&
+      !t.basic.repair &&
+      mixOpen(p, c, s)
+    );
+  });
+  // 3. One Mixed question in every three, for a passed skill not yet Ready.
+  if (Math.floor(p.sequence / 2) % 3 === 0)
+    for (const s of mixCand) {
       const picked = slot(s.id, "mix", "Mix it up");
       if (picked) return picked;
     }
+  // 4. New Basic work in catalog order.
+  for (const s of available) {
+    const t = p.skills[s.id];
+    if (t?.basic.passed) continue;
+    if (!baseOpen(p, c, s)) continue;
+    const picked = slot(s.id, "basic", t ? "Keep building" : "New skill");
+    if (picked) return picked;
   }
+  // 5. Mixed candidates on any other turn.
+  for (const s of mixCand) {
+    const picked = slot(s.id, "mix", "Mix it up");
+    if (picked) return picked;
+  }
+  // 6. Any other due card, including a non-passed skill's short-term review.
   for (const s of sorted) {
     const t = p.skills[s.id];
     if (
@@ -377,7 +460,9 @@ export function chooseNext(
     ) {
       const picked = slot(
         s.id,
-        needsRemediation(t) ? repairRole(s) : reviewRole(s),
+        (t.basic.passed && t.basic.repair) || !mixOpen(p, c, s)
+          ? "basic"
+          : "mix",
         "Keep building",
       );
       if (picked) return picked;

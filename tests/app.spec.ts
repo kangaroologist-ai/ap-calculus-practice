@@ -375,7 +375,7 @@ test('boots with a frozen v1 state, migrates it, and retains the original before
   const levelOne = page.locator('.path-level[data-level="1"]');
   await levelOne.locator('summary').click();
   const constant = levelOne.locator('.path-skill').filter({ hasText: 'Constants' });
-  await expect(constant.locator('.skill-status')).toHaveText('Basic ✓ · Mixed 0/2');
+  await expect(constant.locator('.skill-status')).toHaveText('Basic ✓ · 82%');
 
   const records = await page.evaluate(() => new Promise<{ current: unknown; preMigration: unknown }>((resolve, reject) => {
     const request = indexedDB.open('derivative-studio', 1);

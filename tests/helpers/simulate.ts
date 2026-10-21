@@ -46,6 +46,8 @@ export interface SimulateOptions {
   // basic/mix invariant checks, per SPEC-C7) inspect every step of a run
   // without re-implementing the loop.
   onQuestion?: (question: Question, reason: string, progressBefore: Progress) => void;
+  // Simulated time between questions. The mastery simulation uses 45 s.
+  stepMs?: number;
 }
 
 export interface SimulateResult {
@@ -60,7 +62,7 @@ export interface SimulateResult {
 // (SPEC-C7) under a given config and answering strategy.
 export function simulate(
   c: Config,
-  isRight: (q: Question) => boolean,
+  isRight: (q: Question, reason: string) => boolean,
   maxQuestions = 3000,
   opts: SimulateOptions = {},
 ): SimulateResult {
@@ -83,10 +85,16 @@ export function simulate(
     }
     opts.onQuestion?.(picked.question, picked.reason, structuredClone(p));
     const cur = newCurrent(picked);
-    recordOutcome(p, cur, c, isRight(picked.question) ? CORRECT : INCORRECT, now);
+    recordOutcome(
+      p,
+      cur,
+      c,
+      isRight(picked.question, picked.reason) ? CORRECT : INCORRECT,
+      now,
+    );
     state.session!.current = cur;
     finishQuestion(state);
-    now += 20_000;
+    now += opts.stepMs ?? 20_000;
   }
   throw new Error('did not converge');
 }

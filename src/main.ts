@@ -17,7 +17,7 @@ import {
   recordHint,
   finishQuestion,
   isReady,
-  lineReady,
+  masteryOf,
   needsRemediation,
   basicPassed,
   baseOpen,
@@ -330,7 +330,8 @@ function levelView(level: number, expanded = false) {
     <summary class="level ${unlocked ? "unlocked" : ""} ${skills.some(s => s.id === currentId) ? "active" : ""}"><span class="level-number">${String(level).padStart(2, "0")}</span><span class="level-copy"><strong>${["", "The foundations", "Essential functions", "Rules in combination", "Deeper compositions", "Beyond the first derivative", "Curves & coordinates"][level]}</strong><small>${!skills.length ? "Not included" : unlocked ? `${ready} of ${skills.length} skills ready` : "Locked · preview skills"}</small></span><span class="path-chevron" aria-hidden="true"></span></summary>
     <div class="path-skills">${skills.map(s => {
       const t = state.progress.skills[s.id];
-      const status = !unlocked ? "Locked" : isReady(t) ? "Ready" : needsRemediation(t) ? "Rebuilding" : lineReady(t?.basic) ? `Basic ✓ · Mixed ${t!.mix.streak}/2` : t?.lastSeen ? `Basic ${t.basic.streak}/2` : "Not started";
+      const mastery = Math.round(100 * masteryOf(state.progress, s.id));
+      const status = !unlocked ? "Locked" : isReady(t) ? "Ready" : needsRemediation(t) ? "Rebuilding" : t?.basic.passed ? `Basic ✓ · ${mastery}%` : t?.lastSeen ? `Learning · ${mastery}%` : "Not started";
       return `<div class="path-skill ${currentId === s.id ? "current" : ""}" ${currentId === s.id ? 'aria-current="step"' : ""}><div><strong>${esc(s.label)}</strong><span class="skill-status">${status}</span></div>${t?.card.reps ? `<small>Review ${esc(new Date(t.card.due).toLocaleString("en-US", {month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}))}</small>` : ""}</div>`;
     }).join("") || '<p class="fine">No enabled skills in this level.</p>'}</div></details>`;
 }
@@ -342,16 +343,19 @@ function welcome() {
       !config.disabledFamilies.includes(skill.id),
   );
   const nextSkill = hasProgress
-    ? available.find(
-        (skill) =>
-          baseOpen(state.progress, config, skill) &&
-          !lineReady(state.progress.skills[skill.id]?.basic),
-      ) ??
-      available.find(
-        (skill) =>
-          mixOpen(state.progress, config, skill) &&
-          !lineReady(state.progress.skills[skill.id]?.mix),
-      )
+    ? available.find((skill) => {
+        const t = state.progress.skills[skill.id];
+        return baseOpen(state.progress, config, skill) && !t?.basic.passed;
+      }) ??
+      available.find((skill) => {
+        const t = state.progress.skills[skill.id];
+        return (
+          !!t?.basic.passed &&
+          !isReady(t) &&
+          !t.basic.repair &&
+          mixOpen(state.progress, config, skill)
+        );
+      })
     : undefined;
   const nextSkillLine = nextSkill
     ? `<p class="fine">Level ${nextSkill.level} · ${esc(nextSkill.label)}</p>`
