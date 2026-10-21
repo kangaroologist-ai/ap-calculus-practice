@@ -129,6 +129,10 @@ async function currentPrimarySkill(page: Page): Promise<string> {
   return (await readStoredState(page)).session?.current?.question.primarySkill ?? '';
 }
 
+async function currentSignature(page: Page): Promise<string> {
+  return (await readStoredState(page)).session?.current?.question.signature ?? '';
+}
+
 async function keyboardVisible(page: Page): Promise<boolean> {
   return page.evaluate(() => window.mathVirtualKeyboard.visible);
 }
@@ -143,6 +147,7 @@ test.describe('session transition flows', () => {
     await openApp(page, config);
     await page.getByRole('button', { name: /Start practicing|Continue practicing/ }).click();
     await expect.poll(() => currentPrimarySkill(page)).toBe('constant');
+    const firstQuestion = await currentSignature(page);
     await expect(page.locator('#streak')).toContainText('0 in a row');
     await expect(page.locator('#today-count')).toContainText('practiced today');
     await expect(page.locator('.answer-equation')).toBeVisible();
@@ -162,19 +167,20 @@ test.describe('session transition flows', () => {
     await expect.poll(() => sessionCompleted(page)).toBe(0);
 
     await page.keyboard.press('Enter');
-    await expect.poll(() => currentPrimarySkill(page)).toBe('constant');
     await expect.poll(() => sessionCompleted(page)).toBe(1);
+    await expect.poll(() => currentSignature(page)).not.toBe(firstQuestion);
 
-    // The scheduler needs two independent constant examples before moving on
-    // to the enabled power-rule skill. This also proves continuous practice
-    // does not stop after the first two completed questions.
+    // One first-try correct answer passes constant, so the next question is a
+    // new skill. This also proves continuous practice does not stop after the
+    // first two completed questions.
+    const secondQuestion = await currentSignature(page);
     await setMathfield(page.locator('math-field').first(), await currentAnswer(page));
     await page.getByRole('button', { name: 'Check answer' }).click();
     await expect(page.locator('#feedback')).toContainText('Correct');
     await expect(page.locator('#next')).toBeEnabled();
     await page.locator('#next').click();
-    await expect.poll(() => currentPrimarySkill(page)).toBe('power');
     await expect.poll(() => sessionCompleted(page)).toBe(2);
+    await expect.poll(() => currentSignature(page)).not.toBe(secondQuestion);
   });
 
   test('immediate Enter grades the visible value before a delayed input event', async ({page}) => {
@@ -195,6 +201,7 @@ test.describe('session transition flows', () => {
     await openApp(page, config);
     await page.getByRole('button', { name: /Start practicing|Continue practicing/ }).click();
     await expect.poll(() => currentPrimarySkill(page)).toBe('constant');
+    const firstQuestion = await currentSignature(page);
 
     await setMathfield(page.locator('math-field').first(), await currentAnswer(page));
     await page.getByRole('button', { name: 'Check answer' }).click();
@@ -204,13 +211,14 @@ test.describe('session transition flows', () => {
     await expect.poll(() => sessionCompleted(page)).toBe(0);
 
     await page.clock.fastForward(1_501);
-    await expect.poll(() => currentPrimarySkill(page)).toBe('constant');
     await expect.poll(() => sessionCompleted(page)).toBe(1);
+    await expect.poll(() => currentSignature(page)).not.toBe(firstQuestion);
+    const secondQuestion = await currentSignature(page);
 
     // A cleared interval must not finish the same question a second time.
     await page.clock.fastForward(1_501);
     await expect.poll(() => sessionCompleted(page)).toBe(1);
-    await expect.poll(() => currentPrimarySkill(page)).toBe('constant');
+    await expect.poll(() => currentSignature(page)).toBe(secondQuestion);
   });
 
   test('an incorrect answer restores focus to its original math field', async ({ page }) => {
@@ -367,7 +375,6 @@ test.describe('session transition flows', () => {
     await enterKey.click();
     await expect.poll(async () => (await readStoredState(page)).session?.current?.question.signature)
       .not.toBe(firstQuestion);
-    await expect.poll(() => currentPrimarySkill(page)).toBe('constant');
     await expect.poll(() => keyboardVisible(page)).toBe(true);
     const nextField = page.locator('math-field').first();
     await expect(nextField).toBeFocused();

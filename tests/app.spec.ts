@@ -7,6 +7,7 @@ import path from 'node:path';
 import { createEmptyCard, fsrs, Rating, State } from 'ts-fsrs';
 import { freshProgress, PARAMETERS, stateFor, storeCard } from '../src/progress';
 import type { AppState, Progress, SkillState } from '../src/progress';
+import { SKILLS } from '../src/catalog';
 import { latex } from '../src/math';
 import { questionFingerprint } from '../src/question-identity';
 import type { Config } from '../src/types';
@@ -15,34 +16,7 @@ const appDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const screenshotDir = path.resolve(appDir, 'artifacts/e2e');
 mkdirSync(screenshotDir, { recursive: true });
 
-const skillIds = [
-  'constant',
-  'power',
-  'sum',
-  'root',
-  'exp',
-  'log',
-  'sin',
-  'cos',
-  'tan',
-  'cot',
-  'sec',
-  'csc',
-  'asin',
-  'acos',
-  'atan',
-  'product',
-  'quotient',
-  'chain',
-  'nested',
-  'mixed',
-  'implicit',
-  'inverse',
-  'higher',
-  'parametric',
-  'vector',
-  'polar',
-];
+const skillIds = SKILLS.map(({ id }) => id);
 
 type FixtureConfig = Omit<Config, 'disabledFamilies'> & {
   disabledFamilies?: string[];
@@ -81,13 +55,18 @@ function dueReviewCard(now: number) {
   return { ...storeCard(card), due: now - 1000 };
 }
 
-function seededSkill(skill: string, now: number): SkillState {
+function seededSkill(
+  skill: string,
+  now: number,
+  passed = false,
+  due = now - 1000,
+): SkillState {
   return {
-    card: dueReviewCard(now),
+    card: { ...dueReviewCard(now), due },
     basic: {
-      streak: 1,
+      streak: passed ? 2 : 1,
       lastQ: questionFingerprint(`e2e-seed:${skill}`),
-      passed: false,
+      passed,
       repair: false,
     },
     mix: { streak: 0, passed: false, repair: false },
@@ -100,13 +79,13 @@ function seededSkill(skill: string, now: number): SkillState {
 
 function levelTwoFlowProgress(config: Config, now: number): Progress {
   const progress = freshProgress(config, now);
-  // The foundation has four real-looking evidence events. The first constant
-  // answer below supplies the fifth event and unlocks Level 2 through the UI.
-  // Exponential is also seeded with a due Review card so that the first newly
-  // unlocked Level 2 question is a spaced review, while Log remains a fresh
-  // enabled skill used for the two remediation intervals.
+  // One first-try correct answer passes every Level 1 skill under the mastery
+  // model, so the constant answer below unlocks Level 2 through the UI.
+  // Exponential is already passed and its spaced review becomes due just after
+  // Level 2 opens; a wrong answer there then rates the mature card Again and
+  // puts the passed skill into repair. Log stays a fresh enabled skill.
   progress.skills.constant = seededSkill('constant', now);
-  progress.skills.exp = seededSkill('exp', now);
+  progress.skills.exp = seededSkill('exp', now, true, now + 30_000);
   return progress;
 }
 
@@ -215,6 +194,22 @@ async function keyboardShiftPressCount(page: Page): Promise<number> {
     (window.mathVirtualKeyboard as typeof window.mathVirtualKeyboard & { shiftPressCount: number })
       .shiftPressCount,
   );
+}
+
+async function keyboardRows(page: Page) {
+  return page.evaluate(() => {
+    const layer = document.querySelector('.ML__keyboard .MLK__layer.is-visible');
+    if (!layer) throw new Error('The math keyboard is not visible.');
+    return Array.from(layer.querySelectorAll('.MLK__row')).map((row) =>
+      Array.from(row.querySelectorAll('.MLK__keycap')).map((keycap) => ({
+        id: Array.from(keycap.classList)
+          .find((name) => name.startsWith('practice-key-'))
+          ?.slice('practice-key-'.length),
+        spoken: keycap.getAttribute('data-tooltip'),
+        face: keycap.querySelector('.ML__latex')?.textContent ?? '',
+      })),
+    );
+  });
 }
 
 async function screenshot(page: Page, name: string): Promise<void> {
@@ -782,6 +777,10 @@ test('Level 2 remediation round trip preserves FSRS and due across contexts', as
     const unlocked = await readStoredProgress(desktop);
     expect(unlocked.unlockedLevel).toBe(2);
 
+    // Cancel the armed auto-advance before moving the clock, then let the
+    // seeded exp review fall due so Next opens its spaced review question.
+    await desktop.locator('math-field').first().focus();
+    await desktop.clock.fastForward(60_000);
     await desktop.locator('#next').click();
     await expect.poll(async () => (await readStoredState(desktop)).session?.current?.question.primarySkill).toBe('exp');
     await setMathfield(desktop.locator('math-field').first(), '0');
@@ -795,7 +794,9 @@ test('Level 2 remediation round trip preserves FSRS and due across contexts', as
     expect(relearningSkill.basic.repair).toBe(true);
     expect(relearningSkill.otherSinceFailure).toBe(0);
     expect(relearningSkill.failureStreak).toBeGreaterThan(0);
-    expect(relearningSkill.basic.streak).toBe(0);
+    // A passed line's legacy streak is pinned at two, so a failed due review
+    // shows up in repair, failureStreak and the card state rather than the streak.
+    expect(relearningSkill.basic.streak).toBe(2);
     expect(relearningSkill.card.state).toBe(State.Relearning);
     expect(relearningSkill.card.due).toBeGreaterThan(fixedNow);
 
@@ -831,10 +832,13 @@ test('Level 2 remediation round trip preserves FSRS and due across contexts', as
     await mobile.clock.fastForward(advanceBy);
     const advancedNow = await mobile.evaluate(() => Date.now());
     expect(advancedNow).toBeGreaterThan(relearningSkill.card.due);
+    // The repaired exp question returns only after two other questions, and
+    // the fresh log skill is the only available new Basic work. Skipping does
+    // not record an outcome, so two skips bring the repair question back.
     await mobile.getByRole('button', { name: /Start practicing|Continue practicing/ }).click();
-    await expect.poll(async () => (await readStoredState(mobile)).session?.current?.question.primarySkill).toBe('constant');
+    await expect.poll(async () => (await readStoredState(mobile)).session?.current?.question.primarySkill).toBe('log');
     await mobile.locator('#next').click();
-    await expect.poll(async () => (await readStoredState(mobile)).session?.current?.question.primarySkill).toBe('constant');
+    await expect.poll(async () => (await readStoredState(mobile)).session?.current?.question.primarySkill).toBe('log');
     await mobile.locator('#next').click();
     await expect.poll(async () => (await readStoredState(mobile)).session?.current?.question.primarySkill).toBe('exp');
 
@@ -851,13 +855,23 @@ test('Level 2 remediation round trip preserves FSRS and due across contexts', as
     const firstRecovery = await readStoredProgress(mobile);
     expect(firstRecovery.skills.exp.basic.repair).toBe(true);
     const cardAfterDueReview = structuredClone(firstRecovery.skills.exp.card);
-    await mobile.locator('#next').click();
-    await expect.poll(async () => (await readStoredState(mobile)).session?.current?.question.primarySkill).toBe('exp');
-    await expect.poll(async () => (await readStoredState(mobile)).session?.current?.question.signature).not.toBe(retryState.session!.current!.question.signature);
-    const secondRetryState = await readStoredState(mobile);
-    await setMathfield(mobile.locator('math-field').first(), latex(secondRetryState.session!.current!.question.answers[0]));
-    await mobile.getByRole('button', { name: 'Check answer' }).click();
-    await expect(mobile.locator('#feedback')).toContainText('Correct');
+    // The mastery model keeps a passed skill in repair until its estimate is
+    // back at the pass threshold, which needs several correct answers after a
+    // failed due review. The card changes only on the first answer because it
+    // is no longer due at the frozen mobile clock after that.
+    let previousSignature = retryState.session!.current!.question.signature;
+    for (let retry = 0; retry < 6; retry += 1) {
+      if (!(await readStoredProgress(mobile)).skills.exp.basic.repair) break;
+      await mobile.locator('#next').click();
+      await expect.poll(async () => (await readStoredState(mobile)).session?.current?.question.primarySkill).toBe('exp');
+      await expect.poll(async () => (await readStoredState(mobile)).session?.current?.question.signature).not.toBe(previousSignature);
+      const nextRetryState = await readStoredState(mobile);
+      previousSignature = nextRetryState.session!.current!.question.signature;
+      await setMathfield(mobile.locator('math-field').first(), latex(nextRetryState.session!.current!.question.answers[0]));
+      await mobile.getByRole('button', { name: 'Check answer' }).click();
+      await expect(mobile.locator('#feedback')).toContainText('Correct');
+      expect((await readStoredProgress(mobile)).skills.exp.card).toEqual(cardAfterDueReview);
+    }
     const recovered = await readStoredProgress(mobile);
     expect(recovered.skills.exp.card).toEqual(cardAfterDueReview);
     expect(recovered.skills.exp.basic.repair).toBe(false);
@@ -1267,6 +1281,61 @@ test('one-page math keyboard exposes y and inverse-trig through shift and long p
   await expect(field).toHaveJSProperty('value', '\\arcsin');
   await expect.poll(() => keyboardShiftPressCount(page)).toBe(0);
   await screenshot(page, 'mobile-one-page-keyboard-alternates');
+});
+
+// With only abstract enabled, this fixed instant makes the first question
+// abstract.basic.inner h(x)=f(5x), so the keyboard layout is deterministic.
+const ABSTRACT_KEYBOARD_NOW = Date.UTC(2026, 9, 21, 0, 12, 0);
+const KEY_PLACEHOLDER = '\u25A2';
+
+test('abstract questions replace tan, sec, csc, cot with f and g keys', async ({ page, browserName }) => {
+  test.skip(browserName === 'firefox', 'The abstract-function keyboard is checked in Chromium and WebKit (S6).');
+  await page.clock.setFixedTime(ABSTRACT_KEYBOARD_NOW);
+  await openApp(page, onlySkill('abstract', 5), { width: 390, height: 844 });
+  await page.getByRole('button', { name: /Start practicing|Continue practicing/ }).click();
+  await expect.poll(async () => (await readStoredState(page)).session?.current?.question.primarySkill).toBe('abstract');
+  const question = (await readStoredState(page)).session!.current!.question;
+  expect(question.templateKey).toBe('abstract.basic.inner');
+  expect(question.source).toEqual([['Fn', 'f', 0, ['Multiply', 5, 'x']]]);
+
+  const field = page.locator('math-field').first();
+  await field.focus();
+  await page.getByRole('button', { name: 'Math keyboard' }).click();
+  await expect(page.locator('.ML__keyboard .MLK__layer.is-visible')).toBeVisible();
+
+  const rows = await keyboardRows(page);
+  expect(rows[0][2]).toEqual({ id: 'g', spoken: 'g of', face: `g(${KEY_PLACEHOLDER})` });
+  expect(rows[1].slice(0, 3)).toEqual([
+    { id: 'f', spoken: 'f of', face: `f(${KEY_PLACEHOLDER})` },
+    { id: 'fprime', spoken: 'f prime of', face: `f\u2032(${KEY_PLACEHOLDER})` },
+    { id: 'gprime', spoken: 'g prime of', face: `g\u2032(${KEY_PLACEHOLDER})` },
+  ]);
+
+  // h(x)=f(5x) has derivative 5f'(5x): build it from the function key and digits.
+  for (const id of ['5', 'multiply', 'fprime', '5', 'x']) await pressMathKey(page, id);
+  await pressMathKey(page, 'check');
+  await expect(page.locator('.answer-box[data-verdict="correct"] .answer-verdict')).toHaveText('✓ Correct');
+  await expect(page.locator('#feedback')).toContainText('Correct');
+  await screenshot(page, 'mobile-abstract-function-keyboard');
+});
+
+test('non-abstract questions keep tan, sec, csc and cot in the same positions', async ({ page, browserName }) => {
+  test.skip(browserName === 'firefox', 'The plain keyboard layout is checked in Chromium and WebKit (S6).');
+  await openApp(page, onlySkill('constant', 1), { width: 390, height: 844 });
+  await page.getByRole('button', { name: /Start practicing|Continue practicing/ }).click();
+  await expect.poll(async () => (await readStoredState(page)).session?.current?.question.primarySkill).toBe('constant');
+  const field = page.locator('math-field').first();
+  await field.focus();
+  await page.getByRole('button', { name: 'Math keyboard' }).click();
+  await expect(page.locator('.ML__keyboard .MLK__layer.is-visible')).toBeVisible();
+
+  const rows = await keyboardRows(page);
+  expect(rows[0][2]).toEqual({ id: 'tan', spoken: 'tangent', face: 'tan' });
+  expect(rows[1].slice(0, 3)).toEqual([
+    { id: 'sec', spoken: 'secant', face: 'sec' },
+    { id: 'csc', spoken: 'cosecant', face: 'csc' },
+    { id: 'cot', spoken: 'cotangent', face: 'cot' },
+  ]);
 });
 
 test('first-use keyboard alt tip disappears after Shift and stays dismissed after reload', async ({ browser, browserName }) => {
