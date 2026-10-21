@@ -7,6 +7,18 @@ export type WhatsNewEntry = {
 // Newest first. Add an entry (and bump package.json) only for changes students can see.
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    version: "1.3.0",
+    date: "2026-10-21",
+    title: "Simpler numbers, a smarter path",
+    items: [
+      "Questions use small numbers now, so you practice the rule, not long multiplication. Formulas read the textbook way, like 15x⁸ and ln x − 15eˣ.",
+      "Practice now estimates how well you know each skill, as a percentage on your path. One mixed question can show which rule needs work, so you get fewer extra checks and reach new rules sooner.",
+      "A new learning path: the product rule comes earlier, and three combination skills build up from two rules to harder mixes.",
+      "New skill: <strong>abstract functions</strong>. Differentiate expressions with <em>f</em> and <em>g</em>, like f(x³) or f(x)·g(x); the keyboard shows f(▫), f′(▫), g(▫) and g′(▫) for these questions.",
+      "On iPhone, add practice to your Home Screen so Safari keeps your progress.",
+    ],
+  },
+  {
     version: "1.2.1",
     date: "2026-09-27",
     title: "The whole keyboard on iPhone",

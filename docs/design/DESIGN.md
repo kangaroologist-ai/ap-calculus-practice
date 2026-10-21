@@ -200,6 +200,8 @@ MathLive `math-field`，边框 `--control-border`，聚焦时 3 px `--focus` 外
 
 `<details>` 列表，每个等级一行，展开和收起即时完成、不做动画（`src/style.css:687-856`）。
 
+技能状态文字（2026-10-21 起，掌握度模型）：Locked、Not started、Learning · NN%、Basic ✓ · NN%、Ready、Rebuilding；NN 为掌握度估计的百分比。教师设置关闭的等级显示 “Not included”（当前第 6 级）。
+
 ### 5.6 图标
 
 一律使用内联 SVG，与文字同色（`currentColor`），不用 emoji 充当图标。“Math keyboard” 按钮使用内联 SVG 键盘图标（`src/main.ts` 的 `questionView()`）。
@@ -220,6 +222,7 @@ MathLive `math-field`，边框 `--control-border`，聚焦时 3 px `--focus` 外
 | 行 4 | ← | → | ln / log▫ | 0 / θ（2 格） | | . / π | + | Check / Next（2 格，蓝底） | |
 
 - sin⁻¹、cos⁻¹、tan⁻¹ 只是键帽，输入的是 `\arcsin` 等：判分器接受 arcsin，不接受 `\sin^{-1}`。
+- **抽象函数题**（题目的 `domain.functions` 非空，2026-10-21 起）：行 1 第 3 列 tan 换成 `g(▫)`，行 2 第 1–3 列 sec、csc、cot 换成 `f(▫)`、`f′(▫)`、`g′(▫)`；这四个键没有 alt，其他键与位置不变。这类题用不到 tan、sec、csc、cot；f 与 f′ 左右相邻，g 在 g′ 正上方（`layoutsFor(vars, functions)`，任务文档 `2026-10-21-practice-quality` S6）。键帽画空框，单按插入 `f\left(▫\right)` 等并选中空框；打字等价检查（`tests/math-keyboard.spec.ts`）跳过这四个模板键。
 - **取得 alt 的两种方式**：① 按住有 alt 的键 450 ms，键上方弹出气泡显示将输入的内容，松手输入；手指移动超过约 8 px 或移出键外则取消。② 点 ⇧：点一次只对下一个键生效，然后自动恢复；连点两次锁定，再点一次解除。⇧ 打开时，有 alt 的键换成 alt 并变为 `--tint` 色，没有 alt 的键保持原样（不变淡：它们仍然可以按，变淡会低于 4.5:1）。
 - **手机上键上不印 alt**（负责人试过角标小字后否决：太挤）；**宽度 ≥ 700 px 时在键的右上角印淡蓝小字**（11 px、`--tint`、60% 不透明；← → ⌫ 与确认键不印），此时键宽约 60 px 以上，放得下（2026-09-27 第 14 轮）。发现方式：键盘第一次打开时，顶栏中间显示一行 “Hold a key or tap ⇧ for more”，第一次用过长按或 ⇧ 后不再显示（本机记录 `apcalc.keyboardAltTipSeen`）；帮助页与 What's new 说明。
 - **顶栏**（原页签行）：左侧 **Hint?**、**Skip**，右侧收起键盘图标按钮，触控高度 44 px。提示用完时隐藏 Hint?；答对后隐藏 Hint? 与 Skip。MathLive 每次重建键盘都会清空这一行，由 `src/main.ts` 用 `MutationObserver` 自动补回。
@@ -276,6 +279,7 @@ MathLive 把键帽的 `tooltip` 优先用作 `aria-label`，所以 `tooltip` 只
 | . | decimal point | pi |
 | sin / cos / tan | sine / cosine / tangent | inverse sine / inverse cosine / inverse tangent |
 | sec / csc / cot | secant / cosecant / cotangent | secant squared / cosecant squared / cotangent squared |
+| f(▫) / f′(▫) / g(▫) / g′(▫)（仅抽象函数题） | f of / f prime of / g of / g prime of | — |
 | ln | natural log | log base |
 | ▫/▫ | fraction | divide |
 | ▫^▫ | power | [v] to the power |

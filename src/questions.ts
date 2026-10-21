@@ -10,7 +10,7 @@ import {
   type Template,
 } from "./templates";
 import { inferSkills } from "./skill-inference";
-export const GENERATOR_VERSION = "2.0.0";
+export const GENERATOR_VERSION = "3.0.0";
 export interface QuestionOptions {
   role?: Role;
   key?: string;
