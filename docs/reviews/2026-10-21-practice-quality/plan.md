@@ -48,6 +48,7 @@ Size class: large - six independent topics, one new skill with a format migratio
 | L5 | A correct combined question also counts as an FSRS review of its due component skills (R7) | **Yes** / no | “别的按推荐” → yes | 2026-10-21 |
 | L6 | Re-ask of G10 after the answer in R5 | **Add the persistent-storage request and the Home Screen tip in this release; online saving comes with the accounts task** / no change now | “别的按推荐” → recommended | 2026-10-21 |
 | L7 | Spec talk-through: go-ahead? | **Agree; start with S3 on branch `practice-quality`** / change the Spec | “同意，codex的工作和你能分出的代码工作都可以交给qoder的dsf，审核可以交给codex，codex和dsf意见一致了你再看一眼就行。” Later: “记得保留qoder的session这样有修改可以直接回调” → see the delegation rule under To Do | 2026-10-21 |
+| L8 | Owner during T3 review: “70太高了吧，我觉得要定一个，如果每道题都做对，product rule在10-15题就应该出现了” — how to meet ≤ 15 for an always-correct student? Measured on the branch (27 skills, T3 merged): always-correct student meets product at question 23 (15 skills come first); truth students 65 / 11 / 26 of 40. Moving cot, sec, csc, asin, acos, atan after chain (level 3): always-correct 14; truth students 32 / 8 / 23 of 40. | **Move those six skills after chain (level 3); new S4 targets: always-correct ≤ 15, truth-student median ≤ 35** / keep the order (23 is the minimum) | | |
 
 Default assumptions (not answered): none yet.
 Owner agrees with this understanding: round 2 answers, 2026-10-21 (“4我觉得按85%吧……别的按推荐”). Spec talk-through: “同意” (L7), 2026-10-21.
@@ -268,7 +269,7 @@ Requirements that change: number ranges (S1, S2), display (S3), progression and 
   - Start values depend on the level. One first-try correct answer passes a level 1 or level 2 skill; level 3 and higher need two.
   - A skill at 80% or more passes (sticky) and opens the skills and levels that need it.
   - A skill at 85% or more is Ready (sticky, L4). A passed skill under 60% is weak (clarified 2026-10-21 during T3: before its first pass a skill is still in normal learning, as in the R7 prototype; without this rule the simulation gave 72 remedial questions): it gets targeted Basic practice after two other questions, until it is at 80% again. A weak skill shows as not Ready until then.
-  - One question in every three is a combined (Mixed) question when one is available.
+  - One question in every three is a combined (Mixed) question when one is available (phase decided 2026-10-21 during T3: the third, sixth … question by `Math.floor(sequence / 2) % 3 === 0`; the earlier prompt value `=== 2` gave first P/C 71 > 70, `=== 0` gives 65 / 9 / 28 of 40).
   - The diagnostic queue for all Ready required skills and the two-correct rebuild rule go away.
   - FSRS stays for review timing. A hint or a wrong first try still rates Again. A correct combined question also counts as a Good review of each component skill that is due (L5).
   - The interface keeps its labels, except the path status of a started skill: the streak counts (“Basic ✓ · Mixed 1/2”, “Basic 1/2”) become the estimate (“Basic ✓ · 82%”, “Learning · 45%”), because the streak counts no longer exist. Recorded during T3 preparation, 2026-10-21; to report to the owner. README and help describe the new rules.
