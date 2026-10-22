@@ -179,3 +179,23 @@ describe("guessing control", () => {
     expect((await save(ADA.code)).status).toBe(429);
   });
 });
+
+describe("limit key", () => {
+  it("groups IPv6 addresses by /64 and keeps IPv4 as it is", async () => {
+    const { limitKey } = await import("../../functions/_lib/attempts");
+    expect(limitKey("203.0.113.7")).toBe("203.0.113.7");
+    expect(limitKey("2001:db8:85a3:0042:1000:8a2e:370:7334")).toBe(
+      "2001:db8:85a3:42::/64",
+    );
+    expect(limitKey("2001:DB8:85A3:42::1")).toBe("2001:db8:85a3:42::/64");
+    expect(limitKey("2001:db8::1")).toBe("2001:db8:0:0::/64");
+    expect(limitKey("::1")).toBe("0:0:0:0::/64");
+  });
+
+  it("counts two addresses of one IPv6 /64 together", async () => {
+    for (let i = 0; i < 60; i++)
+      await signIn("TEST-ZZZZ-ZZZZ-ZZ", NOW, `2001:db8:1:2::${(i + 1).toString(16)}`);
+    expect((await signIn("TEST-ZZZZ-ZZZZ-ZZ", NOW, "2001:db8:1:2:ffff::9")).status).toBe(429);
+    expect((await signIn("TEST-ZZZZ-ZZZZ-ZZ", NOW, "2001:db8:1:3::1")).status).toBe(401);
+  });
+});

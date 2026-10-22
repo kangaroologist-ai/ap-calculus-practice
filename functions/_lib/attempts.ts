@@ -15,8 +15,20 @@ export type AttemptGuard =
   | { ok: true; attempt: Attempt }
   | { ok: false; response: Response };
 
+// One IPv6 client can use a whole /64, so count failures per /64 there.
+export function limitKey(ip: string): string {
+  if (!ip.includes(":")) return ip;
+  const [head, tail = ""] = ip.toLowerCase().split("::");
+  const left = head ? head.split(":") : [];
+  const right = tail ? tail.split(":") : [];
+  const groups = ip.includes("::")
+    ? [...left, ...Array(Math.max(0, 8 - left.length - right.length)).fill("0"), ...right]
+    : left;
+  return `${groups.slice(0, 4).map((g) => g.replace(/^0+(?=.)/, "")).join(":")}::/64`;
+}
+
 function clientIp(request: Request): string {
-  return request.headers.get("CF-Connecting-IP") ?? "unknown";
+  return limitKey(request.headers.get("CF-Connecting-IP") ?? "unknown");
 }
 
 export function tooManyAttemptsResponse(attempt: Attempt): Response {

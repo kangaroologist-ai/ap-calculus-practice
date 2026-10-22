@@ -28,6 +28,10 @@ export type JsonBody =
   | { ok: false; response: Response };
 
 export async function readJsonBody(request: Request): Promise<JsonBody> {
+  // Refuse a declared oversized body before reading it; the byte check below
+  // still covers a missing or wrong Content-Length.
+  if (Number(request.headers.get("Content-Length")) > MAX_BODY_CHARS)
+    return { ok: false, response: errorResponse("too-large", 413) };
   const bytes = await request.arrayBuffer();
   if (bytes.byteLength > MAX_BODY_CHARS)
     return { ok: false, response: errorResponse("too-large", 413) };
