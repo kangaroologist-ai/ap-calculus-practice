@@ -277,6 +277,17 @@ Labels: **[F]** fact (source), **[I]** inference, **[U]** unknown, **[P]** probl
 - **[I]** Full order (28 skills): constant, power, sum, root | exp, log, sin, cos | product, quotient, tan, cot, sec, csc, combine | chain, mixed | implicit, inverse, asin, acos, atan, higher, nested, abstract | parametric, vector, polar (off).
 - **[I]** T7 must wait for this step: profile 4 freezes the skill table, which now has 28 skills.
 
+### R10. Full design review findings (P4, 2026-10-22)
+
+Report: `design-reviewer` (Sonnet), scope `reviews/context.md`, screenshots `reviews/shots/`. Claude's grading:
+- **F1 P1 (confirmed by Claude in `artifacts/e2e/webkit-mobile-abstract-function-keyboard.png`)**: at 390 px the faces f(▫), f′(▫), g(▫), g′(▫) are wider than the 39 px keys; they clip and run into each other. Decision: keep the faces (DESIGN §6.1 rule 7, empty box) but draw these four keys smaller so they fit at 390 and 320 px; add a measurement test.
+- **F3 P3**: the prompt shows `f (5x)` with a gap. Fix with F1 (cheap, mechanical).
+- **F4 P3**: level 6 “Not included” still expands to “No enabled skills in this level.” Decision: a level with no enabled skill is a plain row without chevron and without body.
+- **F5 P3**: “1 skills ready” → singular. Fix (mechanical).
+- **F2 P2**: the first-use tip shows on abstract questions though the four keys have no alt. Accept; note in DESIGN §6.1.
+- **F6 P3 (opinion)**: the percentage has no in-app caption. Not changed: it adds copy outside S4/S8; offer to the owner.
+- Device-only items stay for the owner's iPhone check (P6), including “Math keyboard opens on the first tap on an abstract question”.
+
 ## Spec
 
 Final draft after round 2, for the talk-through. One release (G1); version 1.2.1 → 1.3.0. Accounts are a separate task after this release (L1).
@@ -364,6 +375,8 @@ The owner tags below follow this rule: “dsf → Codex → Claude”.
 
 - [x] **T11** (S4, S6, S7, S8) `tests/*.spec.ts`: adapt the browser tests to the intended behaviour changes (first e2e run 2026-10-21: 181 passed, 23 failed in 3 browsers, all from new path / one-answer pass / repair rule / level 6 off) and add the abstract-keyboard browser test left open in T6. *Verify:* `npx playwright test` all pass. *Owner:* dsf → Codex → Claude (L7). Done 2026-10-21: Codex approved round 0 (one nit: the level-4 representative test still says “Nested chain rule”; accepted, rename later). Claude check: `npx playwright test` 208 passed, 62 skipped, 0 failed (Chromium, Firefox, WebKit). Sessions: dsf=4d0f6b58-98e2-430e-9449-966541b79f4f codex=01a15f07-800f-7e60-a51b-801b0b75b757 .
 - [x] **T12** (P7) `scripts/skill-examples.ts`: notes for `combine`, `abstract`, re-scoped `mixed`/`nested`; skill count from the catalog. Regenerated: 28 skills, 112/112 verified. *Owner:* Claude (content notes). Done 2026-10-21, commit 8f8aa7c.
+
+- [ ] **T13** (S6, S8; R10 F1, F3, F4, F5) `src/math-keyboard.ts`, `src/style.css`, `src/math.ts` (`latex` of Fn), `src/main.ts` (path level row, “skill”/“skills”), `tests/math-keyboard.spec.ts`, `tests/math-keyboard-layout.test.ts`, `tests/latex-display.test.ts`, `tests/app.spec.ts`: fix the design-review findings. *Verify:* face-fit measurement at 390 and 320 px; unit and e2e suites. *Owner:* dsf (resumed T6 Qoder session) → Codex → Claude (L7).
 
 Project obligations:
 - [x] **P1** README and `help.html`: numbers, mastery rules, new skill, keyboard keys, storage tip. *Owner:* Claude (docs are not delegated).
