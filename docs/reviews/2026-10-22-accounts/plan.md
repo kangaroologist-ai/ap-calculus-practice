@@ -1,6 +1,6 @@
 ---
 task: accounts
-phase: implement      # grill | research | spec | todo | implement | acceptance | done
+phase: acceptance     # grill | research | spec | todo | implement | acceptance | done
 scope: ap-calculus-practice (site, new Pages Function, new D1 database, README, help.html, DESIGN.md)
 branch: main
 version: 1.3.0 → 1.4.0 (expected; a new user-visible feature)
@@ -14,6 +14,7 @@ commits:              # - <hash>: <key result>
   - dd6bf85: T10a save once per question (5 s wait), 603 unit tests
   - 21841dd: T10b design fixes and _routes.json
   - 28e6b7d: 200% zoom header fix, 42 account e2e, 220 existing e2e
+  - 64d693c: production D1 bound; deployed 71188840; live sync checked
 ---
 
 <!-- Write this document in English, in the ASD-STE100 core style (see SKILL.md, Writing). Owner answers stay verbatim. -->
@@ -324,7 +325,7 @@ Owners follow the owner rule of 2026-10-22: DeepSeek-Flash writes code steps thr
 - [x] **T10a** (S5) `src/sync.ts`, `src/account.ts`, `tests/sync.test.ts`, `tests/account-client.test.ts`: save timing of L2: the scheduler waits 5 s after the last change, then saves once; `flush` saves at once; one save at a time; remove the 20 s interval and `noteSave`. *Verify:* unit tests for the wait, answer plus Next as one save, flush, failures. *Owner:* Claude - subtle timing in Claude's T2 code. Done 2026-10-22: `createSaveScheduler` waits `SAVE_DELAY_MS` (5 s) after the last change, then saves once; `flush` saves at once with keepalive (or right after a running save); one save at a time; `noteSave` and the 20 s interval removed. Tests: 8 scheduler tests (answer plus Next within 5 s is one save), 5 client tests moved to the 5 s wait, one obsolete test removed. README and help say “after each question”.
 - [x] **T10b** (S1, S4, S6) `src/main.ts`, `src/style.css`, `src/teacher.css`, `public/_routes.json`, `tests/accounts/account.spec.ts`, `tests/accounts/teacher.spec.ts`: `_routes.json` and the R6 design fixes. *Verify:* account e2e and existing e2e. *Owner:* DeepSeek (code-loop) - mechanical fixes with exact targets. Done 2026-10-22 (`21841dd`, `28e6b7d`): DeepSeek-Flash (Qoder session `89a9b7a7-9b8f-45a4-b7ab-ea1999b3d9e3`), Codex passed in round 1. Claude found one regression in the existing suite: at 200% page zoom the signed-out header ran 32 px off the page (`tests/app.spec.ts`), because the fix kept the header tools from shrinking and media queries do not see page zoom. Claude fix: at ≤ 430 px the brand name yields first and Move progress reads “Move” for everyone (accessible name unchanged). Checks: 603 unit tests, 42 account e2e, 220 existing e2e (65 browser-conditional skips).
 - [x] **T10c** (S4, S6, P4) Re-capture the account states and the teacher grid after T10 and check the R6 fixes (routine check of the affected states). *Verify:* each R6 item fixed or accepted with a reason. *Owner:* Claude. Done 2026-10-22: 42 screenshots re-captured in `artifacts/design/1.4.0/accounts-after/`. Checked: 1 footer “Signed in as Ada Test” while offline; 2 error under the field (`evidence/after-390-sign-in-error.png`); 3 status on one line at 390, wrap and no truncation asserted at 375 and 320 in e2e; 4 Name header on top after scroll (e2e `elementFromPoint`); 5 selects 44 px with a chevron (`evidence/after-390-teacher-grid.png`); 6 brand name signed out; 7 signed-in copy; 8 subtle Sign out with the sentence; 9 Name column about 7rem; 10 “Nothing to save yet”; 11 “Signing in…”; 12 no gap; 13 header 16 px. Not changed with reasons: 14, 15 (R6). iPhone keyboard and real iOS selects stay for P5.
-- [ ] **T9** (S1, S7) Cloudflare: `wrangler d1 create`, put the id in `wrangler.toml`, `wrangler d1 migrations apply --remote`, “fail open” in the dashboard, make the teacher code. *Verify:* `wrangler d1 execute --remote` lists the tables. *Owner:* Claude - with the owner's go-ahead at that step (account change). Owner go-ahead: L1 (2026-10-22), after T10c. The owner sets “fail open” in the dashboard (no tool here can change it).
+- [x] **T9** (S1, S7) Cloudflare: `wrangler d1 create`, put the id in `wrangler.toml`, `wrangler d1 migrations apply --remote`, “fail open” in the dashboard, make the teacher code. *Verify:* `wrangler d1 execute --remote` lists the tables. *Owner:* Claude - with the owner's go-ahead at that step (account change). Owner go-ahead: L1 (2026-10-22), after T10c. The owner sets “fail open” in the dashboard (no tool here can change it). Done 2026-10-22 except “fail open” (owner): `wrangler d1 create` (APAC, id `5aee60b4-…` in `wrangler.toml`, `64d693c`); tables made with `d1 execute --remote --file migrations/0001_accounts.sql` because `migrations apply` waits for a confirmation (4 tables, 12 rows written); teacher code written by `npm run accounts -- teacher-code` straight into `accounts-private/teacher-code.txt` (mode 600), never shown. Finding: the account already has two other D1 databases (`tiku`, `nutrition-logger`), so the free limits are shared (README).
 
 Project obligations:
 
@@ -333,9 +334,31 @@ Project obligations:
 - [x] **P3** DESIGN.md update: applies - §1 constraint, sign-in sheet, sync status, conflict prompt, teacher grid (T7). Done: T7 (§1, §5.7, §5.8).
 - [x] **P4** Full design review: applies - new page and new components. `design-reviewer` with `reviews/context.md` first. Review done 2026-10-22 (R6): 2 P1 and 6 P2 go to T10; check in T10c. Closed by T10b and T10c: no P0/P1 open.
 - [ ] **P5** iPhone check by the owner: applies - code field and keyboard on the sign-in sheet; the teacher grid on a phone.
-- [ ] **P6** Deploy and live check: applies - `/help`, `/teacher`, one live sign-in and sync on two devices.
+- [x] **P6** Deploy and live check: applies - `/help`, `/teacher`, one live sign-in and sync on two devices. Done 2026-10-22: deployed `dist` (deployment `71188840`); live `/help` has “Save your progress online”; live main bundle `main-8C3sZnna.js` (same hash as the local build) carries 1.4.0; `/teacher` 200 with `X-Robots-Tag: noindex`; `POST /api/session` with a wrong code gives 401 with `no-store`; `_routes.json` deployed. Live sync with a temporary class `ZZCHECK` (Playwright, two browsers): device A saved 8 s after the answer (5 s wait plus grading), device B got the progress at sign-in (`evidence/live-device-b-390.png`), the teacher API showed the row at revision 1; then `delete-class ZZCHECK` and the local codes were removed. Remote now: 0 classes, 0 students, 1 teacher row, 1 failure row (from the wrong-code probe).
 - [ ] **P7** First class set-up by the owner with `add-students`, and the slips printed: applies after P6.
 
 ## Acceptance
 
-<pending>
+Walk of 2026-10-22, after deployment.
+
+| Spec | To Do | Evidence | Result |
+|---|---|---|---|
+| S1 Online store | T1, T1b, T1r, T9, T10b | 40 Function tests; 42 account e2e on `wrangler pages dev`; live 401/no-store and live sync (P6); `_routes.json` live | pass (fail open: owner) |
+| S2 Codes | T1 | `tests/account-code.test.ts`; live sign-in with a generated code | pass |
+| S3 Guessing control | T1, T1r, `3543888` | `tests/functions/guessing.test.ts` (30 students with typing errors pass; 61st bad code 429; IPv6 /64) | pass |
+| S4 Sign-in on the practice site | T3, T3r, T10b, T10c | account e2e (sign-in, wrong code, `#login=`, sign-out, offline sign-out, 320/375/390 header); `evidence/after-390-*.png`; live device B screenshot | pass on emulation; iPhone check open (P5) |
+| S5 Sync rule | T2, T3, T3r, T10a | 26 sync tests, 35 client tests; two-device and offline-conflict e2e; live two-browser sync | pass |
+| S6 Teacher page | T4, T5, T10b, T10c | 9 grid tests; teacher e2e (grid, scroll, Close, 44 px selects); `evidence/teacher-grid-*.jpg`, `after-390-teacher-grid.png`; live `/teacher` 200 | pass; phone check open (P5) |
+| S7 Teacher script | T5, T9 | 18 script tests; local run (`evidence/slips-demo.png`, `report-demo.png`); live `create-class`, `add-students`, `delete-class`, `teacher-code` | pass; first real class open (P7) |
+| S8 Privacy text | T7 | approved wording in the sign-in sheet (`evidence/after-390-sign-in-error.png`) and `help.html`; README | pass |
+| S9 Documents and release | T7, T8, P1–P4, P6 | README, help, DESIGN.md, What's new 1.4.0, version 1.4.0, full design review (R6) closed, deploy and live checks | pass |
+
+Changes from the Spec, with reasons: save timing changed by the owner (L2: one save per question, 5 s wait; was at most once per 20 s); the status text stays visible on phones (Codex T3 and the design review: S4 needs readable status); “Move” is the short label for everyone at ≤ 430 px (200% zoom); the conflict loser is only backed up when the student chooses (T3r); a replaced code needs an explicit “Remove progress and sign out” (T3r).
+
+Open / deferred / owner checks:
+
+- P5 iPhone check by the owner: sign-in field and keyboard (the error must stay visible above the keyboard), the slip QR link, status in the header, the conflict dialog, and the teacher page (grid scroll, selects) on a phone.
+- Owner: in the Cloudflare dashboard, Pages project `ap-calculus-practice` → Settings → Runtime → fail open.
+- P7 first real class: `npm run accounts -- create-class <PREFIX> "<name>"`, then `add-students`, print the slips.
+- Accepted P3 notes: T1r (body read, IPv6 secret, Unicode folding, test batch, 503 without diagnostics), T3r (conflict prompt closed with ✕ waits for the next sync event; no request timeout; dead `continue`; temporary-session conflict loser has no backup), R6 14 and 15.
+- Follow-up idea, not in this task: a site that opens with no network (service worker), because starting practice still needs `practice-config.json` (R5 of the practice-quality task).
