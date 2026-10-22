@@ -1,10 +1,11 @@
 ---
 task: practice-quality
-phase: implement      # grill | research | spec | todo | implement | acceptance | done
+phase: done           # grill | research | spec | todo | implement | acceptance | done
 scope: ap-calculus-practice / question numbers, scheduler, learning path, new abstract-function skill, site access, accounts
 branch: practice-quality
 version: 1.2.1 → 1.3.0 (one release, G1)
-commits: []
+commits:
+  - 5efd5cb: release 1.3.0 on main (fast-forward from 18b8fe7); unit 454/454, e2e 220 passed / 0 failed, test:math 11,200 / 0 failures; CI 39717908855 success; production deployment aec4aa88
 ---
 
 <!-- Write this document in English, in the ASD-STE100 core style (see SKILL.md, Writing). Owner answers stay verbatim. -->
@@ -399,12 +400,33 @@ Project obligations:
 - [x] **P7** Regenerate `skill-examples` (docs and public page); `npm run test:math`. *Owner:* Claude.
 - [x] **P8** Mark `docs/reviews/2026-09-27-coefficients/plan.md` as replaced by this task. *Owner:* Claude.
 
-## Acceptance
-
-Not started.
-
 ## Status at pause (2026-10-21, usage limit)
 
 - Done and committed on `practice-quality`: T1, T1b, T2, T3, T4, T5, T6, T7, T8, T9, T11, T12; P1, P2 (1.3.0), P3, P7. Unit 448/448, e2e 208 passed / 0 failed, `test:math` 11,200 / 0 failures, build passes.
 - Closed 2026-10-22: P4 full design review (see R10, `release-review.md`; final e2e 218 passed / 0 failed, unit 449/449, build passes). Was open: P4 full design review (the `design-reviewer` subagent was started; screenshots in `artifacts/design/1.3.0/`, scope in `reviews/context.md`). Claude found one likely P1 before the review: at 390 px the keys f(▫), f′(▫), g′(▫) are clipped (`artifacts/e2e/webkit-mobile-abstract-function-keyboard.png`); also `f\left(5x\right)` renders with a gap (“f (5x)”). Fix both through the T6 Qoder session `d6123eba-53b3-4ce8-86cd-31bdf0c7cea7` (keys) and the T4 session `8fe724ef-288b-43f1-92e7-c90d8cfaa788` (latex of Fn).
 - Open: P5 deploy (needs the owner's approval), P6 iPhone check by the owner, P8 mark the coefficients plan replaced, worktrees removed 2026-10-22, acceptance walk.
+
+## Acceptance
+
+Walk on 2026-10-22, after the production deploy (commit 5efd5cb; Cloudflare deployment aec4aa88; live footer v1.3.0).
+
+| Spec | To Do | Evidence | Result |
+|---|---|---|---|
+| S1 Number limits | T2 | `tests/number-policy.test.ts` (200 seeds × every template) passes; re-measured: largest answer number 54 outside third derivatives, ≤ 192 for third derivatives; variety test passes | pass |
+| S2 Natural forms | T2 | same test, named-template checks | pass |
+| S3 Natural display | T1, T1b, T13 | `tests/latex-display.test.ts` (round trip over all templates); `test:math` 11,200 / 0 failures | pass |
+| S4 Mastery model | T3 | `tests/mastery.test.ts`; S4 simulation: first P/C 29 (≤ 35), remedial 9 (≤ 20), weak skill 31/40 (≥ 20) | pass |
+| S5 Keep progress on iPhone | T8, P1 | `tests/storage.test.ts` (persist request); help Home Screen paragraph live | pass |
+| S6 Abstract-function skill | T4, T5, T6, T13 | grader tests, SymPy self-test 8/8, 500+ abstract corpus questions 0 failures; keys fit at 390/320 px; full design review P1 fixed; owner's iPhone check on the preview: “没问题” (2026-10-22) | pass |
+| S7 Format 3 / profile 4 | T7 | migration, transfer, legacy-fixture tests; new frozen fixtures; QR 1,862 chars one code (31-L) | pass |
+| S8 Learning path | T9 | `tests/learning-path.test.ts`: always-correct student meets product at question 12 (≤ 15); level 6 off by config (live config revision 2026-10-21-1) | pass |
+| S9 Checker start | T14 | `tests/grader-client.test.ts`; browser test with worker download delayed 4 s → ✓ Correct; owner's iPhone retest “没问题” | pass |
+
+Project obligations: P1 README/help — pass (live `/help` has the new path, f/g keys and Home Screen text); P2 version 1.3.0 and What's new (six items) — pass; P3 DESIGN.md — pass; P4 full design review — pass (`release-review.md`, P0/P1 none open); P5 build, unit 454/454, e2e 220 passed / 0 failed, pushed (`main` 18b8fe7 → 5efd5cb, fast-forward), production deployed, live `/` and `/help` checked — pass; P6 owner's iPhone check — pass; P7 skill examples (28 skills, 112/112) — pass; P8 coefficients plan marked replaced — pass.
+
+Open / deferred / owner checks:
+- Accounts (task C, L1): separate task after this release; design notes in R6.
+- Design review P3 F6 (a caption for the percentage): not done; owner's choice.
+- Codex nit on T11: the level-4 representative browser test still says “Nested chain rule”; rename later.
+- The mastery parameters are hand-set; real answer data (with accounts) can calibrate them.
+- CI on `main` for 5efd5cb: GitHub Actions run 39717908855 (Verify) completed, success.
