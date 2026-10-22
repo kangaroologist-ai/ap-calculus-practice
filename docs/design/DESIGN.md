@@ -10,7 +10,8 @@
 
 - **用户**：备考 AP Calculus AB/BC 的高中生。主要设备是 iPhone Safari，其次是笔记本电脑。
 - **场景**：课间、通勤、写作业间隙的短时练习；常常单手操作。每题要在数学键盘上点十几到几十次。
-- **约束**：离线优先，进度只存在本机浏览器，没有账号；界面文字只用英文。
+- **约束**：离线优先，本机浏览器是进度的主存储。账号可选（1.4.0 起）：学生用老师发的登录码登录后，进度另存一份在线上；不登录时一切照旧，没有任何上传。界面文字只用英文。
+- **第二类用户**：老师，在电脑或手机上用 `/teacher` 查看全班掌握度（只读）。
 - **设计取向**：安静、清楚、像 Apple 系统应用。品牌感只体现在细节（公式排版、f′ 图标），不靠装饰。
 
 ## 2. 设计原则
@@ -205,6 +206,29 @@ MathLive `math-field`，边框 `--control-border`，聚焦时 3 px `--focus` 外
 ### 5.6 图标
 
 一律使用内联 SVG，与文字同色（`currentColor`），不用 emoji 充当图标。“Math keyboard” 按钮使用内联 SVG 键盘图标（`src/main.ts` 的 `questionView()`）。
+
+### 5.7 账号（登录、保存状态、两份副本）
+
+- **页眉，未登录**：保留 “On your device” 标签，在 Move progress 前加次要按钮 **Sign in**。
+- **页眉，已登录**：状态标签（状态点加文字：Saved online／Saving…／Offline: saved on this device／同步停止时的说明）和账号按钮 “Signed in as <姓名>”（次要按钮）。状态点颜色：已保存 `--success`，保存中 `--tint`，离线 `--warning`，停止 `--danger`；文字始终可见，颜色只是辅助。状态变化用 `role="status"` 礼貌播报。
+- **窄屏（≤ 700 px）已登录**：页眉保持一行、页面不横向滚动。保存状态是必须读到的文字，所以让出空间的是品牌名（只留 f′ 图标）、Move progress（缩成 Move，读屏名仍是 Move progress）和账号按钮的 “Signed in as” 前缀（只显示姓名，最宽 8.5rem 截断；读屏名仍是完整的 “Signed in as <姓名>”）。按钮在页眉里用 caption 字号。
+- **页脚**：未登录 “No account. No uploaded answers.”；已登录 “Signed in · progress saved online”。
+- **登录窗口**（`modal("Sign in")`）：标签 “Login code” 的单行输入框（等宽感的大写输入，`autocomplete="off"`、`autocapitalize="characters"`、`spellcheck="false"`、`enterkeyhint="go"`），批准过的隐私短句，主按钮 **Sign in**，下方一行 “You can also practice without signing in.”。错误显示在窗口底部的 `#modal-error`。
+- **账号窗口**（`modal("Your account")`）：定义列表列出姓名、班级、状态、最后一次在线保存时间，危险按钮 **Sign out**。退出过程中按钮禁用，练习也暂停（`replacing`），直到保存并清除完成。
+- **两份副本窗口**（“Two copies of your progress”）：两块并排（窄屏上下排）的摘要，“This device” 与 “Online copy”，各列最后练习时间、已解锁等级、已开始的技能数；主按钮 **Use the online copy**，次要按钮 **Keep this device's copy**；底部小字 “The other copy is kept as a local backup. Restore backup brings it back.”。标题与按钮都用学生的话，不出现 revision 等术语。
+- 落实位置：`src/main.ts` 的 `headerTools`、`openSignIn`、`openAccountSheet`、`openConflict`；`src/account.ts`（状态文字、错误文字）；`src/style.css` 的 `.header-tools`、`.account-status`、`.account-button`、`.login-input`、`.account-facts`、`.conflict-copies`；`tests/accounts/account.spec.ts`（含 390 px 页眉）。
+
+### 5.8 教师页面（`/teacher`）
+
+独立页面 `teacher.html`，沿用帮助页的头部和令牌；样式在 `src/teacher.css`，网格 HTML 由纯函数 `src/teacher-grid.ts` 生成（教师脚本的离线报告也用它）。
+
+- **入口**：一个卡片，标签 “Teacher code” 的输入框和主按钮 **Open**。错误信息显示在卡片里：401 “This teacher code doesn't work.”，429 “Too many attempts. Wait 10 minutes, then try again.”，其他 “Class progress is unavailable. Try again later.”。
+- **工具栏**：班级筛选、排序（姓名／最后练习）、学生人数和加载时间、次要按钮 **Refresh** 与 **Close**。
+- **网格**：`<table>` 放在横向滚动容器里，页面本身不横向滚动。两行表头：等级分组（Level 1 …）在上，技能名在下；表头行在纵向滚动时固定在顶部，姓名列在横向滚动时固定在左侧。前三列是姓名、最后练习、等级。全部班级时每个班一个 `<tbody>`，班名行用 `scope="rowgroup"`。
+- **单元格**：百分比文字（`--label` 色），背景按掌握度分四档，用 `color-mix` 把语义色混入 `--surface`：低于 60% `--danger` 12%；低于 80% `--warning` 13%；低于 85% `--tint` 10%；85% 及以上 `--success` 16%。颜色只是辅助，数字始终可读（WCAG 1.4.1）。没开始的技能留空。
+- **行状态**：没有在线副本的学生只显示姓名；副本来自更新版本时整行显示 “Reload the page to update”；读不出时显示 “Can't read”，只影响该行。
+- **无障碍**：`<caption>`（视觉隐藏）、列头 `scope="col"`、姓名 `scope="row"`；尊重减少动态效果。
+- 落实位置：`src/teacher.ts`、`src/teacher-grid.ts`、`src/teacher.css`；`tests/teacher-grid.test.ts`、`tests/accounts/teacher.spec.ts`。
 
 ## 6. 数学键盘
 

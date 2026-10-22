@@ -7,6 +7,17 @@ export type WhatsNewEntry = {
 // Newest first. Add an entry (and bump package.json) only for changes students can see.
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    version: "1.4.0",
+    date: "2026-10-22",
+    title: "Save your progress online",
+    items: [
+      "Your teacher can give you a login code. <strong>Sign in</strong> with it, and your progress is saved online, so you can continue on any device with the same code.",
+      "Practice saves online soon after your answers. With no internet it keeps working, and it saves online when you are back.",
+      "If two devices practiced offline, you choose which copy to keep. The other copy stays as a local backup.",
+      "Signing in is optional. Without it, practice keeps your progress only on this device, as before.",
+    ],
+  },
+  {
     version: "1.3.0",
     date: "2026-10-21",
     title: "Simpler numbers, a smarter path",

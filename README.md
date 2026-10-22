@@ -1,6 +1,6 @@
 # AP Calculus Practice
 
-无账号的 AP 求导自适应练习网页。电脑与手机均可使用，学习状态只存在浏览器本机，支持进度代码／二维码迁移。
+AP 求导自适应练习网页。电脑与手机均可使用。不登录时学习状态只存在浏览器本机，可用进度代码／二维码迁移；学生用老师发的登录码登录后，进度同时保存在线上，换任何设备都能接着练（见“学生账号与在线保存”）。
 
 ## 本地启动
 
@@ -18,7 +18,7 @@ npm run build
 npm run preview
 ```
 
-字体、公式组件、判分 Worker 都随站点部署。无需任何付费 API 或学生数据库。手机访问本机开发服务时可用 `npm run dev -- --host 0.0.0.0` 并打开电脑的局域网地址；普通局域网 HTTP 不提供摄像头权限，请使用代码／二维码图片导入。正式站点使用 HTTPS。
+字体、公式组件、判分 Worker 都随站点部署。无需任何付费 API。学生账号用 Cloudflare 免费计划里的 Pages Functions 和一个 D1 数据库。`npm run dev` 不运行 Functions；要在本机试账号功能，先运行 `npm run build` 和 `npm run db:local`（建表并写入测试班级 TEST），再运行 `npx wrangler pages dev dist --ip 127.0.0.1 --port 8788`，打开 http://127.0.0.1:8788/ ；开着它时 `npm run dev` 也会把 `/api` 转发过去。手机访问本机开发服务时可用 `npm run dev -- --host 0.0.0.0` 并打开电脑的局域网地址；普通局域网 HTTP 不提供摄像头权限，请使用代码／二维码图片导入。正式站点使用 HTTPS。
 
 ## 教师设置
 
@@ -102,6 +102,57 @@ v1 Ready 技能迁移为 Basic 已通过（标记为 legacy），Mixed 从 0/2 �
 
 代码是自包含数据，不需要服务端短码。profile 1–3 永久保留为旧码解码格式，最新的 profile 4（28 个技能）负责导出；旧 DSP1 也仍可导入。DSP2 使用固定字段顺序、短指纹字典与压缩，保留 FSRS 原始数值精度。二维码在 M 级纠错下不超过第 30 版时使用 M，否则使用 L；直接链接与密集编码两种形式会选版本较小者，只有超出单码容量的异常大快照才分片。冻结的 26 技能 fixture 迁移后导出为 1,181 字符，单张二维码 27-M；28 个技能全部练过的完整快照为 1,862 字符，单张二维码 31-L（`node --import tsx scripts/qr-size-audit.ts` 实测）。所有分片属于同一快照且收齐后才能导入。禁止自动合并两台设备各自继续练习的历史。显式导入前自动保留本机备份，可用 Restore backup 撤回。代码并非加密，获得代码的人可读取学习状态；不要将其当作正式成绩凭证。
 
+## 学生账号与在线保存
+
+账号是可选的：不登录时一切照旧，进度只存在本机，Move progress 照常可用。
+
+**登录码。** 老师用脚本（见下）给每个学生生成一个登录码，形如 `CALC-K7QM-4ZX9-B2`：前面是班级前缀（2–8 个字母），后面是 10 位随机字符（Crockford Base32，约 50 bit）。输入不分大小写，空格和连字符可有可无，随机部分里的 O 当作 0、I／L 当作 1。同一个码可以在任意多台设备上用；它是钥匙，不锁设备。服务器只保存码的 SHA-256 哈希，不保存码本身，所以码丢了只能由老师换新码（进度保留）。
+
+**登录。** 页眉的 Sign in 打开登录窗口：输入登录码，点 Sign in。窗口里有一句隐私说明（见下）。扫纸条上的二维码会打开 `/#login=<码>`：网站把码填进登录窗口，并立即从地址栏删掉；码在 URL fragment 里，不会发给服务器。码不对时提示 “This code doesn't match a student. Check the code on your slip.”；同一网络 10 分钟内输错 60 次后提示 “Too many attempts. Wait 10 minutes, then try again.”。登录后页眉显示 “Signed in as <姓名>” 和保存状态（Saved online／Saving…／Offline: saved on this device），页脚显示 “Signed in · progress saved online”。
+
+**同步规则。** 本机 IndexedDB 仍是主存储，在线副本是第二份。服务器给每次保存一个修订号（revision），设备记下上次同步的修订号和当时的 `updatedAt`；判断哪份更新只看修订号，不看设备时钟（设备时钟可能不准）。“本机有新作答”指 `updatedAt` 与上次同步时不同；只保存当前题目或草稿不算。
+
+| 情况 | 结果 |
+|---|---|
+| 线上没变，本机没变 | 不做任何事 |
+| 线上没变，本机有新作答 | 保存到线上 |
+| 线上更新了，本机没变 | 直接用线上副本，不提示 |
+| 线上更新了，本机也有新作答 | 弹出 “Two copies of your progress”，学生选一份；两份相同则不提示 |
+| 第一次在这台设备登录，账号是空的 | 本机有进度就上传 |
+| 第一次在这台设备登录，账号有进度 | 本机没进度就下载；本机也有进度就弹窗（两份相同则不提示） |
+| 老师清空了账号 | 本机有进度就重新上传 |
+
+作答后最多每 20 秒保存一次（打开页面、登录时的上传也计入），切到后台或关闭页面时立即保存（`keepalive`）。所有联网操作一个接一个进行，不会同时发出两次保存。等待保存时状态显示 Saving…；浏览器报告离线时显示 Offline: saved on this device。没网时照常练习，联网后再保存。注意：开始练习要读取 `practice-config.json`，所以要先联网打开练习，之后断网也能继续。打开页面、登录后都会先取一次线上副本。两台设备各自离线练习后才会出现弹窗；弹窗里两份各显示最后练习时间、已解锁等级和已开始的技能数，按钮 Use the online copy／Keep this device's copy。没选中的那份存为本机备份，Restore backup 可以换回。不弹窗的自动下载不改动本机备份（被替换的那份已经在线上，或者是空的）。网站从不合并两份历史。登录状态下 Reset、Import、Restore 的确认窗口会提示在线进度也会跟着变。
+
+**退出。** 账号窗口里的 Sign out 先把最新进度保存到线上，成功后删除这台设备上的登录码和全部本机进度（含备份），以免共用电脑的下一个学生看到。没网时不退出，并说明原因。退出过程中暂停作答。老师换了码以后，旧码在这台设备上存不了新进度：退出时提示先导出，按钮变成 Remove progress and sign out，学生确认后才删除。Safari 的 7 天清理也会删掉本机保存的登录码，所以学生要保管好纸条。
+
+**隐私（网站上的英文原文由负责人 2026-10-22 批准）。** 登录窗口：“Signing in saves your progress online so you can continue on any device. Your teacher can see your name and your progress. Keep your code private.” 帮助页 Saving online 一节说明：线上保存姓名（老师在名单里输入的文字）、班级、进度快照和保存时间，存放在 Cloudflare；老师能看到；拿到登录码的人也能打开进度；删除线上进度请找老师；不登录则线上什么都不存。服务器日志不记录姓名、登录码或 IP；IP 只以哈希形式存在于输错计数表里；每次有人输错时，服务器删除 20 分钟以前的计数。
+
+**服务器。** `functions/api/` 下三个端点，所有回答都带 `Cache-Control: no-store`：
+
+- `POST /api/session` `{ code }` → 姓名、班级、修订号和在线副本（DSP2 进度代码，空账号为 `null`）。
+- `PUT /api/progress` `{ code, baseRevision, progress, updatedAt }` → 新修订号；`baseRevision` 不是当前修订号时返回 409 和当前在线副本。
+- `POST /api/teacher` `{ code }`（教师码）→ 所有班级和学生的在线副本。
+
+D1 表（`migrations/0001_accounts.sql`）：`classes`（前缀、班名）、`students`（编号、码哈希、班级、姓名、在线副本、修订号、`updated_at`、`saved_at`）、`teacher`（教师码哈希，只有一行）、`login_failures`（IP 哈希、10 分钟窗口、次数）。服务器只存取进度代码文本，不解码，所以将来进度格式升级不需要改服务器。同一 IP（IPv6 按 /64）10 分钟内输错 60 次后返回 429；输对不计数，所以全班在同一个校园网里登录不会被锁。请求体上限 16 KB。D1 Time Travel 可把数据库恢复到 7 天内任意时刻。
+
+**教师页面。** `/teacher`（不被搜索引擎收录）用教师码打开；码只存在本标签页的 `sessionStorage`，Close 清除。完整网格：每行一个学生，按班级分组；每列一个技能，按学习路径顺序，`practice-config.json` 关闭的技能不显示。每格显示掌握度百分比，并用颜色分档（低于 60%、低于 80%、低于 85%、85% 及以上）；没开始的技能留空。前三列是姓名、最后练习时间、已解锁等级；左右滚动时姓名列固定。可按班级筛选，按姓名或最后练习时间排序。线上副本来自更新的网站版本时该行显示 “Reload the page to update”，读不出的副本只在该行显示 “Can't read”。页面只读。
+
+**教师脚本**（在笔记本上运行，需要先 `npx wrangler login`）：
+
+```sh
+npm run accounts -- create-class CALC "AP Calculus AB 2026"
+npm run accounts -- add-students CALC names.txt
+npm run accounts -- reissue CALC "学生姓名"
+npm run accounts -- delete-student CALC "学生姓名"
+npm run accounts -- delete-class CALC
+npm run accounts -- teacher-code
+npm run accounts -- report [CALC]
+npm run accounts -- list
+```
+
+`names.txt` 每行一个姓名（空行忽略，同班重名拒绝）。`add-students` 生成登录码，先写好打印用的纸条页（每人一张：姓名、班级、登录码、登录二维码和 “Keep this slip. You need the code to sign in on a new device.”）和姓名－登录码 CSV，再把姓名和码哈希写入 D1。`reissue` 换新码并保留进度（学生编号不变）。两个删除命令要输入 DELETE 确认。`teacher-code` 生成新教师码并只显示一次，旧码立即失效。`report` 生成与教师页面相同网格的独立 HTML（样式内嵌，不联网）。纸条、CSV 和报告写到 `~/Documents/20_Study/AP Calculus/accounts-private/`（可用 `--out` 改），脚本拒绝写进本仓库的任何工作区；文件只有本人可读（权限 600）。姓名只通过 SQL 文件传给 wrangler，不出现在命令行里，并关闭 wrangler 的日志文件。加 `--local` 则操作本机测试数据库。
+
 ## 判分边界
 
 使用原始表达式解析、有限白名单、独立的实数定义条件检查和至少 24 个高精度有效采样点。学生额外引入的分母、根式、对数限制必须被原题定义域支持；无法确认时返回无法判定。可精确定位且落在原题有效域内的额外线性分母零点会被拒绝。隐函数仅沿原曲线取点；参数／极坐标检查斜率分母。40 位以上 Decimal 数学运算用于数值核验，浮点容差接受常见等价变形。表达式太复杂或无法可靠判定时不影响学习记录。
@@ -119,9 +170,10 @@ npm run test:math
 npm run build
 npx playwright install chromium webkit firefox
 npm run test:e2e
+npm run test:e2e:accounts
 ```
 
-`test:math` 生成固定随机种子 corpus 并使用 SymPy 独立求导核对。`node --import tsx scripts/key-usage.ts` 统计题库答案里各运算和函数出现的比例，数学键盘的布局依据它来取舍。浏览器测试使用临时测试数据；真机证据与模拟视口证据分别记录在 `docs/acceptance.md`。
+`test:math` 生成固定随机种子 corpus 并使用 SymPy 独立求导核对。`node --import tsx scripts/key-usage.ts` 统计题库答案里各运算和函数出现的比例，数学键盘的布局依据它来取舍。`test:e2e:accounts` 先构建并用 `npm run db:local` 建好本机 D1（测试班级 TEST、学生 Ada Test 和 Ben Test、测试教师码，均为编造的测试值），再在 `wrangler pages dev`（端口 8788）上跑账号、同步和教师页面测试；服务器单元测试在 Node 里直接调用处理函数，D1 用 `node:sqlite` 代替。浏览器测试使用临时测试数据；真机证据与模拟视口证据分别记录在 `docs/acceptance.md`。
 
 `tests/fixtures/dsp1.txt`、`dsp2-profile1.txt`、`dsp2-profile3.txt`、`local-state-v2.json`、`local-state-v1.json`、`generator-1.1.0.json` 是旧格式的冻结样本；`dsp2-profile2.txt` 与 `local-state-v1-q2.json` 是 Phase 2 迁移基线。所有文件一经提交都不得重新生成或手工编辑；`tests/legacy-fixtures.test.ts` 用当前代码解码／校验它们。只需生成新增的两份时，运行 `node --import tsx scripts/capture-fixtures.ts --phase2-only`；该选项只写 profile 2 与 q2 本机状态，退出前不会运行原有四份样本的捕获代码。捕获脚本不在测试或构建中运行。
 
@@ -139,7 +191,20 @@ npm run design:capture
 
 **版本与更新记录：** `package.json` 的 `version` 是网站版本号，构建时注入页面。每次发布学生可见的变化，都要提升版本号，并在 `src/whats-new.ts` 顶部新增同版本条目（英文，2–6 条要点）；单元测试要求两者一致。纯重构、测试或内部文档不改版本、不加条目。
 
-纯静态部署，无 Workers Functions 和数据库需求。使用现有账号免费计划即可；不在仓库保存 token。
+静态页面加 `functions/api/` 下的 Pages Functions 和一个 D1 数据库（绑定名 `DB`，见 `wrangler.toml`），都在现有账号的免费计划内（每天 100,000 次 Function 请求、100,000 行 D1 写入；静态页面不计数）。不在仓库保存 token。
+
+第一次启用账号时（只做一次）：
+
+```sh
+npx wrangler d1 create ap-calculus-practice
+# 把输出的 database_id 写进 wrangler.toml
+npx wrangler d1 migrations apply ap-calculus-practice --remote
+npm run accounts -- teacher-code
+```
+
+再在 Cloudflare 控制台 Pages 项目的 Settings → Runtime 选择 fail open：每日额度用完时静态页面照常打开，只有在线保存暂停。
+
+部署：
 
 ```sh
 npm run build
