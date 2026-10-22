@@ -308,3 +308,16 @@ describe('createSaveScheduler', () => {
     expect(scheduler.busy).toBe(false);
   });
 });
+
+describe('createSaveScheduler.noteSave', () => {
+  it('starts the interval for a save made outside the scheduler', async () => {
+    const t = fakeTimer();
+    const s = controlledSave();
+    const scheduler = createSaveScheduler(s.save, t.timer);
+    scheduler.noteSave();
+    scheduler.request();
+    expect(s.calls).toHaveLength(0);
+    await t.advance(20_000);
+    expect(s.calls).toHaveLength(1);
+  });
+});

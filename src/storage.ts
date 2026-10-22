@@ -1,4 +1,5 @@
 import { openDB } from "idb";
+import type { AccountRecord } from "./account";
 import type { AppState } from "./progress";
 import { migrateProgress, LATEST_FORMAT } from "./migrate";
 import type { PortableProgress } from "./transfer";
@@ -11,6 +12,25 @@ const db = () =>
   }));
 export async function loadState(): Promise<AppState | undefined> {
   return (await db()).get("state", "current");
+}
+export function loadAccount(): Promise<AccountRecord | undefined> {
+  return enqueue(async () => (await db()).get("state", "account"));
+}
+export function saveAccount(record: AccountRecord) {
+  const snapshot = structuredClone(record);
+  return enqueue(async () => {
+    await (await db()).put("state", snapshot, "account");
+  });
+}
+// Sign-out removes every local trace of the account and its progress.
+export function clearDevice() {
+  return enqueue(async () => {
+    const d = await db(),
+      tx = d.transaction("state", "readwrite");
+    for (const key of ["current", "backup", "pre-migration", "account"])
+      await tx.store.delete(key);
+    await tx.done;
+  });
 }
 type StorageNavigator = {
   storage?: {
@@ -75,9 +95,20 @@ export function saveState(s: AppState) {
     await (await db()).put("state", snapshot, "current");
   });
 }
+// The conflict prompt keeps the copy that loses in `backup`.
+export function saveBackup(p: PortableProgress) {
+  const { exportedAt, ...progress } = p;
+  const snapshot: AppState = { version: 1, progress };
+  return enqueue(async () => {
+    await (await db()).put("state", snapshot, "backup");
+  });
+}
+// `keepBackup` false: the replaced state is already online (or empty), so the
+// existing backup, which may hold a copy the student chose against, stays.
 export function replaceState(
   p: PortableProgress,
   id: string,
+  keepBackup = true,
 ): Promise<AppState> {
   return enqueue(async () => {
     const d = await db(),
@@ -93,7 +124,7 @@ export function replaceState(
       return old;
     }
     const next: AppState = { version: 1, progress, lastImportedId: id };
-    if (old) await tx.store.put(old, "backup");
+    if (old && keepBackup) await tx.store.put(old, "backup");
     await tx.store.put(next, "current");
     await tx.done;
     return next;

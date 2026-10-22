@@ -34,8 +34,24 @@ import {
   validateLocalState,
   commitMigration,
   requestPersistentStorage,
+  loadAccount,
+  saveAccount,
+  saveBackup,
+  clearDevice,
 } from "./storage";
-import { LATEST_FORMAT } from "./migrate";
+import {
+  AccountError,
+  createSyncController,
+  signInFailureMessage,
+  statusLabel,
+  UNKNOWN_CODE_MESSAGE,
+  type AccountRecord,
+  type AccountStatus,
+  type ConflictCopy,
+  type SyncController,
+} from "./account";
+import { normalizeLoginCode } from "./account-code";
+import { LATEST_FORMAT, NewerProgressError } from "./migrate";
 import {
   makePortableProgress,
   encodeProgress,
@@ -59,6 +75,9 @@ let config: Config,
   replacing = false,
   saveTimer: ReturnType<typeof setTimeout> | undefined;
 let modalCleanup: () => void = () => {};
+let sync: SyncController | undefined;
+let syncStatus: AccountStatus = "saved";
+let syncMessage: string | undefined;
 const grader = new Grader();
 let activeMathfield: MathfieldElement | undefined;
 // On phones the keyboard-open layout has no action bar; content must stay above the keyboard.
@@ -227,9 +246,15 @@ document.addEventListener(
   true,
 );
 document.addEventListener("visibilitychange", () => {
-  if (document.hidden) { cancelAutoNext(); stopCelebration(); }
-  else if (state) updateActivity();
+  if (document.hidden) {
+    cancelAutoNext();
+    stopCelebration();
+    clearTimeout(saveTimer);
+    void persist();
+    sync?.flush();
+  } else if (state) updateActivity();
 });
+window.addEventListener("online", () => sync?.retry());
 const esc = (s: unknown) =>
   String(s).replace(
     /[&<>"']/g,
@@ -272,10 +297,76 @@ function showError(error: unknown) {
     el.hidden = false;
   } else alert((error as Error).message);
 }
+function when(ts: number) {
+  return new Date(ts).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+function syncErrorText(error: unknown) {
+  if (error instanceof AccountError || error instanceof NewerProgressError)
+    return signInFailureMessage(error);
+  return (error as Error)?.message || "Something went wrong.";
+}
+function setSyncStatus(status: AccountStatus, message?: string) {
+  syncStatus = status;
+  syncMessage = message;
+  const label = document.getElementById("account-status-label");
+  if (label) {
+    const dot = label.querySelector(".status-dot");
+    if (dot) dot.setAttribute("data-status", status);
+    const text = document.getElementById("account-status");
+    if (text) text.textContent = statusLabel(status, message);
+  }
+  const sheetStatus = document.getElementById("account-sheet-status");
+  if (sheetStatus) {
+    sheetStatus.textContent = statusLabel(status, message);
+    document
+      .getElementById("account-sheet-dot")
+      ?.setAttribute("data-status", status);
+  }
+}
+async function replaceLocalState(
+  snapshot: PortableProgress,
+  id: string,
+  keepBackup: boolean,
+) {
+  if (temporary) {
+    const { exportedAt, ...progress } = snapshot;
+    state = { version: 1, progress, lastImportedId: id };
+    return state;
+  }
+  state = await replaceState(snapshot, id, keepBackup);
+  return state;
+}
+// A temporary session never wrote to storage; a hanging store must not keep
+// practice blocked after sign-out.
+function clearLocalDevice() {
+  if (temporary) return Promise.resolve();
+  return Promise.race([
+    clearDevice(),
+    new Promise<never>((_, reject) =>
+      setTimeout(
+        () => reject(Error("Could not clear this device. Try again.")),
+        STORAGE_TIMEOUT_MS,
+      ),
+    ),
+  ]);
+}
+async function persistAccount(record: AccountRecord) {
+  if (!temporary) await saveAccount(record);
+}
 async function persist() {
-  if (temporary || replacing || !state) return;
+  if (replacing || !state) return;
+  if (temporary) {
+    sync?.localSaved();
+    return;
+  }
   try {
     await saveState(state);
+    sync?.localSaved();
   } catch {
     temporary = true;
     showError(
@@ -296,6 +387,18 @@ function readyCount() {
       isReady(state.progress.skills[s.id]),
   ).length;
 }
+function accountButton(account: AccountRecord) {
+  return `<button id="account" class="button subtle account-button" aria-label="Signed in as ${esc(account.name)}"><span class="account-prefix">Signed in as </span><span class="account-name">${esc(account.name)}</span></button>`;
+}
+function transferButton() {
+  return `<button id="transfer" class="button subtle" aria-label="Move progress"><span class="transfer-long">Move progress</span><span class="transfer-short" aria-hidden="true">Move</span></button>`;
+}
+function headerTools() {
+  const account = sync?.account;
+  if (account)
+    return `<span id="account-status-label" class="private-label account-status" role="status"><span class="status-dot" data-status="${syncStatus}" aria-hidden="true"></span><span class="status-text" id="account-status">${esc(statusLabel(syncStatus, syncMessage))}</span></span>${accountButton(account)}${transferButton()}`;
+  return `<span class="private-label"><span class="status-dot" aria-hidden="true"></span> On your device</span>${button("signin", "Sign in", "button subtle")}${transferButton()}`;
+}
 function render() {
   const journeyOpen = document.querySelector<HTMLDetailsElement>(".journey")?.open ?? false;
   const expandedLevels = new Set(Array.from(document.querySelectorAll<HTMLDetailsElement>(".path-level[open]"), el => Number(el.dataset.level)));
@@ -304,11 +407,14 @@ function render() {
   const p = state.progress,
     ses = state.session,
     cur = ses?.current;
-  app.innerHTML = `<header class="site-header"><h1 class="brand-heading"><a class="brand" href="/">${icon}<span>AP Calculus<span class="brand-light"> Practice</span></span></a></h1><span class="private-label"><span class="status-dot"></span> On your device</span>${button("transfer", "Move progress", "button subtle")}</header>
+  const signedIn = !!sync?.account;
+  app.innerHTML = `<header class="site-header${signedIn ? " signed-in" : ""}"><h1 class="brand-heading"><a class="brand" href="/" aria-label="AP Calculus Practice">${icon}<span>AP Calculus<span class="brand-light"> Practice</span></span></a></h1><div class="header-tools">${headerTools()}</div></header>
  <main>${location.hostname === "ap-derivative-practice.pages.dev" ? '<p class="notice">We’ve moved to <a href="https://ap-calculus-practice.pages.dev/">AP Calculus Practice</a>. Use Move progress to export here, then import at the new address.</p>' : ""}<div id="notice" class="notice" role="status" ${temporary ? "" : "hidden"}>${temporary ? "Temporary session: export progress before leaving." : ""}</div>
  <div class="workspace"><section class="practice-card" aria-label="Practice">${!ses ? welcome() : ses.finished ? summary() : questionView()}</section>
  <details class="journey" ${journeyOpen ? "open" : ""}><summary class="progress-summary">Progress <span>Level ${p.unlockedLevel} · ${readyCount()} ${readyCount() === 1 ? "skill" : "skills"} ready</span></summary><div class="aside-heading"><span class="eyebrow">YOUR LEARNING PATH</span><span class="count">${readyCount()} / ${SKILLS.filter((s) => !config.disabledFamilies.includes(s.id)).length}</span></div><div class="level-list">${Array.from({ length: 6 }, (_, i) => levelView(i + 1, expandedLevels.has(i + 1))).join("")}</div></details></div>
- <footer><span>No account. No uploaded answers.</span><div><a class="text-button" href="/help.html">How to use</a>${button("input-help", "Input guide", "text-button")}${button("whats-new", `What’s new · v${__APP_VERSION__}`, "text-button")}${button("restore", "Restore backup", "text-button")}${button("reset", "Reset progress", "text-button")}</div></footer></main><div id="modal-root"></div>`;
+ <footer><span id="footer-note">${signedIn ? "Signed in · progress saved online" : "No account. No uploaded answers."}</span><div><a class="text-button" href="/help.html">How to use</a>${button("input-help", "Input guide", "text-button")}${button("whats-new", `What’s new · v${__APP_VERSION__}`, "text-button")}${button("restore", "Restore backup", "text-button")}${button("reset", "Reset progress", "text-button")}</div></footer></main><div id="modal-root"></div>`;
+  on("signin", () => openSignIn());
+  on("account", openAccountSheet);
   on("transfer", openTransfer);
   on("start", startSession);
   on("again", startSession);
@@ -518,6 +624,8 @@ function updateControls() {
     "again",
     "next",
     "hint",
+    "signin",
+    "account",
     "transfer",
     "restore",
     "reset",
@@ -1133,10 +1241,13 @@ function modal(title: string, body: string) {
 }
 function modalError(e: unknown) {
   const el = document.getElementById("modal-error");
-  if (el) {
-    el.hidden = false;
-    el.textContent = (e as Error).message;
+  if (!el) {
+    // The sheet can close while a slow sign-out is still running.
+    showError(e);
+    return;
   }
+  el.hidden = false;
+  el.textContent = (e as Error).message;
 }
 function inputHelp() {
   modal(
@@ -1183,6 +1294,140 @@ function openTransfer() {
   );
   on("export", exportView);
   on("import", importView);
+}
+function signedInNote() {
+  return sync?.account
+    ? '<p class="notice">You\'re signed in, so your online progress changes too.</p>'
+    : "";
+}
+function openSignIn(initialCode = "") {
+  if (busy || replacing || !sync || sync.account) return;
+  const dialog = modal(
+    "Sign in",
+    `<label class="answer-label login-label" for="login-code">Login code<input id="login-code" class="login-input" type="text" value="${esc(initialCode)}" placeholder="CALC-XXXX-XXXX-XX" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="go"></label><p class="fine">Signing in saves your progress online so you can continue on any device. Your teacher can see your name and your progress. Keep your code private.</p>${button("confirm-signin", "Sign in", "button primary")}<p class="fine">You can also practice without signing in.</p>`,
+  );
+  dialog.classList.add("signin-sheet");
+  const input = document.getElementById("login-code") as HTMLInputElement;
+  const submitSignIn = async () => {
+    if (busy || replacing) return;
+    if (normalizeLoginCode(input.value) === null) {
+      modalError(Error(UNKNOWN_CODE_MESSAGE));
+      input.focus();
+      return;
+    }
+    const confirmation = document.getElementById(
+      "confirm-signin",
+    ) as HTMLButtonElement;
+    confirmation.disabled = true;
+    try {
+      const answer = await sync!.signIn(input.value);
+      document.getElementById("close-modal")?.click();
+      render();
+      void sync!.afterSignIn(answer);
+    } catch (error) {
+      modalError(Error(signInFailureMessage(error)));
+      confirmation.disabled = false;
+      input.focus();
+    }
+  };
+  on("confirm-signin", submitSignIn);
+  input.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    void submitSignIn();
+  });
+  input.focus();
+}
+function openAccountSheet() {
+  const account = sync?.account;
+  if (!account || busy || replacing) return;
+  const lastSaved =
+    account.mark && account.mark.revision > 0
+      ? when(account.mark.updatedAt)
+      : "Not saved yet";
+  modal(
+    "Your account",
+    `<div class="account-sheet"><dl class="account-facts"><div><dt>Name</dt><dd>${esc(account.name)}</dd></div><div><dt>Class</dt><dd>${esc(account.className)}</dd></div><div><dt>Status</dt><dd><span class="status-dot" id="account-sheet-dot" data-status="${syncStatus}" aria-hidden="true"></span><span id="account-sheet-status">${esc(statusLabel(syncStatus, syncMessage))}</span></dd></div><div><dt>Last online save</dt><dd>${esc(lastSaved)}</dd></div></dl>${button("signout", "Sign out", "button danger")}</div>`,
+  );
+  // Set after a replaced code refused the save: the next press removes the
+  // unsaved progress, which the message tells the student to export first.
+  let discard = false;
+  on("signout", async () => {
+    if (busy || replacing) return;
+    const signOutButton = document.getElementById("signout") as HTMLButtonElement;
+    signOutButton.disabled = true;
+    clearTimeout(saveTimer);
+    // No answer may change progress between the last online save and the
+    // clear, so practice waits until sign-out ends.
+    replacing = true;
+    updateControls();
+    let result: Awaited<ReturnType<SyncController["signOut"]>>;
+    try {
+      result = await sync!.signOut(discard);
+    } finally {
+      replacing = false;
+      updateControls();
+    }
+    if (!result.ok) {
+      // A conflict prompt has replaced the account sheet; leave it open.
+      if ("conflict" in result) return;
+      modalError(Error(result.message));
+      if ("discard" in result) {
+        discard = true;
+        signOutButton.textContent = "Remove progress and sign out";
+      }
+      signOutButton.disabled = false;
+      return;
+    }
+    state = { version: 1, progress: freshProgress(config) };
+    document.getElementById("close-modal")?.click();
+    render();
+  });
+}
+function openConflict(online: ConflictCopy) {
+  const local = state.progress;
+  const onlineWhen = online.updatedAt === null ? "Unknown" : when(online.updatedAt);
+  modal(
+    "Two copies of your progress",
+    `<p>This device and the online copy both changed since the last sync. Choose the copy to keep.</p><div class="conflict-copies"><section class="conflict-copy"><h3>This device</h3><p>Last practice: ${esc(when(local.updatedAt))}</p><p>Unlocked through Level ${local.unlockedLevel} · ${Object.keys(local.skills).length} skills started</p></section><section class="conflict-copy"><h3>Online copy</h3><p>Last practice: ${esc(onlineWhen)}</p><p>Unlocked through Level ${online.progress.unlockedLevel} · ${Object.keys(online.progress.skills).length} skills started</p></section></div><div class="conflict-actions">${button("use-online", "Use the online copy", "button primary")}${button("keep-local", "Keep this device's copy", "button subtle")}</div><p class="fine">The other copy is kept as a local backup. Restore backup brings it back.</p>`,
+  );
+  const close = () => document.getElementById("close-modal")?.click();
+  const disableChoices = () => {
+    for (const id of ["use-online", "keep-local"]) {
+      const choice = document.getElementById(id) as HTMLButtonElement | null;
+      if (choice) choice.disabled = true;
+    }
+  };
+  on("use-online", async () => {
+    disableChoices();
+    close();
+    try {
+      await sync!.useOnlineCopy(online);
+    } catch (error) {
+      showError(Error(syncErrorText(error)));
+    }
+  });
+  on("keep-local", async () => {
+    disableChoices();
+    close();
+    try {
+      if (!temporary) await saveBackup(online.progress);
+      await sync!.keepLocalCopy(online);
+    } catch (error) {
+      showError(Error(syncErrorText(error)));
+    }
+  });
+}
+function openLoginLink(code: string) {
+  const account = sync?.account;
+  if (account) {
+    modal(
+      "Already signed in",
+      `<p>You're already signed in as ${esc(account.name)}.</p>`,
+    );
+    return;
+  }
+  openSignIn(code);
 }
 async function exportView() {
   try {
@@ -1408,7 +1653,7 @@ function showImportPreview(p: PortableProgress, id: string, resume = false) {
       isReady(p.skills[skill.id]),
   ).length;
   document.getElementById("import-preview")!.innerHTML =
-    `<section class="hint-panel"><h3>Review this snapshot</h3><p>Exported: ${esc(new Date(p.exportedAt).toLocaleString())}</p><p>Unlocked through Level ${p.unlockedLevel} · ${Object.keys(p.skills).length} skills started</p><p>Basic passed ${basicPassedCount} · Ready ${ready}</p><p>${p.streak ?? 0} in a row · ${todayCount(p)} practiced today</p>${p.updatedAt < existing ? '<p class="notice">This snapshot has older learning activity than this device. Importing will replace your current progress.</p>' : ""}<p>Your current progress will be saved as a local backup. The two histories will not be merged.</p>${button("confirm-import", "Replace with this progress", "button primary")}</section>`;
+    `<section class="hint-panel"><h3>Review this snapshot</h3><p>Exported: ${esc(new Date(p.exportedAt).toLocaleString())}</p><p>Unlocked through Level ${p.unlockedLevel} · ${Object.keys(p.skills).length} skills started</p><p>Basic passed ${basicPassedCount} · Ready ${ready}</p><p>${p.streak ?? 0} in a row · ${todayCount(p)} practiced today</p>${p.updatedAt < existing ? '<p class="notice">This snapshot has older learning activity than this device. Importing will replace your current progress.</p>' : ""}<p>Your current progress will be saved as a local backup. The two histories will not be merged.</p>${signedInNote()}${button("confirm-import", "Replace with this progress", "button primary")}</section>`;
   on("confirm-import", async () => {
     if (replacing) return;
     replacing = true;
@@ -1421,6 +1666,7 @@ function showImportPreview(p: PortableProgress, id: string, resume = false) {
         );
       await saveState(state);
       state = await replaceState(p, id);
+      sync?.localSaved();
       modalCleanup();
       render();
     } catch (e) {
@@ -1436,7 +1682,7 @@ function confirmRestore() {
   if (busy || replacing) return;
   modal(
     "Restore your local backup?",
-    `<p>This replaces the current learning state with the last local backup. You can restore again to switch back.</p>${button("confirm-restore", "Restore backup", "button primary")}`,
+    `<p>This replaces the current learning state with the last local backup. You can restore again to switch back.</p>${signedInNote()}${button("confirm-restore", "Restore backup", "button primary")}`,
   );
   on("confirm-restore", async () => {
     if (replacing) return;
@@ -1446,6 +1692,7 @@ function confirmRestore() {
       clearTimeout(saveTimer);
       await saveState(state);
       state = await restoreBackup();
+      sync?.localSaved();
       render();
     } catch (e) {
       modalError(e);
@@ -1459,7 +1706,7 @@ function confirmReset() {
   if (busy || replacing) return;
   modal(
     "Start fresh?",
-    `<p>This resets learning progress on this device. A local backup will be kept. You can export a progress code first.</p>${button("confirm-reset", "Reset this device", "button danger")}`,
+    `<p>This resets learning progress on this device. A local backup will be kept. You can export a progress code first.</p>${signedInNote()}${button("confirm-reset", "Reset this device", "button danger")}`,
   );
   on("confirm-reset", async () => {
     if (replacing) return;
@@ -1471,6 +1718,7 @@ function confirmReset() {
       await saveState(state);
       await resetState(fresh);
       state = fresh;
+      sync?.localSaved();
       render();
     } catch (e) {
       modalError(e);
@@ -1483,6 +1731,7 @@ function confirmReset() {
 window.addEventListener("pagehide", () => {
   clearTimeout(saveTimer);
   void persist();
+  sync?.flush();
 });
 const STORAGE_TIMEOUT_MS = 5000;
 function loadStateWithin(ms: number) {
@@ -1501,12 +1750,23 @@ function chooseAfterStorageFailure() {
     on("continue-unsaved", () => resolve());
   });
 }
+function takeLoginHash() {
+  if (!location.hash.startsWith("#login=")) return undefined;
+  const raw = location.hash.slice("#login=".length);
+  history.replaceState(null, "", location.pathname + location.search);
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return raw;
+  }
+}
 async function boot() {
   const progressLink = location.hash.startsWith("#progress=")
     ? location.href
     : undefined;
   if (progressLink)
     history.replaceState(null, "", location.pathname + location.search);
+  const loginCode = takeLoginHash();
   try {
     const response = await fetch("/practice-config.json", {
       cache: "no-store",
@@ -1535,6 +1795,29 @@ async function boot() {
       if (result.migrated && !temporary)
         await commitMigration(saved, state, result.from < LATEST_FORMAT);
     } else state = { version: 1, progress: freshProgress(config) };
+    let savedAccount: AccountRecord | undefined;
+    if (!temporary) {
+      try {
+        savedAccount = await loadAccount();
+      } catch {
+        savedAccount = undefined;
+      }
+    }
+    sync = createSyncController({
+      host: {
+        getState: () => state,
+        replaceState: replaceLocalState,
+        saveAccount: persistAccount,
+        clearLocal: clearLocalDevice,
+        setStatus: setSyncStatus,
+        openConflict,
+        reportError: (message) => showError(Error(message)),
+        render,
+      },
+      initialAccount: savedAccount,
+    });
+    syncStatus = sync.status;
+    syncMessage = sync.statusMessage;
     render();
     const seen = readSeen();
     // New learners have nothing to compare against; returning ones see notes newer than their last visit.
@@ -1563,11 +1846,18 @@ async function boot() {
         modalError(error);
       }
     }
+    if (savedAccount) void sync?.syncNow();
+    if (loginCode !== undefined) openLoginLink(loginCode);
   } catch (e) {
     app.innerHTML = `<main class="boot-error"><h1>We couldn’t open practice.</h1><p>${esc((e as Error).message)}</p><p>Your saved progress has not been changed.</p><button onclick="location.reload()">Try again</button></main>`;
   }
 }
 window.addEventListener("hashchange", () => {
-  if (location.hash.startsWith("#progress=")) location.reload();
+  if (location.hash.startsWith("#progress=")) {
+    location.reload();
+    return;
+  }
+  const code = takeLoginHash();
+  if (code !== undefined) openLoginLink(code);
 });
 void boot();

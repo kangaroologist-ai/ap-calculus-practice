@@ -119,6 +119,10 @@ textarea:focus-visible {
   outline: 3px solid var(--focus);
   outline-offset: 4px;
 }
+.login-input:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
 .formula:focus-visible {
   outline: 3px solid var(--focus);
   outline-offset: 4px;
@@ -180,8 +184,54 @@ body {
 .status-dot {
   width: 6px;
   height: 6px;
+  flex-shrink: 0;
   background: var(--success);
   border-radius: var(--radius-full);
+}
+.status-dot[data-status="saving"] {
+  background: var(--tint);
+}
+.status-dot[data-status="offline"] {
+  background: var(--warning);
+}
+.status-dot[data-status="stopped"] {
+  background: var(--danger);
+}
+.header-tools {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.header-tools .private-label {
+  margin-left: 0;
+}
+.account-status,
+.status-text {
+  white-space: nowrap;
+}
+.account-status {
+  min-width: 0;
+  max-width: 14rem;
+}
+.account-status .status-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.account-button {
+  min-width: 0;
+  max-width: 14rem;
+}
+.account-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.transfer-short {
+  display: none;
 }
 .boot {
   padding: 70px;
@@ -1027,6 +1077,78 @@ div.path-level > .level {
 .whats-new .modal-body > .button {
   margin-top: var(--space-3);
 }
+.login-label {
+  margin: var(--space-4) 0;
+}
+.login-input {
+  display: block;
+  width: 100%;
+  margin-top: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--label);
+  font-size: var(--t-body);
+  letter-spacing: 0.06em;
+}
+.login-input::placeholder {
+  color: var(--label-2);
+  opacity: 1;
+}
+.signin-sheet .button.primary {
+  margin-top: var(--space-2);
+}
+.account-facts {
+  display: grid;
+  gap: var(--space-3);
+  margin: var(--space-2) 0 var(--space-6);
+}
+.account-facts > div {
+  display: grid;
+  grid-template-columns: 8rem minmax(0, 1fr);
+  gap: var(--space-3);
+}
+.account-facts dt {
+  color: var(--label-2);
+}
+.account-facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.account-facts .status-dot {
+  display: inline-block;
+  margin-right: var(--space-2);
+  vertical-align: middle;
+}
+.account-sheet .button {
+  margin-top: var(--space-2);
+}
+.conflict-copies {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: var(--space-3);
+  margin: var(--space-5) 0;
+}
+.conflict-copy {
+  border: 1px solid var(--separator);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+}
+.conflict-copy h3 {
+  margin: 0 0 var(--space-2);
+  font-size: var(--t-subhead);
+  line-height: 1.4;
+}
+.conflict-copy p {
+  margin: var(--space-1) 0;
+}
+.conflict-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin: var(--space-4) 0;
+}
 .transfer-options {
   display: flex;
   gap: var(--space-3);
@@ -1418,6 +1540,16 @@ body > .ML__keyboard {
   .brand {
     font-size: var(--t-callout);
     gap: var(--space-2);
+    min-width: 0;
+  }
+  .brand-heading {
+    min-width: 0;
+  }
+  .brand > span:last-child {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .brand-mark {
     width: 31px;
@@ -1427,8 +1559,38 @@ body > .ML__keyboard {
   .private-label {
     display: none;
   }
-  .site-header > .button {
-    margin-left: auto;
+  .header-tools {
+    gap: var(--space-2);
+    flex-shrink: 0;
+  }
+  .header-tools .button {
+    white-space: nowrap;
+  }
+  .header-tools #transfer,
+  .header-tools #signin {
+    flex-shrink: 0;
+  }
+  .header-tools .account-status {
+    display: flex;
+    flex: 1 1 auto;
+  }
+  /* The status is required text, so the brand and the Move label yield space. */
+  .site-header.signed-in .brand > span:last-child {
+    display: none;
+  }
+  .site-header.signed-in .transfer-long {
+    display: none;
+  }
+  .site-header.signed-in .transfer-short {
+    display: inline;
+  }
+  .account-prefix {
+    display: none;
+  }
+  .account-button {
+    max-width: 8.5rem;
+  }
+  .header-tools .button {
     font-size: var(--t-caption);
     padding: var(--space-2) var(--space-3);
   }
@@ -1501,6 +1663,7 @@ body > .ML__keyboard {
   }
   .site-header {
     gap: var(--space-3);
+    flex-wrap: nowrap;
     padding: var(--space-4) var(--space-5);
     padding-top: max(var(--space-4), env(safe-area-inset-top));
     padding-left: max(var(--space-5), env(safe-area-inset-left));
@@ -1526,6 +1689,20 @@ body > .ML__keyboard {
 }
 
 @media (max-width: 430px) {
+  .brand-heading .brand > span:last-child {
+    display: none;
+  }
+  .site-header {
+    padding-left: max(var(--space-3), env(safe-area-inset-left));
+    padding-right: max(var(--space-3), env(safe-area-inset-right));
+  }
+  .header-tools {
+    gap: var(--space-1);
+    flex-shrink: 1;
+  }
+  .header-tools .account-status {
+    gap: var(--space-1);
+  }
   .practice-status {
     padding: var(--space-4) var(--space-5);
     gap: var(--space-3);
@@ -1547,9 +1724,6 @@ body > .ML__keyboard {
 }
 
 @media (max-width: 320px) {
-  .site-header > .button {
-    margin-left: 0;
-  }
   main {
     padding-left: var(--space-2);
     padding-right: var(--space-2);

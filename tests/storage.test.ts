@@ -6,7 +6,7 @@ import { makePortableProgress } from '../src/transfer';
 import type { AppState, Progress } from '../src/progress';
 import type { Config } from '../src/types';
 
-type StoreKey = 'current' | 'backup' | 'pre-migration';
+type StoreKey = 'current' | 'backup' | 'pre-migration' | 'account';
 
 const fakeIdb = vi.hoisted(() => {
   const records = new Map<StoreKey, unknown>();
@@ -40,6 +40,9 @@ const fakeIdb = vi.hoisted(() => {
             }
             staged.set(key, clone(value));
             return key;
+          },
+          async delete(key: StoreKey) {
+            staged.delete(key);
           },
         },
         abort() {
@@ -155,6 +158,16 @@ describe('serialized local persistence and backup replacement', () => {
     await storage.saveState(practiced);
     expect(await storage.loadState()).toEqual(practiced);
     expect(fakeIdb.records.get('backup')).toEqual(first);
+  });
+
+  it('can replace the current state without touching the backup', async () => {
+    const first = appState(freshProgress(config, NOW));
+    await storage.saveState(first);
+    await storage.replaceState(snapshot(freshProgress(config, NOW + 1)), 'chosen');
+    expect(fakeIdb.records.get('backup')).toEqual(first);
+    await storage.replaceState(snapshot(freshProgress(config, NOW + 2)), 'silent', false);
+    expect(fakeIdb.records.get('backup')).toEqual(first);
+    expect((await storage.loadState())?.lastImportedId).toBe('silent');
   });
 
   it('keeps the complete progress object when an imported snapshot is installed', async () => {
@@ -298,6 +311,53 @@ describe('serialized local persistence and backup replacement', () => {
     const valid = appState(freshProgress(config, NOW + 2), 'valid-id');
     await storage.saveState(valid);
     expect(await storage.loadState()).toEqual(valid);
+  });
+});
+
+describe('account record and sign-out clearing', () => {
+  const account = {
+    code: 'TEST-AAAA-BBBB-CC',
+    name: 'Test Student',
+    className: 'Test class',
+    classPrefix: 'TEST',
+    mark: { revision: 4, updatedAt: NOW },
+  };
+
+  it('saves and loads the account record', async () => {
+    await storage.saveAccount(account);
+    expect(await storage.loadAccount()).toEqual(account);
+  });
+
+  it('clears current, backup, pre-migration, and account on sign out', async () => {
+    await storage.saveState(appState(freshProgress(config, NOW)));
+    fakeIdb.records.set('backup', appState(freshProgress(config, NOW - 1)));
+    fakeIdb.records.set('pre-migration', appState(freshProgress(config, NOW - 2)));
+    await storage.saveAccount(account);
+
+    await storage.clearDevice();
+
+    expect(fakeIdb.records.size).toBe(0);
+    expect(await storage.loadState()).toBeUndefined();
+    expect(await storage.loadAccount()).toBeUndefined();
+  });
+
+  it('keeps the losing online copy in backup without changing current', async () => {
+    const current = appState(freshProgress(config, NOW), 'current-id');
+    await storage.saveState(current);
+    const online = snapshot(freshProgress(config, NOW + 1), NOW + 2);
+    const { exportedAt, ...onlineProgress } = online;
+
+    await storage.saveBackup(online);
+
+    expect(fakeIdb.records.get('backup')).toEqual({
+      version: 1,
+      progress: onlineProgress,
+    });
+    expect(await storage.loadState()).toEqual(current);
+    expect(await storage.restoreBackup()).toEqual({
+      version: 1,
+      progress: onlineProgress,
+    });
   });
 });
 

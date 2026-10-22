@@ -139,6 +139,11 @@ export function createSaveScheduler(
       clear();
       pending = urgent = false;
     },
+    // A save that did not come from this scheduler (on open, after sign-in)
+    // still starts the interval.
+    noteSave() {
+      lastStart = timer.now();
+    },
     get busy() {
       return pending || running;
     },
