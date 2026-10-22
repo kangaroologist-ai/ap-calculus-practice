@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="theme-color" content="#f5f5f7" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)"><meta name="robots" content="noindex"><title>Teacher · AP Calculus Practice</title><meta name="description" content="View class progress for AP Calculus Practice."><link rel="icon" href="/favicon.svg" type="image/svg+xml">
+</head>
+<body>
+<header class="site-header teacher-header"><a class="brand" href="/"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 32 32" focusable="false"><g transform="translate(16 16) scale(0.86) translate(-16.55 -16.5)" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 7.4C19.7 6 17.3 6 16.5 7.9L13.3 24.1C12.7 26.6 10.5 27.3 9 26.2"/><path d="M11.4 13.6H19.2"/><path d="M24.2 6.6 22.8 11.6"/></g></svg></span><span>AP Calculus<span class="brand-light"> Practice</span></span></a><a class="button subtle" href="/">Back to practice</a></header>
+<main class="teacher-page">
+<div class="teacher-heading"><p class="eyebrow">TEACHER</p><h1>Class progress</h1><p>See each student's mastery by skill. This page shows saved progress and does not change it.</p></div>
+<p id="teacher-error" class="teacher-message" role="alert" hidden></p>
+<p id="teacher-loading" class="teacher-loading" role="status" hidden>Opening class progress…</p>
+<section id="teacher-gate" class="teacher-gate" aria-labelledby="teacher-gate-title">
+<h2 id="teacher-gate-title">Open class progress</h2>
+<p id="teacher-gate-copy" class="teacher-gate-copy">Enter your teacher code. The code stays in this tab until you close it.</p>
+<form id="teacher-form" method="post">
+<label class="teacher-field" for="teacher-code">Teacher code
+<input id="teacher-code" name="code" class="teacher-input" type="text" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" aria-describedby="teacher-gate-copy" required>
+</label>
+<button class="button primary teacher-open" type="submit">Open</button>
+</form>
+</section>
+<section id="teacher-view" class="teacher-view" aria-labelledby="teacher-view-title" hidden>
+<h2 id="teacher-view-title" class="visually-hidden">Students</h2>
+<div class="teacher-toolbar">
+<div class="teacher-filters">
+<label class="teacher-control" for="teacher-class-filter">Class
+<select id="teacher-class-filter" class="teacher-select"><option value="all">All classes</option></select>
+</label>
+<label class="teacher-control" for="teacher-sort">Sort by
+<select id="teacher-sort" class="teacher-select"><option value="name">Name</option><option value="last-practice">Last practice</option></select>
+</label>
+</div>
+<div class="teacher-toolbar-end">
+<p class="teacher-summary" aria-live="polite"><span id="teacher-count"></span><span aria-hidden="true">·</span><span id="teacher-loaded"></span></p>
+<div class="teacher-actions">
+<button id="teacher-refresh" class="button subtle" type="button">Refresh</button>
+<button id="teacher-close" class="button subtle" type="button">Close</button>
+</div>
+</div>
+</div>
+<div id="teacher-grid" class="teacher-grid-scroll" role="region" aria-label="Student mastery grid" aria-busy="false" tabindex="0"></div>
+</section>
+</main>
+<script type="module" src="/src/teacher.ts"></script>
+</body>
+</html>

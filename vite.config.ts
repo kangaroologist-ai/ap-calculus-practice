@@ -22,5 +22,5 @@ export default defineConfig({
     strictPort: true,
     proxy: { "/api": "http://127.0.0.1:8788" },
   },
-  build: { target: "es2022", rollupOptions: { input: { main: resolve("index.html"), help: resolve("help.html") } } },
+  build: { target: "es2022", rollupOptions: { input: { main: resolve("index.html"), help: resolve("help.html"), teacher: resolve("teacher.html") } } },
 });

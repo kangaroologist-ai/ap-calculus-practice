@@ -1,5 +1,9 @@
 /practice-config.json
   Cache-Control: no-store
+/teacher
+  X-Robots-Tag: noindex
+/teacher.html
+  X-Robots-Tag: noindex
 /*
   X-Content-Type-Options: nosniff
   Referrer-Policy: no-referrer
