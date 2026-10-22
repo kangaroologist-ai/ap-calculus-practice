@@ -384,7 +384,7 @@ Project obligations:
 - [x] **P3** `docs/design/DESIGN.md` §6: the abstract-question keys. *Owner:* Claude.
 - [x] **P4** Full design review: `npm run design:capture`, then the `design-reviewer` subagent with `reviews/context.md`; P0 and P1 cleared before release. *Owner:* Sonnet (design-reviewer), graded by Claude.
 - [ ] **P5** [preview deployed 2026-10-22 with the owner's approval (“部署预览”): https://practice-quality.ap-calculus-practice.pages.dev (deployment af2695b1), footer v1.3.0, config level 6 off, help text new; production unchanged (revision 2026-09-19-1)] Build, test, e2e, push, deploy to Cloudflare Pages, check live `/` and `/help` (deploy after the owner's approval). *Owner:* Claude.
-- [ ] **P6** iPhone check by the owner: keyboard keys on an abstract question. *Owner:* owner.
+- [ ] **P6** [2026-10-22: owner asked for a way to jump to abstract questions on the preview; Claude made a test progress link (`research/jump.mts`, `evidence/preview-abstract-jump-link.txt`, QR `evidence/preview-abstract-jump-qr.png`): levels 1–5 passed except `abstract`, cards due in 30 days; checked in WebKit 390 px: first question `h(x)=f(2x)`] iPhone check by the owner: keyboard keys on an abstract question. *Owner:* owner.
 - [x] **P7** Regenerate `skill-examples` (docs and public page); `npm run test:math`. *Owner:* Claude.
 - [x] **P8** Mark `docs/reviews/2026-09-27-coefficients/plan.md` as replaced by this task. *Owner:* Claude.
 
