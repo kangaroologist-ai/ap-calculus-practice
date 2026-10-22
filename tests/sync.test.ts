@@ -207,27 +207,34 @@ function controlledSave() {
   return { calls, save };
 }
 
-describe('createSaveScheduler', () => {
-  it('saves at once, then at most once per 20 s with the newest state', async () => {
+describe('createSaveScheduler (5 s wait, one save per question)', () => {
+  it('saves once, 5 s after the last change', async () => {
     const t = fakeTimer();
     const s = controlledSave();
     const scheduler = createSaveScheduler(s.save, t.timer);
     scheduler.request();
+    expect(s.calls).toHaveLength(0);
+    await t.advance(4_999);
+    expect(s.calls).toHaveLength(0);
+    await t.advance(1);
     expect(s.calls).toHaveLength(1);
+    expect(s.calls[0].keepalive).toBe(false);
     s.calls[0].done();
     await settle();
-    scheduler.request();
-    scheduler.request();
-    scheduler.request();
-    expect(s.calls).toHaveLength(1);
-    await t.advance(19_999);
-    expect(s.calls).toHaveLength(1);
-    await t.advance(1);
-    expect(s.calls).toHaveLength(2);
-    expect(s.calls[1].keepalive).toBe(false);
-    s.calls[1].done();
-    await settle();
     expect(scheduler.busy).toBe(false);
+  });
+
+  it('makes the answer and Next of one question one save', async () => {
+    const t = fakeTimer();
+    const s = controlledSave();
+    const scheduler = createSaveScheduler(s.save, t.timer);
+    scheduler.request(); // answer recorded
+    await t.advance(2_000);
+    scheduler.request(); // Next
+    await t.advance(4_999);
+    expect(s.calls).toHaveLength(0);
+    await t.advance(1);
+    expect(s.calls).toHaveLength(1);
   });
 
   it('never runs two saves at once', async () => {
@@ -235,13 +242,15 @@ describe('createSaveScheduler', () => {
     const s = controlledSave();
     const scheduler = createSaveScheduler(s.save, t.timer);
     scheduler.request();
-    await t.advance(60_000);
+    await t.advance(5_000);
     scheduler.request();
     await t.advance(60_000);
     expect(s.calls).toHaveLength(1);
     s.calls[0].done();
     await settle();
-    // The waiting request starts when the running save ends.
+    // The change made during the save waits 5 s after that save ends.
+    expect(s.calls).toHaveLength(1);
+    await t.advance(5_000);
     expect(s.calls).toHaveLength(2);
   });
 
@@ -250,13 +259,10 @@ describe('createSaveScheduler', () => {
     const s = controlledSave();
     const scheduler = createSaveScheduler(s.save, t.timer);
     scheduler.request();
-    s.calls[0].done();
-    await settle();
-    scheduler.request();
     expect(t.waiting).toBe(1);
     scheduler.flush();
-    expect(s.calls).toHaveLength(2);
-    expect(s.calls[1].keepalive).toBe(true);
+    expect(s.calls).toHaveLength(1);
+    expect(s.calls[0].keepalive).toBe(true);
     expect(t.waiting).toBe(0);
   });
 
@@ -265,6 +271,7 @@ describe('createSaveScheduler', () => {
     const s = controlledSave();
     const scheduler = createSaveScheduler(s.save, t.timer);
     scheduler.request();
+    await t.advance(5_000);
     scheduler.request();
     scheduler.flush();
     expect(s.calls).toHaveLength(1);
@@ -287,10 +294,11 @@ describe('createSaveScheduler', () => {
     const s = controlledSave();
     const scheduler = createSaveScheduler(s.save, t.timer);
     scheduler.request();
+    await t.advance(5_000);
     s.calls[0].fail();
     await settle();
     scheduler.request();
-    await t.advance(20_000);
+    await t.advance(5_000);
     expect(s.calls).toHaveLength(2);
   });
 
@@ -299,25 +307,9 @@ describe('createSaveScheduler', () => {
     const s = controlledSave();
     const scheduler = createSaveScheduler(s.save, t.timer);
     scheduler.request();
-    s.calls[0].done();
-    await settle();
-    scheduler.request();
     scheduler.cancel();
     await t.advance(60_000);
-    expect(s.calls).toHaveLength(1);
-    expect(scheduler.busy).toBe(false);
-  });
-});
-
-describe('createSaveScheduler.noteSave', () => {
-  it('starts the interval for a save made outside the scheduler', async () => {
-    const t = fakeTimer();
-    const s = controlledSave();
-    const scheduler = createSaveScheduler(s.save, t.timer);
-    scheduler.noteSave();
-    scheduler.request();
     expect(s.calls).toHaveLength(0);
-    await t.advance(20_000);
-    expect(s.calls).toHaveLength(1);
+    expect(scheduler.busy).toBe(false);
   });
 });

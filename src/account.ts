@@ -280,11 +280,8 @@ export function createSyncController({
     queue = run.catch(() => {});
     return run;
   };
-  // Saves outside the scheduler still count for its 20 s interval.
-  const sendNow = (record: AccountRecord, progress: Progress) => {
-    scheduler.noteSave();
-    return api.save(record, progress, false);
-  };
+  const sendNow = (record: AccountRecord, progress: Progress) =>
+    api.save(record, progress, false);
 
   const changed = () =>
     !!account && host.getState().progress.updatedAt !== account.mark?.updatedAt;

@@ -525,37 +525,21 @@ describe('sync controller', () => {
     expect(c.controller.status).toBe('saved');
   });
 
-  it('shows Saving while an answer waits for the 20 s interval', async () => {
+  it('shows Saving during the 5 s wait, then saves the question once', async () => {
     const local = practised();
     const c = controllerFor(local, account({ revision: 3, updatedAt: local.updatedAt }));
-    c.h.setProgress(practised(NOW + 1_000, 4));
+    c.h.setProgress(practised(NOW + 1_000, 4)); // the answer
+    c.controller.localSaved();
+    await c.t.advance(2_000);
+    c.h.setProgress(practised(NOW + 3_000, 4)); // Next
     c.controller.localSaved();
     await settle();
-    expect(c.calls.save).toHaveLength(1);
-    expect(c.controller.status).toBe('saved');
-    c.h.setProgress(practised(NOW + 2_000, 5));
-    c.controller.localSaved();
-    await settle();
-    expect(c.calls.save).toHaveLength(1);
+    expect(c.calls.save).toHaveLength(0);
     expect(c.controller.status).toBe('saving');
-    await c.t.advance(20_000);
-    expect(c.calls.save).toHaveLength(2);
+    await c.t.advance(5_000);
+    expect(c.calls.save).toHaveLength(1);
+    expect(c.calls.save[0].progress.updatedAt).toBe(NOW + 3_000);
     expect(c.controller.status).toBe('saved');
-  });
-
-  it('counts a sign-in upload for the 20 s interval', async () => {
-    const local = practised();
-    const c = controllerFor(local, account(), {
-      session: async () => ({ ...emptyAnswer(), revision: 0, progress: undefined, updatedAt: null }),
-    });
-    await c.controller.syncNow();
-    expect(c.calls.save).toHaveLength(1);
-    c.h.setProgress(practised(NOW + 1_000, 4));
-    c.controller.localSaved();
-    await settle();
-    expect(c.calls.save).toHaveLength(1);
-    await c.t.advance(20_000);
-    expect(c.calls.save).toHaveLength(2);
   });
 
   it('turns a 409 answer into the conflict prompt', async () => {
@@ -572,7 +556,7 @@ describe('sync controller', () => {
     });
 
     c.controller.localSaved();
-    await settle();
+    await c.t.advance(5_000);
 
     expect(c.calls.save).toHaveLength(1);
     expect(c.calls.save[0].base).toBe(3);
@@ -591,13 +575,13 @@ describe('sync controller', () => {
     });
 
     c.controller.localSaved();
-    await settle();
+    await c.t.advance(5_000);
     expect(c.h.statuses.at(-1)?.status).toBe('offline');
     expect(c.calls.save).toHaveLength(1);
 
     offline = false;
     c.controller.retry();
-    await c.t.advance(20_000);
+    await c.t.advance(5_000);
     expect(c.calls.save).toHaveLength(2);
     expect(c.h.statuses.at(-1)?.status).toBe('saved');
     expect(c.controller.account?.mark).toEqual({
@@ -689,7 +673,7 @@ describe('sync controller', () => {
     const c = controllerFor(local, account({ revision: 3, updatedAt: NOW }));
 
     c.controller.localSaved();
-    await settle();
+    await c.t.advance(5_000);
     c.h.setProgress(practised(NOW + 40_000, 7));
     c.controller.flush();
     await settle();
@@ -699,12 +683,12 @@ describe('sync controller', () => {
     expect(c.calls.save[1].keepalive).toBe(true);
   });
 
-  it('keeps a page-hide save alive when the interval has already elapsed', async () => {
+  it('saves at page hide at once, without the 5 s wait', async () => {
     const local = practised(NOW + 30_000, 6);
     const c = controllerFor(local, account({ revision: 3, updatedAt: NOW }));
 
     c.controller.localSaved();
-    await settle();
+    await c.t.advance(5_000);
     expect(c.calls.save[0].keepalive).toBe(false);
 
     await c.t.advance(20_000);
@@ -803,10 +787,10 @@ describe('sync controller', () => {
     expect(c.h.clears).toBe(0);
     expect(c.controller.account).toBeDefined();
 
-    // The sign-out save started the 20 s interval, so the new answer waits.
+    // The new answer waits the usual 5 s after the sign-out save.
     await settle();
     expect(c.calls.save).toHaveLength(1);
-    await c.t.advance(20_000);
+    await c.t.advance(5_000);
     expect(c.calls.save).toHaveLength(2);
     expect(c.calls.save[1].progress.updatedAt).toBe(newer.updatedAt);
     expect(c.controller.account?.mark).toEqual({

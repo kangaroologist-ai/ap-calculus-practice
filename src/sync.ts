@@ -78,18 +78,20 @@ const browserTimer: SaveTimer = {
   now: () => Date.now(),
 };
 
-export const SAVE_INTERVAL_MS = 20_000;
+// One question changes progress twice (the answer, then Next). Waiting this
+// long after the last change makes them one online save (L2: one save per
+// question, to spend few Cloudflare writes).
+export const SAVE_DELAY_MS = 5_000;
 
-// Starts at most one online save per interval, and never two at once: each
-// save must start from the revision that the one before it returned. A request
-// during a save or inside the interval waits for one later save, which sends
+// Saves once the progress has been quiet for `delayMs`, and never runs two
+// saves at once: each save must start from the revision that the one before
+// it returned. A change during a save waits for one later save, which sends
 // the newest state.
 export function createSaveScheduler(
   save: (keepalive: boolean) => Promise<unknown>,
   timer: SaveTimer = browserTimer,
-  intervalMs = SAVE_INTERVAL_MS,
+  delayMs = SAVE_DELAY_MS,
 ) {
-  let lastStart = -Infinity;
   let running = false;
   let pending = false;
   let urgent = false;
@@ -99,10 +101,10 @@ export function createSaveScheduler(
     handle = undefined;
   };
   const start = () => {
+    clear();
     const keepalive = urgent;
     pending = urgent = false;
     running = true;
-    lastStart = timer.now();
     void save(keepalive)
       .catch(() => {})
       .finally(() => {
@@ -110,18 +112,18 @@ export function createSaveScheduler(
         if (pending) schedule();
       });
   };
+  // A running save reschedules itself when it ends.
   const schedule = () => {
-    // A running save reschedules itself when it ends.
     if (running) return;
-    if (handle !== undefined && !urgent) return;
+    if (urgent) {
+      start();
+      return;
+    }
     clear();
-    const wait = urgent ? 0 : lastStart + intervalMs - timer.now();
-    if (wait <= 0) start();
-    else
-      handle = timer.setTimeout(() => {
-        handle = undefined;
-        schedule();
-      }, wait);
+    handle = timer.setTimeout(() => {
+      handle = undefined;
+      if (pending && !running) start();
+    }, delayMs);
   };
   return {
     request() {
@@ -138,11 +140,6 @@ export function createSaveScheduler(
     cancel() {
       clear();
       pending = urgent = false;
-    },
-    // A save that did not come from this scheduler (on open, after sign-in)
-    // still starts the interval.
-    noteSave() {
-      lastStart = timer.now();
     },
     get busy() {
       return pending || running;
