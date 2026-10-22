@@ -209,12 +209,13 @@ MathLive `math-field`，边框 `--control-border`，聚焦时 3 px `--focus` 外
 
 ### 5.7 账号（登录、保存状态、两份副本）
 
-- **页眉，未登录**：保留 “On your device” 标签，在 Move progress 前加次要按钮 **Sign in**。
+- **页眉，未登录**：保留 “On your device” 标签（≤ 700 px 时隐藏），在 Move progress 前加次要按钮 **Sign in**。≤ 430 px 时品牌名先让出空间（f′ 图标不缩），Move progress 缩成 Move（读屏名不变），这样 200% 页面缩放时一行也放得下（媒体查询看不到页面缩放，WCAG 1.4.10；`tests/app.spec.ts` 的 200% zoom 检查）。
 - **页眉，已登录**：状态标签（状态点加文字：Saved online／Saving…／Offline: saved on this device／同步停止时的说明）和账号按钮 “Signed in as <姓名>”（次要按钮）。状态点颜色：已保存 `--success`，保存中 `--tint`，离线 `--warning`，停止 `--danger`；文字始终可见，颜色只是辅助。状态变化用 `role="status"` 礼貌播报。
-- **窄屏（≤ 700 px）已登录**：页眉保持一行、页面不横向滚动。保存状态是必须读到的文字，所以让出空间的是品牌名（只留 f′ 图标）、Move progress（缩成 Move，读屏名仍是 Move progress）和账号按钮的 “Signed in as” 前缀（只显示姓名，最宽 8.5rem 截断；读屏名仍是完整的 “Signed in as <姓名>”）。按钮在页眉里用 caption 字号。
-- **页脚**：未登录 “No account. No uploaded answers.”；已登录 “Signed in · progress saved online”。
-- **登录窗口**（`modal("Sign in")`）：标签 “Login code” 的单行输入框（等宽感的大写输入，`autocomplete="off"`、`autocapitalize="characters"`、`spellcheck="false"`、`enterkeyhint="go"`），批准过的隐私短句，主按钮 **Sign in**，下方一行 “You can also practice without signing in.”。错误显示在窗口底部的 `#modal-error`。
-- **账号窗口**（`modal("Your account")`）：定义列表列出姓名、班级、状态、最后一次在线保存时间，危险按钮 **Sign out**。退出过程中按钮禁用，练习也暂停（`replacing`），直到保存并清除完成。
+- **窄屏（≤ 700 px）已登录**：页面不横向滚动。保存状态是必须读到的文字：最多折成两行，**从不截断**（2026-10-22 设计审核 R6）。让出空间的是品牌名（只在已登录时隐藏，只留 f′ 图标；未登录照常显示）、Move progress（缩成 Move，读屏名仍是 Move progress）和账号按钮的 “Signed in as” 前缀（只显示姓名，最宽 8.5rem 截断；读屏名仍是完整的 “Signed in as <姓名>”）。按钮在页眉里用 caption 字号；≤ 430 px 时页眉左右边距与正文一致（16 px）。
+- **页脚**：未登录 “No account. No uploaded answers.”；已登录 “Signed in as <姓名>”。页脚不写保存状态，保存状态只在页眉（R6：页脚只在 `render()` 时写入，会和离线状态矛盾）。
+- **登录后的文案**：欢迎卡片写 “Your work is saved on this device and online.”；Move progress 窗口去掉 “No account needed.”。未登录时保持原文。
+- **登录窗口**（`modal("Sign in")`）：标签 “Login code” 的单行输入框（等宽感的大写输入，`autocomplete="off"`、`autocapitalize="characters"`、`spellcheck="false"`、`enterkeyhint="go"`），批准过的隐私短句，主按钮 **Sign in**，下方一行 “You can also practice without signing in.”。错误紧贴输入框下方（预留一行高度，窗口不跳动；输入框 `aria-describedby` 指向它，出错时 `aria-invalid="true"`），这样 iPhone 键盘弹起时也看得到。请求进行中按钮显示 “Signing in…” 并禁用。
+- **账号窗口**（`modal("Your account")`）：定义列表列出姓名、班级、状态、最后一次在线保存时间（还没保存过时写 “Nothing to save yet”）；说明句 “Signing out saves your progress online, then removes it from this device.” 和次要按钮 **Sign out**（不用危险按钮：退出先保存，不丢数据）。退出过程中按钮禁用，练习也暂停（`replacing`），直到保存并清除完成。老师换码后有未保存的进度时，按钮变成危险按钮 **Remove progress and sign out**：这是会删数据的确认步骤，符合 5.1。
 - **两份副本窗口**（“Two copies of your progress”）：两块并排（窄屏上下排）的摘要，“This device” 与 “Online copy”，各列最后练习时间、已解锁等级、已开始的技能数；主按钮 **Use the online copy**，次要按钮 **Keep this device's copy**；底部小字 “The other copy is kept as a local backup. Restore backup brings it back.”。标题与按钮都用学生的话，不出现 revision 等术语。
 - 落实位置：`src/main.ts` 的 `headerTools`、`openSignIn`、`openAccountSheet`、`openConflict`；`src/account.ts`（状态文字、错误文字）；`src/style.css` 的 `.header-tools`、`.account-status`、`.account-button`、`.login-input`、`.account-facts`、`.conflict-copies`；`tests/accounts/account.spec.ts`（含 390 px 页眉）。
 
@@ -227,6 +228,8 @@ MathLive `math-field`，边框 `--control-border`，聚焦时 3 px `--focus` 外
 - **网格**：`<table>` 放在横向滚动容器里，页面本身不横向滚动。两行表头：等级分组（Level 1 …）在上，技能名在下；表头行在纵向滚动时固定在顶部，姓名列在横向滚动时固定在左侧。前三列是姓名、最后练习、等级。全部班级时每个班一个 `<tbody>`，班名行用 `scope="rowgroup"`。
 - **单元格**：百分比文字（`--label` 色），背景按掌握度分四档，用 `color-mix` 把语义色混入 `--surface`：低于 60% `--danger` 12%；低于 80% `--warning` 13%；低于 85% `--tint` 10%；85% 及以上 `--success` 16%。颜色只是辅助，数字始终可读（WCAG 1.4.1）。没开始的技能留空。
 - **行状态**：没有在线副本的学生只显示姓名；副本来自更新版本时整行显示 “Reload the page to update”；读不出时显示 “Can't read”，只影响该行。
+- **层级与手机**：姓名表头在左上角，横向和纵向滚动时都盖在其他表头之上（选择器优先级要高于 `thead th` 的 `z-index`，R6）。≤ 430 px 时姓名列约 7rem，长名字换行。
+- **下拉框**：`appearance: none` 加 `--label-2` 的箭头，高度 44 px（WebKit 默认的原生下拉框只有 23 px 高，R6）。
 - **无障碍**：`<caption>`（视觉隐藏）、列头 `scope="col"`、姓名 `scope="row"`；尊重减少动态效果。
 - 落实位置：`src/teacher.ts`、`src/teacher-grid.ts`、`src/teacher.css`；`tests/teacher-grid.test.ts`、`tests/accounts/teacher.spec.ts`。
 
@@ -353,7 +356,7 @@ MathLive 把键帽的 `tooltip` 优先用作 `aria-label`，所以 `tooltip` 只
 |---|---|---|
 | 对比度 | 文字 ≥ 4.5:1，控件边框 ≥ 3:1 | `tests/contrast.test.ts` |
 | 字号 | ≥ 12 px，使用 rem | `tests/visual-tokens.spec.ts` |
-| 触控目标 | ≥ 44 × 44 px；键盘键宽例外，见 6.2 | `src/style.css` 按钮规则 |
+| 触控目标 | ≥ 44 × 44 px；键盘键宽例外，见 6.2。原生 `<select>` 也算：用 `appearance: none` 才能在 WebKit 里得到 44 px（5.8） | `src/style.css` 按钮规则；`src/teacher.css` 的 `.teacher-select` |
 | 焦点 | `:focus-visible` 下 3 px `--focus` 描边 | `src/style.css:80-99` |
 | 公式 | `role="math"`，`aria-label` 为 MathLive 的朗读文本，不暴露 LaTeX | `src/main.ts` 的 `math()` |
 | 反馈 | `aria-live="polite"`，颜色之外有符号或文字区分 | `src/main.ts`、5.3 |

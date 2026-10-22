@@ -1703,9 +1703,18 @@ body > .ML__keyboard {
     gap: var(--space-1);
     flex-shrink: 1;
   }
-  /* Signed out, the brand name is the part that yields space. */
-  .site-header:not(.signed-in) .header-tools {
-    flex-shrink: 0;
+  /* Signed out, the brand name yields space first; the f′ mark never
+     shrinks. Move progress is short for everyone here, so the row also fits
+     at 200% page zoom, which media queries do not see (WCAG 1.4.10). */
+  .site-header:not(.signed-in) .brand-heading {
+    flex-shrink: 100;
+    min-width: 31px;
+  }
+  .site-header .transfer-long {
+    display: none;
+  }
+  .site-header .transfer-short {
+    display: inline;
   }
   .header-tools .account-status {
     gap: var(--space-1);

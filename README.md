@@ -108,7 +108,7 @@ v1 Ready 技能迁移为 Basic 已通过（标记为 legacy），Mixed 从 0/2 �
 
 **登录码。** 老师用脚本（见下）给每个学生生成一个登录码，形如 `CALC-K7QM-4ZX9-B2`：前面是班级前缀（2–8 个字母），后面是 10 位随机字符（Crockford Base32，约 50 bit）。输入不分大小写，空格和连字符可有可无，随机部分里的 O 当作 0、I／L 当作 1。同一个码可以在任意多台设备上用；它是钥匙，不锁设备。服务器只保存码的 SHA-256 哈希，不保存码本身，所以码丢了只能由老师换新码（进度保留）。
 
-**登录。** 页眉的 Sign in 打开登录窗口：输入登录码，点 Sign in。窗口里有一句隐私说明（见下）。扫纸条上的二维码会打开 `/#login=<码>`：网站把码填进登录窗口，并立即从地址栏删掉；码在 URL fragment 里，不会发给服务器。码不对时提示 “This code doesn't match a student. Check the code on your slip.”；同一网络 10 分钟内输错 60 次后提示 “Too many attempts. Wait 10 minutes, then try again.”。登录后页眉显示 “Signed in as <姓名>” 和保存状态（Saved online／Saving…／Offline: saved on this device），页脚显示 “Signed in · progress saved online”。
+**登录。** 页眉的 Sign in 打开登录窗口：输入登录码，点 Sign in。窗口里有一句隐私说明（见下）。扫纸条上的二维码会打开 `/#login=<码>`：网站把码填进登录窗口，并立即从地址栏删掉；码在 URL fragment 里，不会发给服务器。码不对时提示 “This code doesn't match a student. Check the code on your slip.”；同一网络 10 分钟内输错 60 次后提示 “Too many attempts. Wait 10 minutes, then try again.”。登录后页眉显示 “Signed in as <姓名>” 和保存状态（Saved online／Saving…／Offline: saved on this device；窄屏上最多折成两行，不截断），页脚显示 “Signed in as <姓名>”。登录窗口的错误提示紧贴输入框下方，iPhone 键盘弹起时也看得到。
 
 **同步规则。** 本机 IndexedDB 仍是主存储，在线副本是第二份。服务器给每次保存一个修订号（revision），设备记下上次同步的修订号和当时的 `updatedAt`；判断哪份更新只看修订号，不看设备时钟（设备时钟可能不准）。“本机有新作答”指 `updatedAt` 与上次同步时不同；只保存当前题目或草稿不算。
 
