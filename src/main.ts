@@ -388,7 +388,7 @@ function readyCount() {
   ).length;
 }
 function accountButton(account: AccountRecord) {
-  return `<button id="account" class="button subtle account-button" aria-label="Signed in as ${esc(account.name)}"><span class="account-prefix">Signed in as </span><span class="account-name">${esc(account.name)}</span></button>`;
+  return `<button id="account" class="button subtle account-button" aria-label="Signed in as ${esc(account.name)}"><span class="account-label"><span class="account-prefix">Signed in as</span> <span class="account-name">${esc(account.name)}</span></span></button>`;
 }
 function transferButton() {
   return `<button id="transfer" class="button subtle" aria-label="Move progress"><span class="transfer-long">Move progress</span><span class="transfer-short" aria-hidden="true">Move</span></button>`;
@@ -407,12 +407,13 @@ function render() {
   const p = state.progress,
     ses = state.session,
     cur = ses?.current;
-  const signedIn = !!sync?.account;
+  const account = sync?.account;
+  const signedIn = !!account;
   app.innerHTML = `<header class="site-header${signedIn ? " signed-in" : ""}"><h1 class="brand-heading"><a class="brand" href="/" aria-label="AP Calculus Practice">${icon}<span>AP Calculus<span class="brand-light"> Practice</span></span></a></h1><div class="header-tools">${headerTools()}</div></header>
  <main>${location.hostname === "ap-derivative-practice.pages.dev" ? '<p class="notice">We’ve moved to <a href="https://ap-calculus-practice.pages.dev/">AP Calculus Practice</a>. Use Move progress to export here, then import at the new address.</p>' : ""}<div id="notice" class="notice" role="status" ${temporary ? "" : "hidden"}>${temporary ? "Temporary session: export progress before leaving." : ""}</div>
  <div class="workspace"><section class="practice-card" aria-label="Practice">${!ses ? welcome() : ses.finished ? summary() : questionView()}</section>
  <details class="journey" ${journeyOpen ? "open" : ""}><summary class="progress-summary">Progress <span>Level ${p.unlockedLevel} · ${readyCount()} ${readyCount() === 1 ? "skill" : "skills"} ready</span></summary><div class="aside-heading"><span class="eyebrow">YOUR LEARNING PATH</span><span class="count">${readyCount()} / ${SKILLS.filter((s) => !config.disabledFamilies.includes(s.id)).length}</span></div><div class="level-list">${Array.from({ length: 6 }, (_, i) => levelView(i + 1, expandedLevels.has(i + 1))).join("")}</div></details></div>
- <footer><span id="footer-note">${signedIn ? "Signed in · progress saved online" : "No account. No uploaded answers."}</span><div><a class="text-button" href="/help.html">How to use</a>${button("input-help", "Input guide", "text-button")}${button("whats-new", `What’s new · v${__APP_VERSION__}`, "text-button")}${button("restore", "Restore backup", "text-button")}${button("reset", "Reset progress", "text-button")}</div></footer></main><div id="modal-root"></div>`;
+ <footer><span id="footer-note">${account ? `Signed in as ${esc(account.name)}` : "No account. No uploaded answers."}</span><div><a class="text-button" href="/help.html">How to use</a>${button("input-help", "Input guide", "text-button")}${button("whats-new", `What’s new · v${__APP_VERSION__}`, "text-button")}${button("restore", "Restore backup", "text-button")}${button("reset", "Reset progress", "text-button")}</div></footer></main><div id="modal-root"></div>`;
   on("signin", () => openSignIn());
   on("account", openAccountSheet);
   on("transfer", openTransfer);
@@ -473,7 +474,7 @@ function welcome() {
   const nextSkillLine = nextSkill
     ? `<p class="fine">Level ${nextSkill.level} · ${esc(nextSkill.label)}</p>`
     : "";
-  return `<div class="card-top"><span class="tag">ADAPTIVE PRACTICE</span><span class="muted">At your own pace</span></div><div class="welcome"><div class="welcome-equation">${math(`${ddx()}\\left[\\sin(x^2)\\right]`)}</div><h2>Differentiation</h2><p>Practice the rules. Review what needs work.</p>${button("start", `${hasProgress ? "Continue practicing" : "Start practicing"} <span aria-hidden="true">→</span>`, "button primary large")}${nextSkillLine}<p class="fine">Your work is saved automatically in this browser.</p></div>`;
+  return `<div class="card-top"><span class="tag">ADAPTIVE PRACTICE</span><span class="muted">At your own pace</span></div><div class="welcome"><div class="welcome-equation">${math(`${ddx()}\\left[\\sin(x^2)\\right]`)}</div><h2>Differentiation</h2><p>Practice the rules. Review what needs work.</p>${button("start", `${hasProgress ? "Continue practicing" : "Start practicing"} <span aria-hidden="true">→</span>`, "button primary large")}${nextSkillLine}<p class="fine">${sync?.account ? "Your work is saved on this device and online." : "Your work is saved automatically in this browser."}</p></div>`;
 }
 function summary() {
   const s = state.session!;
@@ -1290,7 +1291,7 @@ function openTransfer() {
   if (busy || replacing) return;
   modal(
     "Move your progress",
-    `<p>No account needed. Move a snapshot of your learning and review schedule to another device.</p><div class="transfer-options">${button("export", "Export progress", "button primary")}${button("import", "Import progress", "button subtle")}</div><p class="fine">Your current question and draft stay on this device. Imported progress starts with a new question.</p>`,
+    `<p>${sync?.account ? "" : "No account needed. "}Move a snapshot of your learning and review schedule to another device.</p><div class="transfer-options">${button("export", "Export progress", "button primary")}${button("import", "Import progress", "button subtle")}</div><p class="fine">Your current question and draft stay on this device. Imported progress starts with a new question.</p>`,
   );
   on("export", exportView);
   on("import", importView);
@@ -1304,29 +1305,39 @@ function openSignIn(initialCode = "") {
   if (busy || replacing || !sync || sync.account) return;
   const dialog = modal(
     "Sign in",
-    `<label class="answer-label login-label" for="login-code">Login code<input id="login-code" class="login-input" type="text" value="${esc(initialCode)}" placeholder="CALC-XXXX-XXXX-XX" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="go"></label><p class="fine">Signing in saves your progress online so you can continue on any device. Your teacher can see your name and your progress. Keep your code private.</p>${button("confirm-signin", "Sign in", "button primary")}<p class="fine">You can also practice without signing in.</p>`,
+    `<label class="answer-label login-label" for="login-code">Login code<input id="login-code" class="login-input" type="text" value="${esc(initialCode)}" placeholder="CALC-XXXX-XXXX-XX" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="go" aria-describedby="login-error"></label><p id="login-error" class="fine login-error" role="alert"></p><p class="fine">Signing in saves your progress online so you can continue on any device. Your teacher can see your name and your progress. Keep your code private.</p>${button("confirm-signin", "Sign in", "button primary")}<p class="fine">You can also practice without signing in.</p>`,
   );
   dialog.classList.add("signin-sheet");
   const input = document.getElementById("login-code") as HTMLInputElement;
+  const errorLine = document.getElementById("login-error")!;
+  const confirmation = document.getElementById(
+    "confirm-signin",
+  ) as HTMLButtonElement;
+  const showError = (message: string) => {
+    errorLine.textContent = message;
+    input.setAttribute("aria-invalid", "true");
+  };
+  input.addEventListener("input", () => input.removeAttribute("aria-invalid"));
   const submitSignIn = async () => {
-    if (busy || replacing) return;
+    if (busy || replacing || confirmation.disabled) return;
     if (normalizeLoginCode(input.value) === null) {
-      modalError(Error(UNKNOWN_CODE_MESSAGE));
+      showError(UNKNOWN_CODE_MESSAGE);
       input.focus();
       return;
     }
-    const confirmation = document.getElementById(
-      "confirm-signin",
-    ) as HTMLButtonElement;
+    errorLine.textContent = "";
+    input.removeAttribute("aria-invalid");
     confirmation.disabled = true;
+    confirmation.textContent = "Signing in…";
     try {
       const answer = await sync!.signIn(input.value);
       document.getElementById("close-modal")?.click();
       render();
       void sync!.afterSignIn(answer);
     } catch (error) {
-      modalError(Error(signInFailureMessage(error)));
+      showError(signInFailureMessage(error));
       confirmation.disabled = false;
+      confirmation.textContent = "Sign in";
       input.focus();
     }
   };
@@ -1344,10 +1355,10 @@ function openAccountSheet() {
   const lastSaved =
     account.mark && account.mark.revision > 0
       ? when(account.mark.updatedAt)
-      : "Not saved yet";
+      : "Nothing to save yet";
   modal(
     "Your account",
-    `<div class="account-sheet"><dl class="account-facts"><div><dt>Name</dt><dd>${esc(account.name)}</dd></div><div><dt>Class</dt><dd>${esc(account.className)}</dd></div><div><dt>Status</dt><dd><span class="status-dot" id="account-sheet-dot" data-status="${syncStatus}" aria-hidden="true"></span><span id="account-sheet-status">${esc(statusLabel(syncStatus, syncMessage))}</span></dd></div><div><dt>Last online save</dt><dd>${esc(lastSaved)}</dd></div></dl>${button("signout", "Sign out", "button danger")}</div>`,
+    `<div class="account-sheet"><dl class="account-facts"><div><dt>Name</dt><dd>${esc(account.name)}</dd></div><div><dt>Class</dt><dd>${esc(account.className)}</dd></div><div><dt>Status</dt><dd><span class="status-dot" id="account-sheet-dot" data-status="${syncStatus}" aria-hidden="true"></span><span id="account-sheet-status">${esc(statusLabel(syncStatus, syncMessage))}</span></dd></div><div><dt>Last online save</dt><dd>${esc(lastSaved)}</dd></div></dl><p>Signing out saves your progress online, then removes it from this device.</p>${button("signout", "Sign out", "button subtle")}</div>`,
   );
   // Set after a replaced code refused the save: the next press removes the
   // unsaved progress, which the message tells the student to export first.
@@ -1375,6 +1386,7 @@ function openAccountSheet() {
       if ("discard" in result) {
         discard = true;
         signOutButton.textContent = "Remove progress and sign out";
+        signOutButton.className = "button danger";
       }
       signOutButton.disabled = false;
       return;

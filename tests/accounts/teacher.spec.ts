@@ -43,6 +43,14 @@ test("the seed teacher code shows the grid with both seed students", async ({
   ).toBeVisible();
   await expect(page.locator("#teacher-count")).toHaveText("2 students");
   await expect(page.locator("#teacher-error")).toBeHidden();
+
+  const selects = page.locator(".teacher-select");
+  const selectCount = await selects.count();
+  expect(selectCount).toBeGreaterThan(0);
+  for (let index = 0; index < selectCount; index++) {
+    const box = await selects.nth(index).boundingBox();
+    expect(box!.height).toBeGreaterThanOrEqual(44);
+  }
 });
 
 test("the name column stays visible after horizontal scroll at 390 px", async ({
@@ -73,6 +81,24 @@ test("the name column stays visible after horizontal scroll at 390 px", async ({
   expect(cellBox!.x + cellBox!.width).toBeLessThanOrEqual(
     gridBox!.x + gridBox!.width + 1,
   );
+
+  const headingBox = await grid
+    .locator("thead .teacher-name-heading")
+    .boundingBox();
+  const headingIsOnTop = await page.evaluate(
+    ({ x, y }) => {
+      const top = document.elementFromPoint(x, y);
+      const heading = document.querySelector(
+        ".teacher-table thead .teacher-name-heading",
+      );
+      return !!top && !!heading && heading.contains(top);
+    },
+    {
+      x: headingBox!.x + headingBox!.width / 2,
+      y: headingBox!.y + headingBox!.height / 2,
+    },
+  );
+  expect(headingIsOnTop).toBe(true);
 });
 
 test("Close returns to the form and clears sessionStorage", async ({

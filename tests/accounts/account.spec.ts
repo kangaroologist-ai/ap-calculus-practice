@@ -125,7 +125,17 @@ test("signs in and shows the student name", async ({ page }) => {
   await page.goto("/");
   await signIn(page, ADA.code, ADA.name);
   await expect(page.locator("#footer-note")).toHaveText(
-    "Signed in · progress saved online",
+    `Signed in as ${ADA.name}`,
+  );
+  await page
+    .getByRole("button", { name: `Signed in as ${ADA.name}`, exact: true })
+    .click();
+  const dialog = page.locator("#dialog");
+  await expect(dialog).toContainText(
+    "Signing out saves your progress online, then removes it from this device.",
+  );
+  await expect(dialog.locator(".account-facts dd").nth(3)).toHaveText(
+    "Nothing to save yet",
   );
 });
 
@@ -133,11 +143,20 @@ test("shows the message for a code that does not exist", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   const dialog = page.locator("#dialog");
-  await dialog.getByLabel("Login code").fill(WRONG_CODE);
+  const field = dialog.getByLabel("Login code");
+  await field.fill(WRONG_CODE);
+  await expect(field).toHaveAttribute("aria-describedby", "login-error");
   await dialog.getByRole("button", { name: "Sign in", exact: true }).click();
-  await expect(dialog.locator("#modal-error")).toHaveText(
+  const error = dialog.locator("#login-error");
+  await expect(error).toHaveText(
     "This code doesn't match a student. Check the code on your slip.",
   );
+  await expect(field).toHaveAttribute("aria-invalid", "true");
+  const fieldBox = await field.boundingBox();
+  const errorBox = await error.boundingBox();
+  expect(errorBox!.y).toBeGreaterThanOrEqual(fieldBox!.y + fieldBox!.height - 1);
+  await field.fill("CALC");
+  await expect(field).not.toHaveAttribute("aria-invalid", "true");
   await expect(
     page
       .locator(".site-header")
@@ -402,6 +421,48 @@ test("at 390 px the signed-in header is one line without page scroll", async ({
   const statusBox = await status.boundingBox();
   expect(statusBox!.width).toBeGreaterThan(60);
   expect(statusBox!.height).toBeGreaterThan(8);
+});
+
+for (const width of [320, 375]) {
+  test(`at ${width} px the sync status is never cut off`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/");
+    await signIn(page, ADA.code, ADA.name);
+    const status = page.locator("#account-status");
+    await expect(status).toBeVisible();
+    await expect(status).toHaveText("Saved online");
+    expect(
+      await status.evaluate(
+        (element) => element.scrollWidth <= element.clientWidth,
+      ),
+    ).toBe(true);
+
+    await page
+      .getByRole("button", { name: /Start practicing|Continue practicing/ })
+      .click();
+    await page.locator("math-field").first().waitFor({ state: "visible" });
+    await page.context().setOffline(true);
+    await setMathfield(
+      page.locator("math-field").first(),
+      await currentAnswer(page),
+    );
+    await page.getByRole("button", { name: "Check answer" }).click();
+    await expect(page.locator("#feedback")).toContainText("Correct");
+    await expect(status).toHaveText("Offline: saved on this device");
+    expect(
+      await status.evaluate(
+        (element) => element.scrollWidth <= element.clientWidth,
+      ),
+    ).toBe(true);
+  });
+}
+
+test("at 390 px the brand name shows while signed out", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  const brandName = page.locator(".brand-heading .brand > span:last-child");
+  await expect(brandName).toBeVisible();
+  await expect(brandName).toHaveText("AP Calculus Practice");
 });
 
 test("at 390 px the offline sync status stays readable", async ({ page }) => {

@@ -207,24 +207,21 @@ body {
 .header-tools .private-label {
   margin-left: 0;
 }
-.account-status,
-.status-text {
-  white-space: nowrap;
-}
 .account-status {
   min-width: 0;
   max-width: 14rem;
 }
 .account-status .status-text {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
 }
 .account-button {
   min-width: 0;
   max-width: 14rem;
 }
-.account-name {
+.account-label {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -251,6 +248,7 @@ body {
   gap: var(--space-4);
 }
 .brand-mark {
+  flex-shrink: 0;
   width: 37px;
   height: 37px;
   border-radius: 11px; /* logo: radius scales with the mark, not a component token */
@@ -1096,6 +1094,11 @@ div.path-level > .level {
   color: var(--label-2);
   opacity: 1;
 }
+.login-error {
+  min-height: 1.6em;
+  margin: 0;
+  color: var(--danger);
+}
 .signin-sheet .button.primary {
   margin-top: var(--space-2);
 }
@@ -1689,16 +1692,20 @@ body > .ML__keyboard {
 }
 
 @media (max-width: 430px) {
-  .brand-heading .brand > span:last-child {
+  .site-header.signed-in .brand-heading .brand > span:last-child {
     display: none;
   }
   .site-header {
-    padding-left: max(var(--space-3), env(safe-area-inset-left));
-    padding-right: max(var(--space-3), env(safe-area-inset-right));
+    padding-left: max(var(--space-4), env(safe-area-inset-left));
+    padding-right: max(var(--space-4), env(safe-area-inset-right));
   }
   .header-tools {
     gap: var(--space-1);
     flex-shrink: 1;
+  }
+  /* Signed out, the brand name is the part that yields space. */
+  .site-header:not(.signed-in) .header-tools {
+    flex-shrink: 0;
   }
   .header-tools .account-status {
     gap: var(--space-1);
@@ -1746,10 +1753,8 @@ body > .ML__keyboard {
   }
   .site-header {
     gap: var(--space-2);
-    padding: var(--space-2) var(--space-3);
     padding-top: max(var(--space-2), env(safe-area-inset-top));
-    padding-left: max(var(--space-3), env(safe-area-inset-left));
-    padding-right: max(var(--space-3), env(safe-area-inset-right));
+    padding-bottom: var(--space-2);
   }
 }
 

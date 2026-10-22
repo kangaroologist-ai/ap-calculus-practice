@@ -90,8 +90,19 @@
 .teacher-select {
   width: 100%;
   min-width: 150px;
+  padding-right: calc(var(--space-3) + 1.5rem);
   font-size: var(--t-callout);
   font-weight: 400;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--label-2) 50%),
+    linear-gradient(135deg, var(--label-2) 50%, transparent 50%);
+  background-position:
+    calc(100% - 17px) calc(50% + 1px),
+    calc(100% - 12px) calc(50% + 1px);
+  background-repeat: no-repeat;
+  background-size: 5px 5px, 5px 5px;
 }
 .teacher-input:focus-visible,
 .teacher-select:focus-visible {
@@ -223,7 +234,7 @@
   position: sticky;
   left: 0;
 }
-.teacher-name-heading {
+.teacher-table thead .teacher-name-heading {
   z-index: 6;
 }
 .teacher-name-cell {
@@ -344,6 +355,14 @@
   }
 }
 @media (max-width: 430px) {
+  .teacher-col-name {
+    width: 7rem;
+  }
+  .teacher-name-heading,
+  .teacher-name-cell {
+    width: 7rem;
+    min-width: 7rem;
+  }
   .teacher-toolbar-end {
     align-items: flex-start;
     flex-direction: column;
