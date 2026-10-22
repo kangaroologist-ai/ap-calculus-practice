@@ -71,6 +71,14 @@ Default assumptions added after round 2 (for the owner to correct at the Spec ta
 
 Frontier after round 2: empty, except the confirmation of A1–A9 and the privacy wording at the Spec talk-through.
 
+Loop-back rounds during implementation:
+
+| # | Question | Options (recommendation first) | Owner's answer | Date |
+|---|---|---|---|---|
+| L1 | Deploy (T9): create D1, apply the schema, make the teacher code, deploy 1.4.0, live check | **Yes, after the design review has no open P0/P1** / not yet | “同意执行，但注意cloudflare写入读取的次数限制，方法上尽量节省” → yes, plus a new requirement: use as few Cloudflare reads and writes as possible (R5) | 2026-10-22 |
+| L2 | How often to save online (R5) | **When the student leaves the page, and at most once per 5 minutes during practice** / at most once per minute plus on leave / keep 20 s | “能不能每题保存一次？没多少学生” → save once per question (not the recommendation). Claude's method (R5): wait 5 s after the last change of progress, then save once, so the answer and Next of one question make one save; page hide saves at once | 2026-10-22 |
+
+
 Effect of G3 and G4 on the design (Claude, 2026-10-22):
 
 - **[I]** The server stores the name with the code hash. The privacy text must say that the teacher sees the name and the progress.
@@ -152,6 +160,38 @@ Risks:
 - **[I]** Names are now personal data on Cloudflare. Control: the privacy text (S8), no names in logs, `Cache-Control: no-store` on all `/api/` answers, and a script command to delete data.
 - **[I]** A lost slip after a Safari wipe: the teacher gives a new code with `reissue`, and the progress stays.
 
+### R5. Cloudflare reads and writes (L1, 2026-10-22)
+
+Assumption for the estimate: 100 students, 20 minutes of practice per day each, one answer about every 30 s (40 answers).
+
+- **[F]** Each online save is one Function request, one D1 row write (`UPDATE students … WHERE code_hash = ? AND revision = ?`, unique-index lookup), and about two rows read (the guessing-limit check and the update). `functions/api/progress.ts`, `functions/_lib/attempts.ts`.
+- **[F]** Each page open of a signed-in student is one request and about three rows read (`POST /api/session`). Each teacher-page load reads every student row once.
+- **[F]** Failed sign-ins write one `login_failures` row and delete old ones. Correct sign-ins write nothing.
+- **[F]** Today the client saves at most once per 20 s (`SAVE_INTERVAL_MS`, `src/sync.ts`) and at page hide (`visibilitychange` hidden and `pagehide`, `src/main.ts`).
+- **[I]** Estimate per day for 100 students: 20 s gives about 4,100 writes and 4,200 requests; 60 s about 2,100; 5 minutes plus page hide about 500 writes and 600 requests. Free limits: 100,000 writes, 100,000 requests (R2), 5,000,000 rows read. Reads stay below 1%.
+- **[F]** The Functions request limit is per Cloudflare account, shared with any other Worker or Pages Function in it (R2).
+- **[I]** The online copy only has to be current when the student moves to another device or the teacher looks. The page-hide save covers the first case; the timed save is only a safety net and feeds the teacher page.
+- **[I]** Cost of a 5-minute interval: the teacher page can lag up to 5 minutes behind a student who is still practising; a second device that opens while the first is still in use gets progress up to 5 minutes old. Practice itself never waits for the network.
+- **[I]** With a long interval, “Saving…” during the wait would be wrong. The status needs a state for “newest answers are on this device, the online save comes later” (design review finding 1 and Codex T3 round 3 point to the same problem).
+- **[U]** Whether Pages adds a `_routes.json` that limits Functions to `/api/*`. **[I]** An explicit `public/_routes.json` makes sure that static files never run a Function.
+- **[F]** One question changes `progress.updatedAt` twice: `recordOutcome` once per question (`current.recorded`, `src/progress.ts:240`), then `finishQuestion` on Next or Skip (`src/progress.ts:496`). A hint before the answer also records.
+- **[I]** L2 method: a trailing wait of 5 s after the last change, then one save. Answer and Next fall in one window, so one question gives about one save. Estimate: 30 students × 40 questions ≈ 1,200 writes and 1,300 requests per day (about 1.3% of the free limits); 100 students about 4,000.
+- **[I]** The status needs no separate waiting state: “Saving…” lasts at most about 5 s plus the request.
+
+### R6. Full design review (P4, 2026-10-22)
+
+`design-reviewer` (report in this task's `reviews/`): 2 P1, 6 P2, 7 P3, no Spec conflict. Claude checked the key claims in the code: the footer is set only in `render()` (`src/main.ts:415`); the ≤ 430 px rule that hides the brand name is new in T3 and not scoped to signed-in (absent in `87ba656`); `.teacher-table thead th { z-index: 3 }` outranks `.teacher-name-heading { z-index: 6 }`. Claude's grading and decisions:
+
+- P1-1 footer says “progress saved online” while offline: fix. The footer becomes “Signed in as <name>”; only the header shows the save state.
+- P1-2 sign-in error below the button, likely under the iPhone keyboard: fix (error under the field, `aria-describedby`, `aria-invalid`, reserved height). iPhone check in P5.
+- P2-3 status text truncated at ≤ 375 px: fix (wrap to two lines, never truncate; test at 375 and 320).
+- P2-4 teacher Name header under other headers after scroll: fix (selector specificity).
+- P2-5 teacher selects 23 px tall in WebKit: fix (`appearance: none`, chevron, 44 px).
+- P2-6 brand name hidden for signed-out phones: fix (scope to signed-in).
+- P2-7 signed-in copy still says “saved in this browser” / “No account needed”: fix (signed-in variants).
+- P2-8 Sign out as a red danger button with no explanation: fix as proposed (subtle button and the sentence “Signing out saves your progress online, then removes it from this device.”); §5.1 stays.
+- P3 accepted for this release: 9 (narrower Name column on phones: fix, cheap), 10 (“Nothing to save yet”: fix), 11 (“Signing in…”: fix), 12 (gap in “Signed in as”: fix), 13 (header 12 px vs content 16 px: fix with 3). Not changed: 14 (masked teacher code; the teacher chooses where to type it), 15 (no “newer” hint in the conflict dialog; device clocks are not trusted, R3).
+
 ## Spec
 
 Draft for the talk-through, 2026-10-22. Version 1.3.0 → 1.4.0.
@@ -174,6 +214,7 @@ Terms:
   - The server checks: body ≤ 16 KB; the DSP2 code has the form `DSP2.<8 hex digits>.<URL-safe Base64>` (`src/transfer.ts:87`); the base revision is a whole number. The server does not decode the code.
   - All `/api/` answers have `Cache-Control: no-store`. The server logs no names and no codes.
   - The Pages project uses “fail open”, so the site loads when the daily limit is reached.
+  - `public/_routes.json` limits Functions to `/api/*`, so static files never count as Function requests (L1, R5).
   - *Accept:* Function tests (handlers called directly, D1 adapter over `node:sqlite`, R4) for each endpoint, the 409 case, a wrong code, an oversized body, and a bad code text.
 - **S2 Codes.** *From:* G2, G7, R2, R4
   - Login code: class prefix of 2–8 letters, then 10 random characters from the Crockford Base32 alphabet (50 bits), shown as `PREFIX-XXXX-XXXX-XX`.
@@ -194,6 +235,7 @@ Terms:
   - Sign out (A7): the site saves online first, then removes the code and the progress from this device. With no network, sign out stops and the site says why.
   - The device keeps the login code, name, class, and last synced revision in IndexedDB key `account`.
   - Wrong code: “This code doesn't match a student. Check the code on your slip.”
+  - Design review fixes (R6, 2026-10-22): the footer shows “Signed in as <name>” and no save claim; the sign-in error appears directly under the code field (`aria-describedby`, `aria-invalid`, reserved height) and the button says “Signing in…” during the request; the status text wraps to two lines on narrow phones and is never cut off; the brand name hides only for signed-in phones; signed-in copy: “Your work is saved on this device and online.” on the welcome card and no “No account needed.” in Move progress; the account sheet has a subtle **Sign out** button under the sentence “Signing out saves your progress online, then removes it from this device.”, and shows “Nothing to save yet” before the first online save.
   - *Accept:* end-to-end tests for sign-in, a wrong code, the QR link, and sign out; full design review; iPhone check by the owner (keyboard on the code field).
 - **S5 Sync rule.** *From:* G8 (practice-quality), R3, A1, A2, A4
   - The `account` key keeps the revision and the `progress.updatedAt` of the last sync.
@@ -217,12 +259,12 @@ Terms:
     | has progress | no progress | use the online copy |
     | has progress | has progress | prompt, unless the copies are equal |
 
-  - After an answer, the site saves online at most once per 20 s, and at page hide (`keepalive`). A 409 answer goes to the first table as “newer”.
+  - Save timing (changed by L2, 2026-10-22): after a change of progress the site waits 5 s for more changes, then saves online once; one question (answer and Next) gives about one save. At page hide it saves at once (`keepalive`). Only one server call runs at a time. A 409 answer goes to the first table as “newer”.
   - Reset progress and Import progress while signed in: the confirmation says that the online copy changes too. The next sync saves the result online.
   - Prompt “Two copies of your progress”: for each copy, the time of the last practice, the unlocked level, and the number of skills started. Buttons: **Use the online copy** and **Keep this device's copy**. The copy that loses goes to the local backup, and Restore backup brings it back.
   - With no network, practice continues. The site saves online when the network comes back.
   - The site never merges two histories (README rule).
-  - *Accept:* unit tests for every row of both tables, the 409 path, and a draft save that does not count as changed; an end-to-end test with two browser contexts and one login code (practice on A, open B, B shows A's progress; offline change on both, prompt, backup kept).
+  - *Accept:* unit tests for every row of both tables, the 409 path, a draft save that does not count as changed, and the 5 s wait (answer plus Next within 5 s gives one save); an end-to-end test with two browser contexts and one login code (practice on A, open B, B shows A's progress; offline change on both, prompt, backup kept).
 - **S6 Teacher page.** *From:* G4, G5, G6, G7, A8
   - `/teacher` (new page `teacher.html`) asks for the teacher code. The page keeps the code only in `sessionStorage`. It has `noindex`.
   - Full grid (G6): one row per student, grouped by class; one column per skill in path order. Skills of families that `practice-config.json` turns off do not show.
@@ -230,6 +272,7 @@ Terms:
   - Fixed columns before the skills: name, last practice, unlocked level. The name column stays in view during horizontal scroll. On a phone, the grid scrolls horizontally.
   - A class filter and a sort by name or by last practice.
   - The page only shows data (A8).
+  - Design review fixes (R6): the Name header stays above the other headers during horizontal scroll; the class and sort selects are 44 px tall in WebKit too; on phones the Name column is about 7rem wide and long names wrap.
   - An online copy from a newer site version (`NewerProgressError`) shows “Reload the page to update”, as import does. A damaged copy shows “Can't read” in that row only.
   - *Accept:* unit test for the row data from a fixture DSP2 code; end-to-end test with a local D1; full design review at 390 px and 1280 px.
 - **S7 Teacher script.** *From:* G1, G3, G5, A5, A8, A9
@@ -275,14 +318,17 @@ Owners follow the owner rule of 2026-10-22: DeepSeek-Flash writes code steps thr
 - [x] **T6** (S1–S7) Claude review of each delegated step: read the diff, run `npm test`, `npm run build`, `npm run test:e2e`. *Verify:* all pass. *Owner:* Claude - final review. Done 2026-10-22: each step's diff read; on `main` after all merges: `tsc` clean, 604 unit tests, build; account e2e and existing e2e results as in T3. Steps that needed Claude fixes are named in T1b, T4, T5, T3, T3r.
 - [x] **T7** (S8, S9) `README.md`, `help.html`, `docs/design/DESIGN.md`: privacy text, sign-in and sync help, teacher page, new components; remove “no accounts” and “no student database”. *Verify:* compare each statement with the code. *Owner:* Claude - docs are not delegated. Done 2026-10-22: README (new section “学生账号与在线保存”: login code, sign-in, sync table, sign-out, privacy, server, teacher page, teacher script; local dev; tests; first-time D1 steps; removed “无账号”, “无需学生数据库”, “纯静态部署”), `help.html` (new section “Save your progress online” with the approved privacy text; #move and iPhone text updated), DESIGN.md (§1 constraint and second user; new §5.7 account UI, §5.8 teacher page). Each label and message checked against `src/main.ts`, `src/account.ts`, `src/teacher.ts`, `scripts/accounts.ts`.
 - [x] **T8** (S9) `package.json`, `package-lock.json`, `src/whats-new.ts`: `npm version 1.4.0 --no-git-tag-version`; What's new entry. *Verify:* the What's new unit test passes. *Owner:* Claude. Done 2026-10-22: `npm version 1.4.0 --no-git-tag-version` (package.json and lock), What's new 1.4.0 “Save your progress online” with 4 items; the What's new unit test passes (604 unit tests).
-- [ ] **T9** (S1, S7) Cloudflare: `wrangler d1 create`, put the id in `wrangler.toml`, `wrangler d1 migrations apply --remote`, “fail open” in the dashboard, make the teacher code. *Verify:* `wrangler d1 execute --remote` lists the tables. *Owner:* Claude - with the owner's go-ahead at that step (account change).
+- [ ] **T10a** (S5) `src/sync.ts`, `src/account.ts`, `tests/sync.test.ts`, `tests/account-client.test.ts`: save timing of L2: the scheduler waits 5 s after the last change, then saves once; `flush` saves at once; one save at a time; remove the 20 s interval and `noteSave`. *Verify:* unit tests for the wait, answer plus Next as one save, flush, failures. *Owner:* Claude - subtle timing in Claude's T2 code.
+- [ ] **T10b** (S1, S4, S6) `src/main.ts`, `src/style.css`, `src/teacher.css`, `public/_routes.json`, `tests/accounts/account.spec.ts`, `tests/accounts/teacher.spec.ts`: `_routes.json` and the R6 design fixes. *Verify:* account e2e and existing e2e. *Owner:* DeepSeek (code-loop) - mechanical fixes with exact targets.
+- [ ] **T10c** (S4, S6, P4) Re-capture the account states and the teacher grid after T10 and check the R6 fixes (routine check of the affected states). *Verify:* each R6 item fixed or accepted with a reason. *Owner:* Claude.
+- [ ] **T9** (S1, S7) Cloudflare: `wrangler d1 create`, put the id in `wrangler.toml`, `wrangler d1 migrations apply --remote`, “fail open” in the dashboard, make the teacher code. *Verify:* `wrangler d1 execute --remote` lists the tables. *Owner:* Claude - with the owner's go-ahead at that step (account change). Owner go-ahead: L1 (2026-10-22), after T10c. The owner sets “fail open” in the dashboard (no tool here can change it).
 
 Project obligations:
 
 - [x] **P1** README and `help.html` sync: applies (T7). Done: T7.
 - [x] **P2** Version 1.4.0 and What's new: applies (T8). Done: T8.
 - [x] **P3** DESIGN.md update: applies - §1 constraint, sign-in sheet, sync status, conflict prompt, teacher grid (T7). Done: T7 (§1, §5.7, §5.8).
-- [ ] **P4** Full design review: applies - new page and new components. `design-reviewer` with `reviews/context.md` first.
+- [ ] **P4** Full design review: applies - new page and new components. `design-reviewer` with `reviews/context.md` first. Review done 2026-10-22 (R6): 2 P1 and 6 P2 go to T10; check in T10c.
 - [ ] **P5** iPhone check by the owner: applies - code field and keyboard on the sign-in sheet; the teacher grid on a phone.
 - [ ] **P6** Deploy and live check: applies - `/help`, `/teacher`, one live sign-in and sync on two devices.
 - [ ] **P7** First class set-up by the owner with `add-students`, and the slips printed: applies after P6.
