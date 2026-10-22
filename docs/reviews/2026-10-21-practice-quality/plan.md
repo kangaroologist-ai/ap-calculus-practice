@@ -288,6 +288,15 @@ Report: `design-reviewer` (Sonnet), scope `reviews/context.md`, screenshots `rev
 - **F6 P3 (opinion)**: the percentage has no in-app caption. Not changed: it adds copy outside S4/S8; offer to the owner.
 - Device-only items stay for the owner's iPhone check (P6), including “Math keyboard opens on the first tap on an abstract question”.
 
+### R11. “Check your input” on the first answer (owner's iPhone, 2026-10-22)
+
+- **[F]** Owner's iPhone screenshot (`evidence/owner-iphone-check-your-input.webp`): first question of the preview jump link, `h(x)=f(cos(x))`, answer `f′(cos x)·(−sin x)` (correct), result “Check your input”.
+- **[F]** The same LaTeX (`f^{\prime}\left(\cos x\right)\cdot\left(-\sin x\right)`, read from the real keys in WebKit) grades `correct` in Node (75–104 ms) and in the browser.
+- **[F]** Cause: `src/grader-client.ts` creates the grading worker on the first check and starts the 3-second timer at the same moment, so the timer also covers the download and start of the worker (3.2 MB raw, 876 KB brotli) and the compute-engine start. On timeout it shows “This calculation took too long. Try a shorter equivalent answer.” under “Check your input”, and it terminates the worker, so the next check starts cold again.
+- **[F]** Reproduced: with the worker download delayed by 4 s in WebKit 390 px, the first check of a correct answer gives exactly that message (`evidence/slow-first-check-repro.png`).
+- **[P]** This existed before 1.3.0 (any first answer on a slow phone connection); the jump link made it visible because the first question was checked at once.
+- **[I]** Fix: start the worker when a question appears and wait for its `ready` message; the 3-second limit counts only the calculation after `ready`; a separate, longer start limit with its own message.
+
 ## Spec
 
 Final draft after round 2, for the talk-through. One release (G1); version 1.2.1 → 1.3.0. Accounts are a separate task after this release (L1).
@@ -377,6 +386,8 @@ The owner tags below follow this rule: “dsf → Codex → Claude”.
 - [x] **T12** (P7) `scripts/skill-examples.ts`: notes for `combine`, `abstract`, re-scoped `mixed`/`nested`; skill count from the catalog. Regenerated: 28 skills, 112/112 verified. *Owner:* Claude (content notes). Done 2026-10-21, commit 8f8aa7c.
 
 - [x] **T13** (S6, S8; R10 F1, F3, F4, F5) `src/math-keyboard.ts`, `src/style.css`, `src/math.ts` (`latex` of Fn), `src/main.ts` (path level row, “skill”/“skills”), `tests/math-keyboard.spec.ts`, `tests/math-keyboard-layout.test.ts`, `tests/latex-display.test.ts`, `tests/app.spec.ts`; after dsf's questions also `tests/abstract-grading.test.ts` (display strings) and one path rule in `src/style.css` (cursor): fix the design-review findings. *Verify:* face-fit measurement at 390 and 320 px; unit and e2e suites. *Owner:* dsf (resumed T6 Qoder session) → Codex → Claude (L7). Done 2026-10-22: Codex approved round 1. Claude check: unit 449/449; faces fit at 390 and 320 px (`reviews/shots/webkit-abstract-keys-390.png`, `-320.png`); prompt shows `f(5x)`. Sessions: dsf=d6123eba-53b3-4ce8-86cd-31bdf0c7cea7 codex=01a16104-cbc4-7372-af8b-b71975234b37 .
+
+- [ ] **T14** (S9; R11) `src/grader-client.ts`, `src/main.ts` (start the worker when a question appears), new `tests/grader-client.test.ts`, `tests/app.spec.ts` (slow-download test): checker start outside the 3-second limit. *Verify:* unit and browser tests; redeploy the preview. *Owner:* dsf (resumed T4 Qoder session) → Codex → Claude (L7).
 
 Project obligations:
 - [x] **P1** README and `help.html`: numbers, mastery rules, new skill, keyboard keys, storage tip. *Owner:* Claude (docs are not delegated).
