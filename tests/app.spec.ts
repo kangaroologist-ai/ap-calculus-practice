@@ -1361,6 +1361,33 @@ test('abstract questions replace tan, sec, csc, cot with f and g keys', async ({
   await screenshot(page, 'mobile-abstract-function-keyboard');
 });
 
+test('a slow checker download does not use up the calculation time', async ({ page, browserName }) => {
+  test.skip(browserName === 'firefox', 'The slow checker start is checked in Chromium and WebKit (T14).');
+  await page.clock.setFixedTime(ABSTRACT_KEYBOARD_NOW);
+  let workerRequests = 0;
+  await page.route(/grading\.worker/, async (route) => {
+    workerRequests += 1;
+    await new Promise((resolve) => setTimeout(resolve, 4_000));
+    await route.continue();
+  });
+  const config = onlySkill('abstract', 5);
+  await openApp(page, config, { width: 390, height: 844 }, freshProgress(config, ABSTRACT_KEYBOARD_NOW));
+  await page.getByRole('button', { name: /Start practicing|Continue practicing/ }).click();
+  await expect.poll(async () => (await readStoredState(page)).session?.current?.question.primarySkill).toBe('abstract');
+
+  const field = page.locator('math-field').first();
+  await field.focus();
+  await page.getByRole('button', { name: 'Math keyboard' }).click();
+  await expect(page.locator('.ML__keyboard .MLK__layer.is-visible')).toBeVisible();
+  // h(x)=f(5x) has derivative 5f'(5x), as in the keyboard test above.
+  for (const id of ['5', 'multiply', 'fprime', '5', 'x']) await pressMathKey(page, id);
+  await pressMathKey(page, 'check');
+  // The checker needs about 4 s to arrive; that time must not count as calculation.
+  await expect(page.locator('.answer-box[data-verdict="correct"] .answer-verdict'))
+    .toHaveText('✓ Correct', { timeout: 15_000 });
+  expect(workerRequests).toBeGreaterThan(0);
+});
+
 for (const width of [390, 320]) {
   test(`abstract function key faces fit inside their key at ${width}px`, async ({ page, browserName }) => {
     test.skip(browserName === 'firefox', 'The abstract-function keyboard is checked in Chromium and WebKit (S6).');

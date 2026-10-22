@@ -15,6 +15,9 @@ class TestWorker extends EventTarget {
   terminate() {
     this.terminated = true;
   }
+  ready() {
+    this.dispatchEvent(new MessageEvent("message", { data: { ready: true } }));
+  }
   respond(verdict: unknown) {
     this.dispatchEvent(
       new MessageEvent("message", { data: { id: this.message.id, verdict } }),
@@ -33,11 +36,14 @@ describe("worker boundary", () => {
     const grader = new Grader(),
       q = generateQuestion("power", "worker");
     const result = grader.check(q, ["x"]);
+    TestWorker.instances[0].ready();
     await vi.advanceTimersByTimeAsync(3000);
     expect((await result).status).toBe("inconclusive");
     expect(TestWorker.instances[0].terminated).toBe(true);
     const next = grader.check(q, ["x"]);
     expect(TestWorker.instances).toHaveLength(2);
+    TestWorker.instances[1].ready();
+    await vi.advanceTimersByTimeAsync(0);
     TestWorker.instances[0].respond({
       status: "incorrect",
       feedbackCode: "stale",

@@ -16,6 +16,7 @@ export const WHATS_NEW: WhatsNewEntry[] = [
       "A new learning path: the product rule comes earlier, and three combination skills build up from two rules to harder mixes.",
       "New skill: <strong>abstract functions</strong>. Differentiate expressions with <em>f</em> and <em>g</em>, like f(x³) or f(x)·g(x); the keyboard shows f(▫), f′(▫), g(▫) and g′(▫) for these questions.",
       "On iPhone, add practice to your Home Screen so Safari keeps your progress.",
+      "Your first answer no longer shows <strong>Check your input</strong> on a slow connection: the checker now loads while you read the question.",
     ],
   },
   {

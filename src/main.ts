@@ -319,7 +319,10 @@ function render() {
   on("whats-new", () => whatsNew(WHATS_NEW));
   on("restore", confirmRestore);
   on("reset", confirmReset);
-  if (cur && !ses?.finished) mountInputs();
+  if (cur && !ses?.finished) {
+    grader.warm();
+    mountInputs();
+  }
   observeFormulas();
 }
 function levelView(level: number, expanded = false) {

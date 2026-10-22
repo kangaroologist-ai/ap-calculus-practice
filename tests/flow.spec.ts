@@ -330,6 +330,9 @@ test.describe('session transition flows', () => {
       const field = page.locator('math-field').first();
       await setMathfield(field, await currentAnswer(page));
       await page.getByRole('button', {name:'Check answer'}).click();
+      // The panel is deliberately 1x1 px, so visibility only changes when the
+      // countdown is armed; wait for that before interrupting, as the title says.
+      await expect(page.locator('#auto-next')).toBeVisible();
       await expectVisuallyHidden(page, '#auto-next');
       if (interruption === 'editing') await field.focus();
       else {
