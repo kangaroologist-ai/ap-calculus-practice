@@ -393,6 +393,46 @@ test('boots with a frozen v1 state, migrates it, and retains the original before
   expect(records.preMigration).toEqual(saved);
 });
 
+test('path uses singular skill counts and shows a level with no enabled skill as a plain row', async ({ page }) => {
+  const config = configFor({ disabledFamilies: ['parametric', 'vector', 'polar'] });
+  const now = Date.now();
+  const progress = freshProgress(config, now);
+  progress.skills.constant = {
+    ...seededSkill('constant', now, true),
+    mix: { streak: 2, passed: true, repair: false },
+  };
+  await openApp(page, config, undefined, progress);
+  await page.locator('.progress-summary').click();
+
+  await expect(page.locator('.progress-summary span')).toHaveText('Level 1 · 1 skill ready');
+  const levelOne = page.locator('.path-level[data-level="1"]');
+  await expect(levelOne).toHaveJSProperty('tagName', 'DETAILS');
+  await expect(levelOne.locator('summary small')).toHaveText('1 of 4 skills ready');
+
+  const notIncluded = page.locator('.path-level[data-level="6"]');
+  await expect(notIncluded).toHaveJSProperty('tagName', 'DIV');
+  await expect(notIncluded.locator('summary')).toHaveCount(0);
+  await expect(notIncluded.locator('.path-chevron')).toHaveCount(0);
+  await expect(notIncluded.locator('.path-skills')).toHaveCount(0);
+  await expect(notIncluded).toContainText('Not included');
+  await expect(page.getByText('No enabled skills in this level.')).toHaveCount(0);
+});
+
+test('path says one skill ready when a level has a single enabled skill', async ({ page }) => {
+  const config = onlySkill('constant', 1);
+  const now = Date.now();
+  const progress = freshProgress(config, now);
+  progress.skills.constant = {
+    ...seededSkill('constant', now, true),
+    mix: { streak: 2, passed: true, repair: false },
+  };
+  await openApp(page, config, undefined, progress);
+  await page.locator('.progress-summary').click();
+
+  await expect(page.locator('.progress-summary span')).toHaveText('Level 1 · 1 skill ready');
+  await expect(page.locator('.path-level[data-level="1"] summary small')).toHaveText('1 of 1 skill ready');
+});
+
 test.describe('Derivative Studio browser flows', () => {
   test('constant first question: zero, blur, export/import, restore, and damaged code', async ({ page }) => {
     const config = onlySkill('constant', 1);
@@ -1287,11 +1327,13 @@ test('one-page math keyboard exposes y and inverse-trig through shift and long p
 // abstract.basic.inner h(x)=f(5x), so the keyboard layout is deterministic.
 const ABSTRACT_KEYBOARD_NOW = Date.UTC(2026, 9, 21, 0, 12, 0);
 const KEY_PLACEHOLDER = '\u25A2';
+const ABSTRACT_KEY_IDS = ['f', 'fprime', 'g', 'gprime'];
 
 test('abstract questions replace tan, sec, csc, cot with f and g keys', async ({ page, browserName }) => {
   test.skip(browserName === 'firefox', 'The abstract-function keyboard is checked in Chromium and WebKit (S6).');
   await page.clock.setFixedTime(ABSTRACT_KEYBOARD_NOW);
-  await openApp(page, onlySkill('abstract', 5), { width: 390, height: 844 });
+  const config = onlySkill('abstract', 5);
+  await openApp(page, config, { width: 390, height: 844 }, freshProgress(config, ABSTRACT_KEYBOARD_NOW));
   await page.getByRole('button', { name: /Start practicing|Continue practicing/ }).click();
   await expect.poll(async () => (await readStoredState(page)).session?.current?.question.primarySkill).toBe('abstract');
   const question = (await readStoredState(page)).session!.current!.question;
@@ -1318,6 +1360,42 @@ test('abstract questions replace tan, sec, csc, cot with f and g keys', async ({
   await expect(page.locator('#feedback')).toContainText('Correct');
   await screenshot(page, 'mobile-abstract-function-keyboard');
 });
+
+for (const width of [390, 320]) {
+  test(`abstract function key faces fit inside their key at ${width}px`, async ({ page, browserName }) => {
+    test.skip(browserName === 'firefox', 'The abstract-function keyboard is checked in Chromium and WebKit (S6).');
+    await page.clock.setFixedTime(ABSTRACT_KEYBOARD_NOW);
+    const config = onlySkill('abstract', 5);
+    await openApp(page, config, { width, height: 844 }, freshProgress(config, ABSTRACT_KEYBOARD_NOW));
+    await page.getByRole('button', { name: /Start practicing|Continue practicing/ }).click();
+    await expect.poll(async () => (await readStoredState(page)).session?.current?.question.primarySkill).toBe('abstract');
+    const field = page.locator('math-field').first();
+    await field.focus();
+    await page.getByRole('button', { name: 'Math keyboard' }).click();
+    await expect(page.locator('.ML__keyboard .MLK__layer.is-visible')).toBeVisible();
+
+    for (const scheme of ['light', 'dark'] as const) {
+      await page.emulateMedia({ colorScheme: scheme });
+      const fits = await page.evaluate((ids) => {
+        const layer = document.querySelector('.ML__keyboard .MLK__layer.is-visible');
+        if (!layer) throw new Error('The math keyboard is not visible.');
+        return ids.map((id) => {
+          const keycap = layer.querySelector(`.practice-key-${id}`);
+          const face = keycap?.querySelector('.ML__latex');
+          if (!keycap || !face) throw new Error(`The ${id} key face is missing.`);
+          return {
+            id,
+            keyWidth: keycap.getBoundingClientRect().width,
+            faceWidth: face.getBoundingClientRect().width,
+          };
+        });
+      }, ABSTRACT_KEY_IDS);
+      for (const { id, keyWidth, faceWidth } of fits)
+        expect(faceWidth, `${id} face at ${width}px (${scheme})`).toBeLessThanOrEqual(keyWidth - 4);
+      if (scheme === 'light') await screenshot(page, `abstract-keys-${width}`);
+    }
+  });
+}
 
 test('non-abstract questions keep tan, sec, csc and cot in the same positions', async ({ page, browserName }) => {
   test.skip(browserName === 'firefox', 'The plain keyboard layout is checked in Chromium and WebKit (S6).');

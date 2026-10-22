@@ -194,11 +194,11 @@ describe('abstract-function helpers', () => {
   });
 
   it('writes primes without a dot after a number', () => {
-    expect(latex(fn('f', 0, 'x'))).toBe('f\\left(x\\right)');
+    expect(latex(fn('f', 0, 'x'))).toBe('f(x)');
     expect(latex(fn('g', 2, ['Power', 'x', 3]))).toBe(
-      "g''\\left(x^{3}\\right)",
+      "g''(x^{3})",
     );
-    expect(latex(['Multiply', 3, fn('f', 0, 'x')])).toBe('3f\\left(x\\right)');
+    expect(latex(['Multiply', 3, fn('f', 0, 'x')])).toBe('3f(x)');
   });
 
   it('counts an abstract function as one argument', () => {

@@ -307,7 +307,7 @@ function render() {
   app.innerHTML = `<header class="site-header"><h1 class="brand-heading"><a class="brand" href="/">${icon}<span>AP Calculus<span class="brand-light"> Practice</span></span></a></h1><span class="private-label"><span class="status-dot"></span> On your device</span>${button("transfer", "Move progress", "button subtle")}</header>
  <main>${location.hostname === "ap-derivative-practice.pages.dev" ? '<p class="notice">We’ve moved to <a href="https://ap-calculus-practice.pages.dev/">AP Calculus Practice</a>. Use Move progress to export here, then import at the new address.</p>' : ""}<div id="notice" class="notice" role="status" ${temporary ? "" : "hidden"}>${temporary ? "Temporary session: export progress before leaving." : ""}</div>
  <div class="workspace"><section class="practice-card" aria-label="Practice">${!ses ? welcome() : ses.finished ? summary() : questionView()}</section>
- <details class="journey" ${journeyOpen ? "open" : ""}><summary class="progress-summary">Progress <span>Level ${p.unlockedLevel} · ${readyCount()} skills ready</span></summary><div class="aside-heading"><span class="eyebrow">YOUR LEARNING PATH</span><span class="count">${readyCount()} / ${SKILLS.filter((s) => !config.disabledFamilies.includes(s.id)).length}</span></div><div class="level-list">${Array.from({ length: 6 }, (_, i) => levelView(i + 1, expandedLevels.has(i + 1))).join("")}</div></details></div>
+ <details class="journey" ${journeyOpen ? "open" : ""}><summary class="progress-summary">Progress <span>Level ${p.unlockedLevel} · ${readyCount()} ${readyCount() === 1 ? "skill" : "skills"} ready</span></summary><div class="aside-heading"><span class="eyebrow">YOUR LEARNING PATH</span><span class="count">${readyCount()} / ${SKILLS.filter((s) => !config.disabledFamilies.includes(s.id)).length}</span></div><div class="level-list">${Array.from({ length: 6 }, (_, i) => levelView(i + 1, expandedLevels.has(i + 1))).join("")}</div></details></div>
  <footer><span>No account. No uploaded answers.</span><div><a class="text-button" href="/help.html">How to use</a>${button("input-help", "Input guide", "text-button")}${button("whats-new", `What’s new · v${__APP_VERSION__}`, "text-button")}${button("restore", "Restore backup", "text-button")}${button("reset", "Reset progress", "text-button")}</div></footer></main><div id="modal-root"></div>`;
   on("transfer", openTransfer);
   on("start", startSession);
@@ -327,14 +327,17 @@ function levelView(level: number, expanded = false) {
   const ready = skills.filter(s => isReady(state.progress.skills[s.id])).length;
   const unlocked = state.progress.unlockedLevel >= level;
   const currentId = state.session?.current?.question.primarySkill;
+  const copy = `<span class="level-number">${String(level).padStart(2, "0")}</span><span class="level-copy"><strong>${["", "The foundations", "Essential functions", "Products & quotients", "The chain rule", "Beyond the basics", "Curves & coordinates"][level]}</strong><small>${!skills.length ? "Not included" : unlocked ? `${ready} of ${skills.length} ${skills.length === 1 ? "skill" : "skills"} ready` : "Locked · preview skills"}</small></span>`;
+  if (!skills.length)
+    return `<div class="path-level" data-level="${level}"><div class="level">${copy}</div></div>`;
   return `<details class="path-level ${unlocked ? "unlocked" : ""}" data-level="${level}" ${expanded ? "open" : ""}>
-    <summary class="level ${unlocked ? "unlocked" : ""} ${skills.some(s => s.id === currentId) ? "active" : ""}"><span class="level-number">${String(level).padStart(2, "0")}</span><span class="level-copy"><strong>${["", "The foundations", "Essential functions", "Products & quotients", "The chain rule", "Beyond the basics", "Curves & coordinates"][level]}</strong><small>${!skills.length ? "Not included" : unlocked ? `${ready} of ${skills.length} skills ready` : "Locked · preview skills"}</small></span><span class="path-chevron" aria-hidden="true"></span></summary>
+    <summary class="level ${unlocked ? "unlocked" : ""} ${skills.some(s => s.id === currentId) ? "active" : ""}">${copy}<span class="path-chevron" aria-hidden="true"></span></summary>
     <div class="path-skills">${skills.map(s => {
       const t = state.progress.skills[s.id];
       const mastery = Math.round(100 * masteryOf(state.progress, s.id));
       const status = !unlocked ? "Locked" : isReady(t) ? "Ready" : needsRemediation(t) ? "Rebuilding" : t?.basic.passed ? `Basic ✓ · ${mastery}%` : t?.lastSeen ? `Learning · ${mastery}%` : "Not started";
       return `<div class="path-skill ${currentId === s.id ? "current" : ""}" ${currentId === s.id ? 'aria-current="step"' : ""}><div><strong>${esc(s.label)}</strong><span class="skill-status">${status}</span></div>${t?.card.reps ? `<small>Review ${esc(new Date(t.card.due).toLocaleString("en-US", {month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}))}</small>` : ""}</div>`;
-    }).join("") || '<p class="fine">No enabled skills in this level.</p>'}</div></details>`;
+    }).join("")}</div></details>`;
 }
 function welcome() {
   const hasProgress = Object.keys(state.progress.skills).length > 0;

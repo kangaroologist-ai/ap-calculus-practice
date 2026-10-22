@@ -137,10 +137,13 @@ function alternateCommand(id: string, vars: string[]): Command {
   return insert(alternate.latex, 'after');
 }
 
+const templateKeyIds = new Set(['f', 'fprime', 'g', 'gprime']);
+
 function key(id: string, vars: string[], width = 1): KeyboardKeycap {
   const item = MATH_KEYS.find(item => item.id === id)!;
   const alternate = altFor(id, vars);
   const classNames = [`practice-key-${id}`];
+  if (templateKeyIds.has(id)) classNames.push('practice-key-template');
   if (alternate) classNames.push('practice-has-alt');
   if (item.physical.length > 2) classNames.push('small');
 

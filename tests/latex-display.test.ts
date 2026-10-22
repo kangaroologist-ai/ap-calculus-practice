@@ -76,6 +76,12 @@ describe('natural display of products and negative terms', () => {
     expect(latex(neg(neg('x')))).toBe('-\\left(-x\\right)');
     expect(latex(['Negate', -3] as Expr)).toBe('-\\left(-3\\right)');
   });
+
+  it('writes abstract function applications without a gap', () => {
+    expect(latex(['Fn', 'f', 0, ['Multiply', 5, 'x']] as Expr)).toBe('f(5x)');
+    expect(latex(['Fn', 'f', 1, ['Power', 'x', 2]] as Expr)).toBe("f'(x^{2})");
+    expect(latex(['Fn', 'g', 0, ['Fn', 'f', 0, 'x']] as Expr)).toBe('g(f(x))');
+  });
 });
 
 describe('generated LaTeX round-trips through the grader parser', () => {

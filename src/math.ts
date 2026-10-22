@@ -153,7 +153,7 @@ export function latex(e: Expr): string {
       const name = a[0] as string;
       const order = a[1] as number;
       const arg = a[2];
-      return `${name}${"'".repeat(order)}\\left(${latex(arg)}\\right)`;
+      return `${name}${"'".repeat(order)}(${latex(arg)})`;
     }
     default:
       return `\\${op.toLowerCase()}${wrap(u)}`;

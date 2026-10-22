@@ -199,6 +199,7 @@ describe.each(LAYOUT_CASES)('math keyboard for $vars', ({ vars, variable, latex:
       expect(keycap.label, `${id} should render through LaTeX`).toBeUndefined();
       expect(keycap.command, `${id} primary command`).toEqual(MATH_KEYS.find(key => key.id === id)?.command);
       expect(keycap.tooltip, `${id} spoken name`).toBe(EXPECTED_PRIMARY_TOOLTIPS[id]);
+      expect(keycap.class?.split(/\s+/), `${id} template class`).not.toContain('practice-key-template');
     });
     expect(keyAt(layout, 2, 7).latex).toBe('\\cdot');
     expect(keyAt(layout, 3, 7).latex).toBe('-');
@@ -340,6 +341,7 @@ describe('math keyboard for abstract-function questions', () => {
       expect(keycap.command, `${id} command`).toEqual(expectedInsert(command));
       expect(keycap.tooltip, `${id} spoken name`).toBe(spoken);
       expect(shiftObject(keycap), `${id} should not have an alternate`).toBeUndefined();
+      expect(keycap.class?.split(/\s+/)).toContain('practice-key-template');
       expect(keycap.class?.split(/\s+/)).not.toContain('practice-has-alt');
     });
   });
