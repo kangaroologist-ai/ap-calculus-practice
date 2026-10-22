@@ -1,6 +1,6 @@
 ---
 task: coefficients
-phase: grill          # grill | research | spec | todo | implement | acceptance | done
+phase: done           # grill | research | spec | todo | implement | acceptance | done
 scope: ap-calculus-practice / 出题器参数范围
 branch: (未开始；1.2.0 发布后另开分支)
 version: 1.2.0 → 待定

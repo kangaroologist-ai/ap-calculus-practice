@@ -382,11 +382,11 @@ Project obligations:
 - [x] **P1** README and `help.html`: numbers, mastery rules, new skill, keyboard keys, storage tip. *Owner:* Claude (docs are not delegated).
 - [x] **P2** `npm version 1.3.0 --no-git-tag-version`; What's new entry in `src/whats-new.ts`. *Owner:* Claude.
 - [x] **P3** `docs/design/DESIGN.md` §6: the abstract-question keys. *Owner:* Claude.
-- [ ] **P4** Full design review: `npm run design:capture`, then the `design-reviewer` subagent with `reviews/context.md`; P0 and P1 cleared before release. *Owner:* Sonnet (design-reviewer), graded by Claude.
+- [x] **P4** Full design review: `npm run design:capture`, then the `design-reviewer` subagent with `reviews/context.md`; P0 and P1 cleared before release. *Owner:* Sonnet (design-reviewer), graded by Claude.
 - [ ] **P5** Build, test, e2e, push, deploy to Cloudflare Pages, check live `/` and `/help` (deploy after the owner's approval). *Owner:* Claude.
 - [ ] **P6** iPhone check by the owner: keyboard keys on an abstract question. *Owner:* owner.
 - [x] **P7** Regenerate `skill-examples` (docs and public page); `npm run test:math`. *Owner:* Claude.
-- [ ] **P8** Mark `docs/reviews/2026-09-27-coefficients/plan.md` as replaced by this task. *Owner:* Claude.
+- [x] **P8** Mark `docs/reviews/2026-09-27-coefficients/plan.md` as replaced by this task. *Owner:* Claude.
 
 ## Acceptance
 
