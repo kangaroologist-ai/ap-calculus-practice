@@ -198,9 +198,11 @@ npm run design:capture
 ```sh
 npx wrangler d1 create ap-calculus-practice
 # 把输出的 database_id 写进 wrangler.toml
-npx wrangler d1 migrations apply ap-calculus-practice --remote
+npx wrangler d1 execute ap-calculus-practice --remote --file migrations/0001_accounts.sql
 npm run accounts -- teacher-code
 ```
+
+2026-10-22 已做完：数据库在 APAC 区域，id 已写进 `wrangler.toml`。`d1 migrations apply` 会停下来等确认，所以直接执行建表 SQL（全部是 `CREATE … IF NOT EXISTS`，重复执行无害）。教师码写在 `accounts-private/teacher-code.txt`（权限 600），没有出现在任何日志里。注意：同一个 Cloudflare 账号里还有其他 D1 数据库和 Worker，免费额度是整个账号共用的。
 
 再在 Cloudflare 控制台 Pages 项目的 Settings → Runtime 选择 fail open：每日额度用完时静态页面照常打开，只有在线保存暂停。
 
