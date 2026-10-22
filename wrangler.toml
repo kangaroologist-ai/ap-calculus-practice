@@ -1,3 +1,10 @@
 name = "ap-calculus-practice"
 pages_build_output_dir = "./dist"
 compatibility_date = "2026-09-18"
+
+# A later step replaces the id with the real one from `wrangler d1 create`.
+[[d1_databases]]
+binding = "DB"
+database_name = "ap-calculus-practice"
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "migrations"
